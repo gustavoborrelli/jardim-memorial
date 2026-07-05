@@ -1,0 +1,1986 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Jardim Memorial — Um lugar para lembrar</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,500&family=Inter:wght@400;500;600&display=swap');
+
+  :root{
+    --sky1:#7d6f99;
+    --sky2:#c9a97e;
+    --stone:#c9beb0;
+    --stone-dark:#8a7f72;
+    --amber:#e8b978;
+    --plum:#3d3450;
+    --cream:#f4efe6;
+    --sage:#7a8b6f;
+  }
+  html,body{margin:0;height:100%;overflow:hidden;background:#221c2c;font-family:'Inter',sans-serif;color:var(--cream);}
+  #app{position:relative;width:100vw;height:100vh;}
+  canvas{display:block;outline:none;}
+
+  .veil{
+    position:absolute;inset:0;
+    background:radial-gradient(ellipse at 50% 100%, rgba(0,0,0,0) 0%, rgba(20,30,10,0.12) 100%);
+    pointer-events:none;
+  }
+
+  .hud{
+    position:absolute;
+    font-family:'Inter',sans-serif;
+    color:var(--cream);
+    z-index:5;
+  }
+  .title-block{
+    top:22px; left:26px;
+    max-width:340px;
+  }
+  .title-block h1{
+    font-family:'Cormorant Garamond',serif;
+    font-weight:600;
+    font-size:26px;
+    margin:0 0 2px 0;
+    letter-spacing:0.3px;
+    color:var(--cream);
+    text-shadow:0 2px 10px rgba(0,0,0,0.5);
+  }
+  .title-block p{
+    margin:0;
+    font-size:12.5px;
+    line-height:1.5;
+    color:rgba(244,239,230,0.75);
+    text-shadow:0 1px 6px rgba(0,0,0,0.5);
+  }
+
+  .controls-chip{
+    bottom:22px; left:26px;
+    background:rgba(30,22,38,0.55);
+    border:1px solid rgba(244,239,230,0.15);
+    backdrop-filter:blur(6px);
+    border-radius:12px;
+    padding:12px 16px;
+    font-size:12px;
+    line-height:1.7;
+    color:rgba(244,239,230,0.85);
+  }
+  .controls-chip b{color:var(--amber);font-weight:600;}
+
+  .action-col{
+    top:22px; right:26px;
+    display:flex; flex-direction:column; gap:10px; align-items:flex-end;
+  }
+  .btn{
+    font-family:'Inter',sans-serif;
+    font-size:13px; font-weight:600;
+    letter-spacing:0.2px;
+    color:var(--plum);
+    background:var(--amber);
+    border:none; border-radius:10px;
+    padding:11px 18px;
+    cursor:pointer;
+    box-shadow:0 6px 18px rgba(0,0,0,0.35);
+    transition:transform 0.15s ease, box-shadow 0.15s ease;
+  }
+  .btn:hover{ transform:translateY(-1px); box-shadow:0 8px 22px rgba(0,0,0,0.4); }
+  .btn:active{ transform:translateY(0px) scale(0.98); }
+  .btn.secondary{
+    background:rgba(30,22,38,0.55);
+    color:var(--cream);
+    border:1px solid rgba(244,239,230,0.25);
+  }
+
+  .toast{
+    position:absolute; top:78px; right:26px;
+    background:rgba(30,22,38,0.7);
+    border:1px solid rgba(232,185,120,0.35);
+    color:var(--cream);
+    font-size:12.5px;
+    padding:9px 14px;
+    border-radius:10px;
+    max-width:260px;
+    text-align:right;
+    opacity:0;
+    transform:translateY(-6px);
+    transition:opacity 0.35s ease, transform 0.35s ease;
+    z-index:6;
+    pointer-events:none;
+  }
+  .toast.show{ opacity:1; transform:translateY(0); }
+
+  /* modal */
+  .modal-back{
+    position:absolute; inset:0;
+    background:rgba(15,10,20,0.55);
+    display:none;
+    align-items:center; justify-content:center;
+    z-index:20;
+  }
+  .modal-back.open{ display:flex; }
+  .modal{
+    width:min(420px, 88vw);
+    background:linear-gradient(180deg, #2c2438, #221c2c);
+    border:1px solid rgba(244,239,230,0.12);
+    border-radius:16px;
+    padding:26px 26px 22px;
+    box-shadow:0 20px 60px rgba(0,0,0,0.5);
+  }
+  .modal h2{
+    font-family:'Cormorant Garamond',serif;
+    font-weight:600;
+    font-size:22px;
+    margin:0 0 4px 0;
+    color:var(--cream);
+  }
+  .modal .sub{
+    font-size:12px;
+    color:rgba(244,239,230,0.6);
+    margin:0 0 18px 0;
+  }
+  .field{ margin-bottom:14px; }
+  .field label{
+    display:block;
+    font-size:11.5px;
+    font-weight:600;
+    letter-spacing:0.3px;
+    color:var(--amber);
+    text-transform:uppercase;
+    margin-bottom:6px;
+  }
+  .field input, .field textarea{
+    width:100%;
+    box-sizing:border-box;
+    background:rgba(244,239,230,0.06);
+    border:1px solid rgba(244,239,230,0.18);
+    border-radius:8px;
+    padding:10px 12px;
+    font-family:'Inter',sans-serif;
+    font-size:13.5px;
+    color:var(--cream);
+    resize:none;
+  }
+  .field input:focus, .field textarea:focus{
+    outline:none;
+    border-color:var(--amber);
+  }
+  .field textarea{ height:56px; }
+  .field input[type="file"]{
+    padding:8px 10px;
+    font-size:12px;
+    cursor:pointer;
+  }
+  .field input[type="file"]::file-selector-button{
+    background:var(--amber);
+    color:var(--plum);
+    border:none;
+    border-radius:6px;
+    padding:6px 12px;
+    font-family:'Inter',sans-serif;
+    font-weight:600;
+    font-size:12px;
+    margin-right:10px;
+    cursor:pointer;
+  }
+  .photo-preview{
+    margin-top:8px;
+    display:none;
+    align-items:center;
+    gap:10px;
+  }
+  .photo-preview.show{ display:flex; }
+  .photo-preview img{
+    width:54px; height:54px;
+    border-radius:50%;
+    object-fit:cover;
+    border:2px solid var(--amber);
+  }
+  .photo-preview span{
+    font-size:11.5px;
+    color:rgba(244,239,230,0.65);
+  }
+  .modal-actions{
+    display:flex; justify-content:flex-end; gap:10px; margin-top:6px;
+  }
+  .hint-empty{
+    position:absolute;
+    padding:8px 12px;
+    background:rgba(30,22,38,0.75);
+    border:1px solid rgba(244,239,230,0.2);
+    border-radius:8px;
+    font-size:11.5px;
+    color:var(--cream);
+    pointer-events:none;
+    transform:translate(-50%,-120%);
+    display:none;
+    z-index:4;
+    white-space:nowrap;
+  }
+
+  .epitaph-card{
+    position:absolute;
+    padding:14px 16px;
+    background:rgba(30,22,38,0.82);
+    border:1px solid rgba(232,185,120,0.3);
+    border-radius:10px;
+    max-width:240px;
+    font-size:12.5px;
+    color:var(--cream);
+    pointer-events:none;
+    transform:translate(-50%,-115%);
+    display:none;
+    z-index:4;
+  }
+  .epitaph-card .name{
+    font-family:'Cormorant Garamond',serif;
+    font-style:italic;
+    font-size:17px;
+    color:var(--amber);
+    margin:0 0 2px 0;
+  }
+  .epitaph-card .dates{
+    font-size:10.5px;
+    color:rgba(244,239,230,0.55);
+    margin:0 0 6px 0;
+  }
+  .epitaph-card .msg{
+    margin:0;
+    line-height:1.4;
+    color:rgba(244,239,230,0.85);
+  }
+  .epitaph-card .ep-photo{
+    width:64px; height:64px;
+    border-radius:50%;
+    object-fit:cover;
+    border:2px solid var(--amber);
+    margin:0 auto 8px;
+    display:block;
+  }
+  .epitaph-card .section{
+    margin:8px 0 0 0;
+    font-size:10px;
+    letter-spacing:0.5px;
+    text-transform:uppercase;
+    color:rgba(232,185,120,0.75);
+  }
+
+  .loading{
+    position:absolute; inset:0;
+    display:flex; align-items:center; justify-content:center;
+    background:#221c2c;
+    z-index:30;
+    font-family:'Cormorant Garamond',serif;
+    font-size:16px;
+    color:rgba(244,239,230,0.7);
+    letter-spacing:0.5px;
+  }
+
+  /* ===== MAIN MENU ===== */
+  .menu-screen{
+    position:absolute; inset:0;
+    z-index:40;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background:linear-gradient(180deg, rgba(46,134,217,0.55) 0%, rgba(120,190,235,0.45) 55%, rgba(180,225,200,0.55) 100%);
+    backdrop-filter: blur(3px);
+    transition:opacity 0.5s ease;
+  }
+  .menu-screen.hidden{ opacity:0; pointer-events:none; }
+  .menu-card{
+    text-align:center;
+    background:rgba(255,255,255,0.88);
+    border-radius:22px;
+    padding:44px 52px 38px;
+    box-shadow:0 24px 70px rgba(20,50,80,0.35);
+    max-width:420px;
+    width:88vw;
+    box-sizing:border-box;
+  }
+  .menu-card .paw{
+    font-size:44px;
+    margin-bottom:6px;
+  }
+  .menu-card h1{
+    font-family:'Cormorant Garamond',serif;
+    font-weight:600;
+    font-size:38px;
+    margin:0 0 4px 0;
+    color:#2c3a55;
+    letter-spacing:0.5px;
+  }
+  .menu-card .tagline{
+    font-size:13.5px;
+    color:#5a6a80;
+    margin:0 0 26px 0;
+    line-height:1.5;
+  }
+  .menu-btns{
+    display:flex; flex-direction:column; gap:10px;
+  }
+  .menu-btn{
+    font-family:'Inter',sans-serif;
+    font-size:15px; font-weight:600;
+    padding:13px 18px;
+    border-radius:12px;
+    border:none;
+    cursor:pointer;
+    transition:transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+  }
+  .menu-btn.primary{
+    background:#e8a23d;
+    color:#3a2c14;
+    box-shadow:0 6px 18px rgba(232,162,61,0.4);
+  }
+  .menu-btn.primary:hover{ transform:translateY(-2px); background:#f0ad48; }
+  .menu-btn.ghost{
+    background:rgba(44,58,85,0.08);
+    color:#2c3a55;
+  }
+  .menu-btn.ghost:hover{ background:rgba(44,58,85,0.15); }
+  .menu-card .credits{
+    margin-top:22px;
+    font-size:10.5px;
+    color:#9aa8ba;
+  }
+
+  /* menu sub-panels (how to play / about) */
+  .menu-panel{ display:none; text-align:left; }
+  .menu-panel.active{ display:block; }
+  .menu-home.active{ display:block; }
+  .menu-home{ display:none; }
+  .menu-panel h2{
+    font-family:'Cormorant Garamond',serif;
+    font-size:24px;
+    color:#2c3a55;
+    margin:0 0 12px 0;
+    text-align:center;
+  }
+  .menu-panel .rule{
+    display:flex; gap:10px; align-items:flex-start;
+    font-size:13px; color:#48586e;
+    margin-bottom:10px; line-height:1.45;
+  }
+  .menu-panel .rule .ico{ font-size:16px; flex-shrink:0; }
+  .menu-panel .about-text{
+    font-size:13.5px; color:#48586e; line-height:1.6;
+    margin:0 0 6px 0;
+  }
+  .menu-panel .back-row{ text-align:center; margin-top:18px; }
+
+  /* dog breed cards */
+  .dog-cards{
+    display:grid;
+    grid-template-columns:repeat(3, 1fr);
+    gap:10px;
+  }
+  .dog-card{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:6px;
+    padding:14px 8px 12px;
+    background:rgba(44,58,85,0.06);
+    border:2px solid transparent;
+    border-radius:14px;
+    cursor:pointer;
+    font-family:'Inter',sans-serif;
+    transition:transform 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+  }
+  .dog-card:hover{
+    transform:translateY(-3px);
+    border-color:#e8a23d;
+    background:rgba(232,162,61,0.12);
+  }
+  .dog-swatch{
+    display:flex; gap:4px;
+  }
+  .dog-swatch i{
+    width:22px; height:22px;
+    border-radius:50%;
+    display:inline-block;
+    border:2px solid rgba(255,255,255,0.8);
+    box-shadow:0 2px 6px rgba(0,0,0,0.2);
+  }
+  .dog-name{
+    font-weight:600;
+    font-size:13px;
+    color:#2c3a55;
+  }
+  .dog-desc{
+    font-size:10.5px;
+    color:#7a879a;
+    text-align:center;
+    line-height:1.35;
+  }
+  @media (max-width:480px){
+    .dog-cards{ grid-template-columns:1fr; }
+  }
+
+  /* pause hint + pause menu */
+  .pause-chip{
+    position:absolute;
+    top:22px; left:50%;
+    transform:translateX(-50%);
+    background:rgba(30,22,38,0.5);
+    border:1px solid rgba(244,239,230,0.2);
+    border-radius:20px;
+    padding:6px 14px;
+    font-size:11.5px;
+    color:rgba(244,239,230,0.85);
+    z-index:5;
+  }
+  .pause-chip b{ color:var(--amber); }
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="loading" id="loading">preparando o jardim…</div>
+
+  <!-- ===== MAIN MENU ===== -->
+  <div class="menu-screen" id="menuScreen">
+    <div class="menu-card">
+
+      <div class="menu-home active" id="menuHome">
+        <div class="paw">🐾</div>
+        <h1>Jardim Memorial</h1>
+        <p class="tagline">Um jardim ensolarado para passear, plantar flores<br>e guardar a memória dos nossos melhores amigos.</p>
+        <div class="menu-btns">
+          <button class="menu-btn primary" id="btnPlay">▶ &nbsp;Entrar no jardim</button>
+          <button class="menu-btn ghost" id="btnDogs">🐾 Escolher cachorro</button>
+          <button class="menu-btn ghost" id="btnHow">Como jogar</button>
+          <button class="menu-btn ghost" id="btnAbout">Sobre</button>
+        </div>
+        <div class="credits">feito com Three.js · aperte ESC no jogo para voltar aqui</div>
+      </div>
+
+      <div class="menu-panel" id="menuDogs">
+        <h2>Escolha seu companheiro</h2>
+        <div class="dog-cards">
+          <button class="dog-card" data-breed="shepherd">
+            <span class="dog-swatch"><i style="background:#c0803d"></i><i style="background:#2b2320"></i></span>
+            <span class="dog-name">Pastor Alemão</span>
+            <span class="dog-desc">Leal e imponente, orelhas sempre em pé</span>
+          </button>
+          <button class="dog-card" data-breed="dachshund">
+            <span class="dog-swatch"><i style="background:#8a4a26"></i><i style="background:#5f3014"></i></span>
+            <span class="dog-name">Dachshund</span>
+            <span class="dog-desc">Comprido, baixinho e cheio de coragem</span>
+          </button>
+          <button class="dog-card" data-breed="golden">
+            <span class="dog-swatch"><i style="background:#dfa14e"></i><i style="background:#f3e3c2"></i></span>
+            <span class="dog-name">Golden Retriever</span>
+            <span class="dog-desc">Dourado, alegre e de rabo abanando</span>
+          </button>
+        </div>
+        <div class="back-row"><button class="menu-btn ghost" data-back>← Voltar</button></div>
+      </div>
+
+      <div class="menu-panel" id="menuHow">
+        <h2>Como jogar</h2>
+        <div class="rule"><span class="ico">🐕</span><span><b>W A S D</b> ou setas movem o cãozinho. Ele sempre anda na direção em que a câmera está olhando.</span></div>
+        <div class="rule"><span class="ico">🎥</span><span><b>Dois dedos no touchpad</b> (ou roda do mouse) giram a câmera ao redor dele.</span></div>
+        <div class="rule"><span class="ico">🌸</span><span><b>Clique no gramado</b> para plantar uma flor colorida onde quiser.</span></div>
+        <div class="rule"><span class="ico">🪦</span><span><b>Clique numa pedra vazia</b> (círculos verdes) para gravar nome, foto, datas e uma mensagem. O jardim tem quatro campos: Recanto do Sol, Bosque da Saudade, Campo das Estrelas e Prado dos Companheiros.</span></div>
+        <div class="rule"><span class="ico">💬</span><span><b>Passe o mouse sobre uma lápide</b> para ler a homenagem gravada nela.</span></div>
+        <div class="rule"><span class="ico">⏸️</span><span><b>ESC</b> pausa e volta para este menu a qualquer momento.</span></div>
+        <div class="back-row"><button class="menu-btn ghost" data-back>← Voltar</button></div>
+      </div>
+
+      <div class="menu-panel" id="menuAbout">
+        <h2>Sobre</h2>
+        <p class="about-text">O Jardim Memorial é um pequeno espaço virtual para celebrar a memória de cães que já partiram. Não há pontuação nem objetivo — apenas um lugar tranquilo para caminhar, plantar flores e deixar palavras de carinho.</p>
+        <p class="about-text">As homenagens ficam gravadas nas pedras durante a sessão. Oito moradores fictícios já têm seu cantinho no jardim; as demais pedras esperam por suas histórias.</p>
+        <div class="back-row"><button class="menu-btn ghost" data-back>← Voltar</button></div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="veil"></div>
+
+  <div class="pause-chip" id="pauseChip"><b>ESC</b> — menu / pausa</div>
+
+  <div class="hud title-block">
+    <h1>Jardim Memorial</h1>
+    <p>Um lugar tranquilo para lembrar. Passeie, plante flores e, se quiser, deixe uma homenagem em uma das pedras vazias.</p>
+  </div>
+
+  <div class="hud action-col">
+    <button class="btn" id="btnAdd">+ Deixar uma homenagem</button>
+    <button class="btn secondary" id="btnSound">🔈 Som: ligado</button>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <div class="hud controls-chip">
+    <div><b>W A S D</b> ou setas — caminhar</div>
+    <div><b>Dois dedos no touchpad</b> — girar a câmera</div>
+    <div><b>Clique no gramado</b> — plantar uma flor</div>
+    <div><b>Clique numa pedra vazia</b> — deixar homenagem</div>
+  </div>
+
+  <div class="hint-empty" id="hintEmpty">clique para deixar uma homenagem aqui</div>
+  <div class="epitaph-card" id="epitaphCard">
+    <img class="ep-photo" id="epPhoto" alt="" style="display:none">
+    <p class="name" id="epName">—</p>
+    <p class="dates" id="epDates">—</p>
+    <p class="msg" id="epMsg">—</p>
+    <p class="section" id="epSection"></p>
+  </div>
+
+  <div class="modal-back" id="modalBack">
+    <div class="modal">
+      <h2>Uma homenagem</h2>
+      <p class="sub">Essas palavras ficarão gravadas na pedra escolhida.</p>
+      <div class="field">
+        <label>Nome</label>
+        <input id="inName" maxlength="24" placeholder="Nome do companheiro">
+      </div>
+      <div class="field">
+        <label>Foto (opcional)</label>
+        <input type="file" id="inPhoto" accept="image/*">
+        <div class="photo-preview" id="photoPreview"></div>
+      </div>
+      <div class="field">
+        <label>Datas (opcional)</label>
+        <input id="inDates" maxlength="24" placeholder="ex: 2012 – 2025">
+      </div>
+      <div class="field">
+        <label>Mensagem</label>
+        <textarea id="inMsg" maxlength="90" placeholder="Uma lembrança, em poucas palavras"></textarea>
+      </div>
+      <div class="modal-actions">
+        <button class="btn secondary" id="btnCancel">Cancelar</button>
+        <button class="btn" id="btnConfirm">Gravar na pedra</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function(){
+
+"use strict";
+
+/* ============ BASIC SETUP ============ */
+const appEl = document.getElementById('app');
+const scene = new THREE.Scene();
+
+function makeSkyTexture(){
+  const c = document.createElement('canvas');
+  c.width = 8; c.height = 256;
+  const ctx = c.getContext('2d');
+  const g = ctx.createLinearGradient(0,0,0,256);
+  g.addColorStop(0, '#3f8edb');
+  g.addColorStop(0.45, '#74bdea');
+  g.addColorStop(0.75, '#cfe6f2');
+  g.addColorStop(1, '#ffe9c9');
+  ctx.fillStyle = g;
+  ctx.fillRect(0,0,8,256);
+  const tex = new THREE.CanvasTexture(c);
+  tex.magFilter = THREE.LinearFilter;
+  return tex;
+}
+scene.background = makeSkyTexture();
+scene.fog = new THREE.Fog(0xcfe8f5, 42, 115);
+
+const camera = new THREE.PerspectiveCamera(52, window.innerWidth/window.innerHeight, 0.1, 200);
+
+const renderer = new THREE.WebGLRenderer({antialias:true});
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+/* LOW-POLY STYLE: every standard material is flat-shaded (visible facets) */
+const _MSM = THREE.MeshStandardMaterial;
+THREE.MeshStandardMaterial = function(params){
+  return new _MSM(Object.assign({flatShading:true}, params));
+};
+appEl.insertBefore(renderer.domElement, appEl.firstChild);
+
+window.addEventListener('resize', ()=>{
+  camera.aspect = window.innerWidth/window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+/* ============ LIGHTING ============ */
+const hemi = new THREE.HemisphereLight(0xcfe6ff, 0xd9b98a, 0.9);
+scene.add(hemi);
+
+const sun = new THREE.DirectionalLight(0xffe9c2, 1.25);
+sun.position.set(-14, 30, 16);
+sun.castShadow = true;
+sun.shadow.mapSize.set(1536,1536);
+sun.shadow.camera.left = -35;
+sun.shadow.camera.right = 35;
+sun.shadow.camera.top = 35;
+sun.shadow.camera.bottom = -35;
+sun.shadow.camera.far = 80;
+sun.shadow.bias = -0.0015;
+scene.add(sun);
+
+// friendly little sun disc up in the sky, purely visual
+const sunDisc = new THREE.Mesh(
+  new THREE.CircleGeometry(2.4, 24),
+  new THREE.MeshBasicMaterial({color:0xfff2b0, transparent:true, opacity:0.9})
+);
+sunDisc.position.set(-30, 34, -20);
+sunDisc.lookAt(0,10,0);
+scene.add(sunDisc);
+const sunGlow = new THREE.Mesh(
+  new THREE.CircleGeometry(4.2, 24),
+  new THREE.MeshBasicMaterial({color:0xfff8d8, transparent:true, opacity:0.35})
+);
+sunGlow.position.copy(sunDisc.position);
+sunGlow.lookAt(0,10,0);
+scene.add(sunGlow);
+
+const fillLight = new THREE.PointLight(0xfff0c0, 0.35, 30);
+fillLight.position.set(0, 6, 20);
+scene.add(fillLight);
+
+/* low-poly drifting clouds */
+const clouds = [];
+function makeCloud(x,y,z,sc){
+  const g = new THREE.Group();
+  const m = new THREE.MeshStandardMaterial({color:0xffffff, roughness:1});
+  [[0,0,0,1],[0.9,0.12,0.25,0.72],[-0.85,0.05,-0.15,0.62],[0.15,0.4,-0.2,0.5]].forEach(([cx,cy,cz,cs])=>{
+    const puff = new THREE.Mesh(new THREE.IcosahedronGeometry(0.9,0), m);
+    puff.position.set(cx,cy,cz);
+    puff.scale.setScalar(cs);
+    g.add(puff);
+  });
+  g.scale.setScalar(sc);
+  g.position.set(x,y,z);
+  scene.add(g);
+  clouds.push(g);
+}
+makeCloud(-20,16,-32,2.4);
+makeCloud(16,19,-40,3.0);
+makeCloud(32,17,8,2.5);
+makeCloud(-34,21,16,2.8);
+makeCloud(4,23,38,2.3);
+
+/* ============ GROUND ============ */
+function makeGrassTexture(){
+  const c = document.createElement('canvas');
+  c.width = c.height = 256;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = '#6fae4e';
+  ctx.fillRect(0,0,256,256);
+  for(let i=0;i<3200;i++){
+    const x = Math.random()*256, y = Math.random()*256;
+    const shade = 110 + Math.random()*80;
+    ctx.fillStyle = `rgba(${shade-40},${shade+30},${shade-60},0.5)`;
+    ctx.fillRect(x, y, 1.6, 1.6);
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.repeat.set(14,14);
+  return tex;
+}
+const groundGeo = new THREE.PlaneGeometry(130, 130, 44, 44);
+{
+  const pos = groundGeo.attributes.position;
+  for(let i=0;i<pos.count;i++){
+    const gx = pos.getX(i), gy = pos.getY(i);
+    const d = Math.hypot(gx, gy);
+    if(d > 29){
+      const t = d - 29;
+      pos.setZ(i, t*0.22 + Math.sin(gx*0.33)*Math.cos(gy*0.29)*t*0.12 + Math.random()*0.5);
+    }
+  }
+  groundGeo.computeVertexNormals();
+}
+const groundMat = new THREE.MeshStandardMaterial({color:0x8cb56a, roughness:1});
+const ground = new THREE.Mesh(groundGeo, groundMat);
+ground.rotation.x = -Math.PI/2;
+ground.receiveShadow = true;
+scene.add(ground);
+
+/* path */
+function makeStoneTexture(){
+  const c = document.createElement('canvas');
+  c.width = c.height = 128;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = '#b7ac9c';
+  ctx.fillRect(0,0,128,128);
+  for(let i=0;i<400;i++){
+    const shade = 150 + Math.random()*60;
+    ctx.fillStyle = `rgba(${shade},${shade-10},${shade-25},0.4)`;
+    ctx.fillRect(Math.random()*128, Math.random()*128, 3,3);
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.repeat.set(1,7);
+  return tex;
+}
+const pathMat = new THREE.MeshStandardMaterial({color:0xe2cfa6, roughness:1});
+// four symmetric avenues radiating from the central plaza (N, S, E, W)
+[[0,-16.5,0],[0,16.5,0],[-16.5,0,Math.PI/2],[16.5,0,Math.PI/2]].forEach(([px,pz,rz])=>{
+  const av = new THREE.Mesh(new THREE.PlaneGeometry(4.2, 22), pathMat);
+  av.rotation.x = -Math.PI/2;
+  av.rotation.z = rz;
+  av.position.set(px, 0.02, pz);
+  av.receiveShadow = true;
+  scene.add(av);
+});
+
+/* ============ FENCE ============ */
+const fenceMat = new THREE.MeshStandardMaterial({color:0x5b4a3d, roughness:0.9});
+const fenceGroup = new THREE.Group();
+function addFenceRun(x1,z1,x2,z2){
+  const len = Math.hypot(x2-x1, z2-z1);
+  const postCount = Math.round(len/3);
+  for(let i=0;i<=postCount;i++){
+    const t = i/postCount;
+    const px = x1 + (x2-x1)*t;
+    const pz = z1 + (z2-z1)*t;
+    const post = new THREE.Mesh(new THREE.CylinderGeometry(0.09,0.11,1.3,6), fenceMat);
+    post.position.set(px, 0.65, pz);
+    post.castShadow = true;
+    fenceGroup.add(post);
+  }
+  const rail = new THREE.Mesh(new THREE.BoxGeometry(
+    Math.abs(x2-x1)||0.12, 0.1, Math.abs(z2-z1)||0.12
+  ), fenceMat);
+  rail.position.set((x1+x2)/2, 0.95, (z1+z2)/2);
+  rail.castShadow = true;
+  fenceGroup.add(rail);
+  const rail2 = rail.clone();
+  rail2.position.y = 0.55;
+  fenceGroup.add(rail2);
+}
+const B = 27;
+addFenceRun(-B,-B, B,-B);
+addFenceRun(-B, B, -3.2, B);
+addFenceRun(3.2, B, B, B);
+addFenceRun(-B,-B, -B, B);
+addFenceRun(B,-B, B, B);
+scene.add(fenceGroup);
+
+// gate posts
+[[2.4,B-0.2],[-2.4,B-0.2]].forEach(([x,z])=>{
+  const post = new THREE.Mesh(new THREE.CylinderGeometry(0.14,0.16,2.1,8), fenceMat);
+  post.position.set(x,1.05,z);
+  post.castShadow = true;
+  scene.add(post);
+});
+const lintel = new THREE.Mesh(new THREE.BoxGeometry(5.2,0.18,0.18), fenceMat);
+lintel.position.set(0, 2.05, B-0.2);
+scene.add(lintel);
+
+/* ============ TREES ============ */
+function makeTree(x,z,scale=1){
+  const g = new THREE.Group();
+  const trunk = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.16*scale, 0.26*scale, 1.4*scale, 5),
+    new THREE.MeshStandardMaterial({color:0x6e4a30, roughness:1})
+  );
+  trunk.position.y = 0.7*scale;
+  trunk.castShadow = true;
+  g.add(trunk);
+  const greens = [0x4e8a4a, 0x5e9e56, 0x74b061];
+  const pick = Math.floor(Math.random()*3);
+  [[1.5,1.6,1.15],[1.15,1.35,2.05],[0.8,1.1,2.85]].forEach(([r,h,y],i)=>{
+    const cone = new THREE.Mesh(
+      new THREE.ConeGeometry(r*scale, h*scale, 6),
+      new THREE.MeshStandardMaterial({color:greens[(i+pick)%3], roughness:0.95})
+    );
+    cone.position.y = y*scale;
+    cone.rotation.y = Math.random()*Math.PI;
+    cone.castShadow = true;
+    g.add(cone);
+  });
+  g.position.set(x,0,z);
+  return g;
+}
+[[-22,-22,1.2],[22,-22,1],[-22,20,0.9],[22,21,1.15],[-24,2,0.8],[24,-2,0.85]].forEach(([x,z,s])=>{
+  scene.add(makeTree(x,z,s));
+});
+
+// tree-lined avenues: both sides of all four avenues, symmetric
+[9, 15, 21].forEach(d=>{
+  [-3.6, 3.6].forEach(off=>{
+    const s = 0.6 + Math.random()*0.12;
+    scene.add(makeTree(off,  d, s));
+    scene.add(makeTree(off, -d, 0.6 + Math.random()*0.12));
+    scene.add(makeTree( d, off, 0.6 + Math.random()*0.12));
+    scene.add(makeTree(-d, off, 0.6 + Math.random()*0.12));
+  });
+});
+
+/* benches + lamps arranged symmetrically around the central plaza */
+const benchMat = new THREE.MeshStandardMaterial({color:0x6b5744, roughness:0.9});
+function makeBench(){
+  const g = new THREE.Group();
+  const seat = new THREE.Mesh(new THREE.BoxGeometry(1.6,0.12,0.5), benchMat);
+  seat.position.y = 0.45; seat.castShadow = true;
+  g.add(seat);
+  [[-0.65,-0.2],[0.65,-0.2],[-0.65,0.2],[0.65,0.2]].forEach(([x,z])=>{
+    const leg = new THREE.Mesh(new THREE.BoxGeometry(0.08,0.45,0.08), benchMat);
+    leg.position.set(x,0.22,z);
+    g.add(leg);
+  });
+  return g;
+}
+function makeLamp(){
+  const g = new THREE.Group();
+  const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.06,0.08,2.6,8), fenceMat);
+  pole.position.y = 1.3; pole.castShadow = true;
+  g.add(pole);
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.22,6,5), new THREE.MeshStandardMaterial({
+    color:0xffe3b0, emissive:0xffb877, emissiveIntensity:0.6
+  }));
+  head.position.y = 2.65;
+  g.add(head);
+  return g;
+}
+// 4 lamps on the diagonals just outside the plaza
+[[1,1],[1,-1],[-1,1],[-1,-1]].forEach(([sx,sz])=>{
+  const l = makeLamp();
+  l.position.set(sx*5.0, 0, sz*5.0);
+  scene.add(l);
+});
+// 4 benches a bit further out on the diagonals, facing the fountain
+[[1,1],[1,-1],[-1,1],[-1,-1]].forEach(([sx,sz])=>{
+  const b = makeBench();
+  b.position.set(sx*6.4, 0, sz*6.4);
+  b.rotation.y = Math.atan2(-sx, -sz) + Math.PI/2;
+  scene.add(b);
+});
+
+/* ============ CENTRAL PLAZA + FOUNTAIN ============ */
+const PLAZA = { x:0, z:0, r:5.5 };
+
+// circular stone plaza floor
+function makePlazaTexture(){
+  const c = document.createElement('canvas');
+  c.width = c.height = 256;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = '#c3b8a6';
+  ctx.fillRect(0,0,256,256);
+  // concentric ring joints, like cobbled plaza
+  ctx.strokeStyle = 'rgba(120,108,92,0.55)';
+  ctx.lineWidth = 2;
+  for(let r=20; r<=128; r+=22){
+    ctx.beginPath(); ctx.arc(128,128,r,0,Math.PI*2); ctx.stroke();
+  }
+  for(let a=0; a<Math.PI*2; a+=Math.PI/10){
+    ctx.beginPath();
+    ctx.moveTo(128+Math.cos(a)*20, 128+Math.sin(a)*20);
+    ctx.lineTo(128+Math.cos(a)*128, 128+Math.sin(a)*128);
+    ctx.stroke();
+  }
+  for(let i=0;i<600;i++){
+    const shade = 160+Math.random()*50;
+    ctx.fillStyle = `rgba(${shade},${shade-8},${shade-22},0.35)`;
+    ctx.fillRect(Math.random()*256, Math.random()*256, 2.5, 2.5);
+  }
+  return new THREE.CanvasTexture(c);
+}
+const plazaFloor = new THREE.Mesh(
+  new THREE.CircleGeometry(PLAZA.r, 24),
+  new THREE.MeshStandardMaterial({color:0xd9c49a, roughness:1})
+);
+plazaFloor.rotation.x = -Math.PI/2;
+plazaFloor.position.set(PLAZA.x, 0.03, PLAZA.z);
+plazaFloor.receiveShadow = true;
+scene.add(plazaFloor);
+const plazaRing = new THREE.Mesh(
+  new THREE.RingGeometry(PLAZA.r-0.55, PLAZA.r-0.22, 24),
+  new THREE.MeshStandardMaterial({color:0xbfa87e, roughness:1})
+);
+plazaRing.rotation.x = -Math.PI/2;
+plazaRing.position.set(PLAZA.x, 0.045, PLAZA.z);
+scene.add(plazaRing);
+
+// fountain
+const fountain = new THREE.Group();
+const basinMat = new THREE.MeshStandardMaterial({color:0xb8ac98, roughness:0.8});
+const waterMat = new THREE.MeshStandardMaterial({color:0x5fb7e8, roughness:0.15, metalness:0.1, transparent:true, opacity:0.85});
+
+// outer basin wall
+const basinWall = new THREE.Mesh(new THREE.CylinderGeometry(1.7,1.85,0.5,12,1,true), basinMat);
+basinWall.position.y = 0.25; basinWall.castShadow = true; basinWall.receiveShadow = true;
+fountain.add(basinWall);
+const basinRim = new THREE.Mesh(new THREE.TorusGeometry(1.7,0.1,6,12), basinMat);
+basinRim.rotation.x = Math.PI/2;
+basinRim.position.y = 0.5;
+fountain.add(basinRim);
+const basinFloor = new THREE.Mesh(new THREE.CircleGeometry(1.72,12), basinMat);
+basinFloor.rotation.x = -Math.PI/2;
+basinFloor.position.y = 0.06;
+fountain.add(basinFloor);
+
+// lower water surface
+const waterLow = new THREE.Mesh(new THREE.CircleGeometry(1.62,12), waterMat);
+waterLow.rotation.x = -Math.PI/2;
+waterLow.position.y = 0.38;
+fountain.add(waterLow);
+
+// central pedestal + upper bowl
+const pedestal = new THREE.Mesh(new THREE.CylinderGeometry(0.18,0.26,0.9,7), basinMat);
+pedestal.position.y = 0.5+0.45; pedestal.castShadow = true;
+fountain.add(pedestal);
+const upperBowl = new THREE.Mesh(new THREE.CylinderGeometry(0.62,0.3,0.28,10,1,true), basinMat);
+upperBowl.position.y = 1.45; upperBowl.castShadow = true;
+fountain.add(upperBowl);
+const upperWater = new THREE.Mesh(new THREE.CircleGeometry(0.56,10), waterMat.clone());
+upperWater.rotation.x = -Math.PI/2;
+upperWater.position.y = 1.52;
+fountain.add(upperWater);
+
+// little dog statue on top spouting the jet (a nod to the theme)
+const statueMat = new THREE.MeshStandardMaterial({color:0xd8d0c2, roughness:0.7});
+const statue = new THREE.Group();
+const stBody = new THREE.Mesh(new THREE.SphereGeometry(0.14,6,5), statueMat);
+stBody.scale.set(1,0.8,1.3); stBody.position.y = 0.12;
+statue.add(stBody);
+const stHead = new THREE.Mesh(new THREE.SphereGeometry(0.09,6,5), statueMat);
+stHead.position.set(0,0.24,0.14);
+statue.add(stHead);
+const stSnout = new THREE.Mesh(new THREE.SphereGeometry(0.05,8,6), statueMat);
+stSnout.scale.set(0.8,0.7,1.3); stSnout.position.set(0,0.22,0.24);
+statue.add(stSnout);
+[[-0.05],[0.05]].forEach(([sx])=>{
+  const ear = new THREE.Mesh(new THREE.ConeGeometry(0.035,0.08,5), statueMat);
+  ear.position.set(sx,0.33,0.1);
+  statue.add(ear);
+});
+statue.position.y = 1.55;
+fountain.add(statue);
+
+// water jet (cone of water) + droplets
+const jet = new THREE.Mesh(new THREE.CylinderGeometry(0.02,0.05,0.6,8), waterMat.clone());
+jet.position.y = 2.15;
+fountain.add(jet);
+
+const fountainDrops = [];
+for(let i=0;i<14;i++){
+  const d = new THREE.Mesh(new THREE.SphereGeometry(0.035,6,6), waterMat.clone());
+  d.userData = { t: Math.random(), speed: 0.5+Math.random()*0.4, angle: Math.random()*Math.PI*2, radius: 0.15+Math.random()*0.45 };
+  fountain.add(d);
+  fountainDrops.push(d);
+}
+
+fountain.position.set(PLAZA.x, 0, PLAZA.z);
+scene.add(fountain);
+
+// four flower pots around the plaza rim
+const potMat = new THREE.MeshStandardMaterial({color:0xb06a48, roughness:0.9});
+[0, Math.PI/2, Math.PI, Math.PI*1.5].forEach(a=>{
+  const px = PLAZA.x + Math.cos(a+Math.PI/4)*(PLAZA.r-0.7);
+  const pz = PLAZA.z + Math.sin(a+Math.PI/4)*(PLAZA.r-0.7);
+  const pot = new THREE.Mesh(new THREE.CylinderGeometry(0.3,0.22,0.4,10), potMat);
+  pot.position.set(px, 0.2, pz);
+  pot.castShadow = true;
+  scene.add(pot);
+  const bush = new THREE.Mesh(new THREE.SphereGeometry(0.32,8,7), new THREE.MeshStandardMaterial({color:0x5f8f4a, roughness:0.95}));
+  bush.position.set(px, 0.55, pz);
+  bush.castShadow = true;
+  scene.add(bush);
+  for(let f=0; f<5; f++){
+    const dotColor = [0xff6fa5,0xffc93c,0xff8a3d,0xb14fd8,0xffffff][f];
+    const dot = new THREE.Mesh(new THREE.SphereGeometry(0.045,6,5), new THREE.MeshStandardMaterial({color:dotColor, roughness:0.5}));
+    const fa = Math.random()*Math.PI*2, fe = Math.random()*Math.PI/2;
+    dot.position.set(px+Math.cos(fa)*Math.cos(fe)*0.3, 0.55+Math.sin(fe)*0.3, pz+Math.sin(fa)*Math.cos(fe)*0.3);
+    scene.add(dot);
+  }
+});
+
+/* ============ MEMORIAL STONES ============ */
+function engraveTexture(name, dates, msg, photoImg){
+  const c = document.createElement('canvas');
+  c.width = 300; c.height = 300;
+  const ctx = c.getContext('2d');
+  ctx.clearRect(0,0,300,300);
+  ctx.textAlign = 'center';
+
+  if(photoImg){
+    // circular photo in a carved frame at the top
+    const cx = 150, cy = 82, r = 56;
+    ctx.save();
+    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2); ctx.clip();
+    const ar = photoImg.width / photoImg.height;
+    let dw = r*2, dh = r*2;
+    if(ar > 1){ dw = r*2*ar; } else { dh = r*2/ar; }
+    ctx.drawImage(photoImg, cx-dw/2, cy-dh/2, dw, dh);
+    ctx.restore();
+    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2);
+    ctx.lineWidth = 6;
+    ctx.strokeStyle = 'rgba(90,78,64,0.9)';
+    ctx.stroke();
+
+    ctx.fillStyle = 'rgba(70,60,52,0.92)';
+    ctx.font = 'italic 27px Georgia, serif';
+    ctx.fillText(name, 150, 176);
+    ctx.font = '14px Georgia, serif';
+    ctx.fillStyle = 'rgba(70,60,52,0.65)';
+    ctx.fillText(dates || '', 150, 198);
+    ctx.font = '13px Georgia, serif';
+    ctx.fillStyle = 'rgba(70,60,52,0.8)';
+    wrapText(ctx, msg || '', 150, 232, 240, 17);
+  } else {
+    ctx.fillStyle = 'rgba(70,60,52,0.92)';
+    ctx.font = 'italic 36px Georgia, serif';
+    ctx.fillText(name, 150, 112);
+    ctx.font = '17px Georgia, serif';
+    ctx.fillStyle = 'rgba(70,60,52,0.65)';
+    ctx.fillText(dates || '', 150, 144);
+    ctx.font = '16px Georgia, serif';
+    ctx.fillStyle = 'rgba(70,60,52,0.8)';
+    wrapText(ctx, msg || '', 150, 190, 240, 21);
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.needsUpdate = true;
+  return tex;
+}
+function wrapText(ctx, text, x, y, maxWidth, lineHeight){
+  const words = text.split(' ');
+  let line = '';
+  let lines = [];
+  for(let n=0;n<words.length;n++){
+    const test = line + words[n] + ' ';
+    if(ctx.measureText(test).width > maxWidth && n>0){
+      lines.push(line); line = words[n] + ' ';
+    } else { line = test; }
+  }
+  lines.push(line);
+  lines = lines.slice(0,3);
+  const startY = y - (lines.length-1)*lineHeight/2;
+  lines.forEach((l,i)=> ctx.fillText(l.trim(), x, startY + i*lineHeight));
+}
+
+const stoneMat = new THREE.MeshStandardMaterial({color:0xcbc0b0, roughness:0.85});
+const stoneGroup = new THREE.Group();
+scene.add(stoneGroup);
+
+/* four named sections, one per quadrant */
+const SECTIONS = [
+  {name:'Recanto do Sol',          sx: 1, sz: -1},
+  {name:'Bosque da Saudade',       sx: -1, sz: -1},
+  {name:'Campo das Estrelas',      sx: 1, sz: 1},
+  {name:'Prado dos Companheiros',  sx: -1, sz: 1},
+];
+
+const plots = [];
+SECTIONS.forEach(sec=>{
+  [9,15].forEach(ax=>{
+    [9,15].forEach(az=>{
+      plots.push({x:sec.sx*ax, z:sec.sz*az, section:sec.name, occupied:false, mesh:null, data:null});
+    });
+  });
+});
+
+/* entrance archway with a name plank for each section */
+function makeSectionSign(text){
+  const c = document.createElement('canvas');
+  c.width = 512; c.height = 110;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = '#8a6a48';
+  ctx.fillRect(0,0,512,110);
+  // wood grain
+  ctx.strokeStyle = 'rgba(70,50,32,0.35)';
+  for(let i=0;i<9;i++){
+    ctx.beginPath();
+    ctx.moveTo(0, 8+i*12+Math.random()*4);
+    ctx.bezierCurveTo(170, 4+i*12, 340, 14+i*12, 512, 8+i*12);
+    ctx.stroke();
+  }
+  ctx.strokeStyle = '#5c4630';
+  ctx.lineWidth = 8;
+  ctx.strokeRect(4,4,504,102);
+  ctx.fillStyle = '#f4ead8';
+  ctx.textAlign = 'center';
+  ctx.font = 'italic 46px Georgia, serif';
+  ctx.fillText(text, 256, 70);
+  return new THREE.CanvasTexture(c);
+}
+const archWood = new THREE.MeshStandardMaterial({color:0x6b5236, roughness:0.9});
+SECTIONS.forEach(sec=>{
+  const g = new THREE.Group();
+  [-1.4, 1.4].forEach(off=>{
+    const post = new THREE.Mesh(new THREE.CylinderGeometry(0.09,0.11,2.3,7), archWood);
+    post.position.set(off, 1.15, 0);
+    post.castShadow = true;
+    g.add(post);
+  });
+  const beam = new THREE.Mesh(new THREE.BoxGeometry(3.3,0.14,0.14), archWood);
+  beam.position.y = 2.3;
+  g.add(beam);
+  const plank = new THREE.Mesh(
+    new THREE.PlaneGeometry(2.9, 0.62),
+    new THREE.MeshStandardMaterial({map:makeSectionSign(sec.name), roughness:0.85, side:THREE.DoubleSide})
+  );
+  plank.position.y = 1.95;
+  g.add(plank);
+  // stand at the edge of the N-S avenue, marking the walk-in entrance to the quadrant
+  g.position.set(sec.sx*4.7, 0, sec.sz*12);
+  g.rotation.y = Math.PI/2; // walk through it along the x direction
+  scene.add(g);
+});
+
+const seedStories = [
+  ["Bento","2010 – 2023","Sempre esperava na porta."],
+  ["Mel","2014 – 2024","Farejou o mundo com alegria."],
+  ["Thor","2009 – 2021","Guardião fiel do quintal."],
+  ["Luna","2015 – 2022","Dormia enroscada no sol."],
+  ["Fubá","2011 – 2023","Correu atrás de toda bola."],
+  ["Amora","2016 – 2024","Latia para os trovões."],
+  ["Zeca","2008 – 2020","Companheiro de todas as tardes."],
+  ["Nina","2013 – 2022","Adorava água e lama."],
+];
+
+function buildStone(plot, data){
+  const g = new THREE.Group();
+  const base = new THREE.Mesh(new THREE.BoxGeometry(1.15,0.18,0.5), stoneMat);
+  base.position.y = 0.09;
+  base.castShadow = true; base.receiveShadow = true;
+  g.add(base);
+
+  const bodyGeo = new THREE.BoxGeometry(1.0, 1.1, 0.28);
+  const body = new THREE.Mesh(bodyGeo, stoneMat);
+  body.position.y = 0.18 + 0.55;
+  body.castShadow = true; body.receiveShadow = true;
+  g.add(body);
+
+  const cap = new THREE.Mesh(new THREE.SphereGeometry(0.5,8,4,0,Math.PI*2,0,Math.PI/2), stoneMat);
+  cap.scale.set(1,0.42,0.56);
+  cap.position.y = 0.18 + 1.1;
+  cap.castShadow = true;
+  g.add(cap);
+
+  const tex = engraveTexture(data.name, data.dates, data.msg, data.photo || null);
+  const plaqueMat = new THREE.MeshStandardMaterial({map:tex, transparent:true, roughness:0.9});
+  const plaque = new THREE.Mesh(new THREE.PlaneGeometry(0.92,1.0), plaqueMat);
+  plaque.position.set(0, 0.18+0.58, 0.145);
+  g.add(plaque);
+
+  g.position.set(plot.x, 0, plot.z);
+  g.userData = { isStone:true, plotRef:plot, data };
+  return g;
+}
+
+function markEmptyPlot(plot){
+  const marker = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.55,0.6,0.04,8),
+    new THREE.MeshStandardMaterial({color:0x94a67f, roughness:1, transparent:true, opacity:0.55})
+  );
+  marker.position.set(plot.x, 0.021, plot.z);
+  marker.userData = { isEmptyPlot:true, plotRef:plot };
+  stoneGroup.add(marker);
+  plot.marker = marker;
+  const stake = new THREE.Mesh(new THREE.ConeGeometry(0.05,0.35,6), new THREE.MeshStandardMaterial({color:0x6b5744}));
+  stake.position.set(plot.x, 0.17, plot.z);
+  stoneGroup.add(stake);
+}
+
+// seed 2 occupied + leave 2 empty in each of the four sections
+plots.forEach((plot, i)=>{
+  const withinSection = i % 4; // plots are grouped 4 per section
+  if(withinSection < 2){
+    const [name,dates,msg] = seedStories[Math.floor(i/4)*2 + withinSection];
+    const data = {name,dates,msg};
+    const stoneMesh = buildStone(plot, data);
+    stoneGroup.add(stoneMesh);
+    plot.occupied = true; plot.mesh = stoneMesh; plot.data = data;
+  } else {
+    markEmptyPlot(plot);
+  }
+});
+
+/* ============ FLOWERS ============ */
+const flowerGroup = new THREE.Group();
+scene.add(flowerGroup);
+const flowerColors = [0xe8547a, 0xf5d020, 0xffffff, 0xb14fd8, 0xff8a3d, 0xff5fa0, 0x6fb7ff, 0xfff066];
+function plantFlower(x,z,instant){
+  const g = new THREE.Group();
+  const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.02,0.02,0.28,5), new THREE.MeshStandardMaterial({color:0x4f6b3f}));
+  stem.position.y = 0.14;
+  g.add(stem);
+  const color = flowerColors[Math.floor(Math.random()*flowerColors.length)];
+  const bloom = new THREE.Mesh(new THREE.IcosahedronGeometry(0.085,0), new THREE.MeshStandardMaterial({color, roughness:0.6}));
+  bloom.position.y = 0.31;
+  bloom.rotation.set(Math.random(), Math.random(), Math.random());
+  g.add(bloom);
+  const center = new THREE.Mesh(new THREE.IcosahedronGeometry(0.04,0), new THREE.MeshStandardMaterial({color:0xf5c542}));
+  center.position.y = 0.40;
+  g.add(center);
+  g.position.set(x + (Math.random()-0.5)*0.4, 0, z + (Math.random()-0.5)*0.4);
+  g.rotation.y = Math.random()*Math.PI*2;
+  flowerGroup.add(g);
+  if(instant){ g.scale.setScalar(0.85+Math.random()*0.3); return; }
+  g.scale.setScalar(0);
+  const start = performance.now();
+  function grow(){
+    const t = Math.min(1,(performance.now()-start)/380);
+    g.scale.setScalar(t);
+    if(t<1) requestAnimationFrame(grow);
+  }
+  grow();
+}
+
+function isFreeSpot(x,z){
+  if(Math.abs(x) < 2.8 || Math.abs(z) < 2.8) return false; // the four avenues
+  if(Math.hypot(x-PLAZA.x, z-PLAZA.z) < PLAZA.r + 0.5) return false; // central plaza
+  for(const plot of plots){
+    if(Math.hypot(x-plot.x, z-plot.z) < 1.5) return false;
+  }
+  return true;
+}
+function scatterFlowers(count){
+  let placed = 0, tries = 0;
+  while(placed < count && tries < count*6){
+    tries++;
+    const x = (Math.random()-0.5)*2*BOUNDS_FOR_FLOWERS;
+    const z = (Math.random()-0.5)*2*BOUNDS_FOR_FLOWERS;
+    if(isFreeSpot(x,z)){
+      plantFlower(x,z,true);
+      placed++;
+    }
+  }
+}
+const BOUNDS_FOR_FLOWERS = 25;
+scatterFlowers(90);
+
+/* ============ BUTTERFLIES ============ */
+const fireflyGroup = new THREE.Group();
+scene.add(fireflyGroup);
+const butterflyPalette = [0xff6fa5, 0xffc93c, 0x6fc8ff, 0xff8a3d, 0xb14fd8, 0x6fe3a1];
+const fireflies = [];
+for(let i=0;i<22;i++){
+  const m = new THREE.Group();
+  const color = butterflyPalette[i % butterflyPalette.length];
+  const wingMat = new THREE.MeshStandardMaterial({color, roughness:0.6, side:THREE.DoubleSide});
+  const wingL = new THREE.Mesh(new THREE.CircleGeometry(0.09,5), wingMat);
+  wingL.position.x = -0.06;
+  const wingR = new THREE.Mesh(new THREE.CircleGeometry(0.09,5), wingMat);
+  wingR.position.x = 0.06;
+  m.add(wingL, wingR);
+  const bodyDot = new THREE.Mesh(new THREE.SphereGeometry(0.02,5,5), new THREE.MeshStandardMaterial({color:0x3a2c22}));
+  m.add(bodyDot);
+  const bx = (Math.random()-0.5)*40, bz = (Math.random()-0.5)*40;
+  m.position.set(bx, 0.6+Math.random()*1.6, bz);
+  fireflyGroup.add(m);
+  fireflies.push({mesh:m, wingL, wingR, baseX:bx, baseZ:bz, phase:Math.random()*Math.PI*2, speed:0.4+Math.random()*0.4});
+}
+
+/* ============ DOG BUILDER — THREE BREEDS ============ */
+const eyeWhiteMat = new THREE.MeshStandardMaterial({color:0xffffff, roughness:0.4});
+const pupilMat = new THREE.MeshStandardMaterial({color:0x231a12, roughness:0.3});
+const noseMat = new THREE.MeshStandardMaterial({color:0x2c2018, roughness:0.4});
+
+function addEyes(g, x, y, z){
+  [-x, x].forEach(ex=>{
+    const white = new THREE.Mesh(new THREE.SphereGeometry(0.052,10,10), eyeWhiteMat);
+    white.position.set(ex, y, z);
+    g.add(white);
+    const pupil = new THREE.Mesh(new THREE.SphereGeometry(0.028,8,8), pupilMat);
+    pupil.position.set(ex, y+0.004, z+0.033);
+    g.add(pupil);
+  });
+}
+
+function buildDog(breed){
+  const g = new THREE.Group();
+  const parts = {group:g, legs:[], tail:null, body:null, bodyBaseY:0.42, breed};
+
+  if(breed === 'golden'){
+    /* ---- GOLDEN RETRIEVER: warm gold coat, floppy ears, happy feathered tail ---- */
+    const fur = new THREE.MeshStandardMaterial({color:0xdfa14e, roughness:0.85});
+    const furDark = new THREE.MeshStandardMaterial({color:0xc08339, roughness:0.85});
+    const cream = new THREE.MeshStandardMaterial({color:0xf3e3c2, roughness:0.8});
+
+    const body = new THREE.Mesh(new THREE.SphereGeometry(0.34,7,6), fur);
+    body.scale.set(1, 0.72, 1.35);
+    body.position.y = 0.42; body.castShadow = true;
+    g.add(body); parts.body = body; parts.bodyBaseY = 0.42;
+
+    const chest = new THREE.Mesh(new THREE.SphereGeometry(0.24,6,5), cream);
+    chest.scale.set(0.85, 0.55, 1.0);
+    chest.position.set(0, 0.28, 0.18);
+    g.add(chest);
+
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.22,7,6), fur);
+    head.scale.set(0.95, 0.9, 0.85);
+    head.position.set(0, 0.64, 0.44);
+    head.castShadow = true;
+    g.add(head);
+
+    const muzzle = new THREE.Mesh(new THREE.SphereGeometry(0.135,6,5), cream);
+    muzzle.scale.set(0.8, 0.68, 1.25);
+    muzzle.position.set(0, 0.575, 0.66);
+    g.add(muzzle);
+
+    const nose = new THREE.Mesh(new THREE.SphereGeometry(0.05,8,8), noseMat);
+    nose.scale.set(1, 0.85, 0.9);
+    nose.position.set(0, 0.605, 0.79);
+    g.add(nose);
+
+    addEyes(g, 0.095, 0.70, 0.58);
+
+    [-1, 1].forEach(side=>{
+      const ear = new THREE.Mesh(new THREE.SphereGeometry(0.12,6,5), furDark);
+      ear.scale.set(0.5, 1.35, 0.28);
+      ear.position.set(side*0.20, 0.62, 0.36);
+      ear.rotation.z = side*0.35;
+      ear.rotation.x = 0.35;
+      ear.castShadow = true;
+      g.add(ear);
+    });
+
+    const tailGroup = new THREE.Group();
+    tailGroup.position.set(0, 0.48, -0.58);
+    const seg = new THREE.Mesh(new THREE.CylinderGeometry(0.05,0.07,0.36,6), fur);
+    seg.position.set(0,0.04,-0.06);
+    seg.rotation.x = -1.0;
+    tailGroup.add(seg);
+    // feathered plume
+    const plume = new THREE.Mesh(new THREE.SphereGeometry(0.09,8,7), furDark);
+    plume.scale.set(0.7,1.5,0.7);
+    plume.position.set(0, 0.26, -0.26);
+    plume.rotation.x = -0.7;
+    tailGroup.add(plume);
+    g.add(tailGroup); parts.tail = tailGroup;
+
+    [[-0.17,-0.28],[0.17,-0.28],[-0.17,0.26],[0.17,0.26]].forEach(([x,z])=>{
+      const legG = new THREE.Group();
+      const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.055,0.065,0.3,7), fur);
+      leg.position.y = 0.15; leg.castShadow = true;
+      legG.add(leg);
+      const paw = new THREE.Mesh(new THREE.SphereGeometry(0.07,8,7), cream);
+      paw.scale.set(1,0.6,1.1); paw.position.y = 0.02;
+      legG.add(paw);
+      legG.position.set(x, 0.17, z);
+      g.add(legG); parts.legs.push(legG);
+    });
+  }
+
+  else if(breed === 'shepherd'){
+    /* ---- PASTOR ALEMÃO: tan + black saddle, erect ears, dark mask, low bushy tail ---- */
+    const tan = new THREE.MeshStandardMaterial({color:0xc0803d, roughness:0.85});
+    const black = new THREE.MeshStandardMaterial({color:0x2b2320, roughness:0.85});
+    const tanLight = new THREE.MeshStandardMaterial({color:0xd6a468, roughness:0.85});
+
+    const body = new THREE.Mesh(new THREE.SphereGeometry(0.34,7,6), tan);
+    body.scale.set(1, 0.74, 1.45);
+    body.position.y = 0.44; body.castShadow = true;
+    g.add(body); parts.body = body; parts.bodyBaseY = 0.44;
+
+    // black saddle draped over the back — the breed signature
+    const saddle = new THREE.Mesh(new THREE.SphereGeometry(0.31,6,5), black);
+    saddle.scale.set(1.02, 0.52, 1.15);
+    saddle.position.set(0, 0.56, -0.08);
+    g.add(saddle);
+
+    const chest = new THREE.Mesh(new THREE.SphereGeometry(0.22,6,5), tanLight);
+    chest.scale.set(0.85, 0.55, 0.95);
+    chest.position.set(0, 0.30, 0.22);
+    g.add(chest);
+
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.22,7,6), tan);
+    head.scale.set(0.92, 0.9, 0.92);
+    head.position.set(0, 0.68, 0.48);
+    head.castShadow = true;
+    g.add(head);
+
+    // longer wolfish muzzle with black mask on top
+    const muzzle = new THREE.Mesh(new THREE.SphereGeometry(0.125,6,5), tan);
+    muzzle.scale.set(0.72, 0.6, 1.5);
+    muzzle.position.set(0, 0.60, 0.72);
+    g.add(muzzle);
+    const mask = new THREE.Mesh(new THREE.SphereGeometry(0.105,6,5), black);
+    mask.scale.set(0.68, 0.5, 1.3);
+    mask.position.set(0, 0.645, 0.72);
+    g.add(mask);
+
+    const nose = new THREE.Mesh(new THREE.SphereGeometry(0.05,8,8), noseMat);
+    nose.scale.set(1, 0.85, 0.9);
+    nose.position.set(0, 0.625, 0.89);
+    g.add(nose);
+
+    addEyes(g, 0.09, 0.74, 0.62);
+
+    // tall erect triangular ears — unmistakably a shepherd
+    [-1, 1].forEach(side=>{
+      const ear = new THREE.Mesh(new THREE.ConeGeometry(0.085,0.24,6), black);
+      ear.position.set(side*0.115, 0.90, 0.42);
+      ear.rotation.z = side*-0.12;
+      ear.castShadow = true;
+      g.add(ear);
+      const inner = new THREE.Mesh(new THREE.ConeGeometry(0.045,0.13,5), tanLight);
+      inner.position.set(side*0.115, 0.885, 0.445);
+      g.add(inner);
+    });
+
+    // bushy tail carried low
+    const tailGroup = new THREE.Group();
+    tailGroup.position.set(0, 0.42, -0.66);
+    const seg = new THREE.Mesh(new THREE.CylinderGeometry(0.045,0.07,0.46,6), black);
+    seg.position.set(0,-0.14,-0.10);
+    seg.rotation.x = -2.55;
+    tailGroup.add(seg);
+    const tip = new THREE.Mesh(new THREE.SphereGeometry(0.06,8,6), black);
+    tip.position.set(0, -0.32, -0.20);
+    tailGroup.add(tip);
+    g.add(tailGroup); parts.tail = tailGroup;
+
+    [[-0.17,-0.30],[0.17,-0.30],[-0.17,0.28],[0.17,0.28]].forEach(([x,z])=>{
+      const legG = new THREE.Group();
+      const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.055,0.065,0.32,7), tan);
+      leg.position.y = 0.16; leg.castShadow = true;
+      legG.add(leg);
+      const paw = new THREE.Mesh(new THREE.SphereGeometry(0.068,8,7), black);
+      paw.scale.set(1,0.6,1.1); paw.position.y = 0.02;
+      legG.add(paw);
+      legG.position.set(x, 0.17, z);
+      g.add(legG); parts.legs.push(legG);
+    });
+  }
+
+  else {
+    /* ---- DACHSHUND: long low body, stubby legs, long muzzle, huge floppy ears ---- */
+    const choc = new THREE.MeshStandardMaterial({color:0x8a4a26, roughness:0.85});
+    const chocDark = new THREE.MeshStandardMaterial({color:0x5f3014, roughness:0.85});
+    const chocLight = new THREE.MeshStandardMaterial({color:0xb06f3e, roughness:0.85});
+
+    const body = new THREE.Mesh(new THREE.SphereGeometry(0.30,7,6), choc);
+    body.scale.set(0.9, 0.68, 2.35);
+    body.position.y = 0.30; body.castShadow = true;
+    g.add(body); parts.body = body; parts.bodyBaseY = 0.30;
+
+    const chest = new THREE.Mesh(new THREE.SphereGeometry(0.19,6,5), chocLight);
+    chest.scale.set(0.8, 0.5, 1.4);
+    chest.position.set(0, 0.18, 0.22);
+    g.add(chest);
+
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.175,7,6), choc);
+    head.scale.set(0.9, 0.9, 1.0);
+    head.position.set(0, 0.46, 0.74);
+    head.castShadow = true;
+    g.add(head);
+
+    // extra-long muzzle — classic sausage-dog profile
+    const muzzle = new THREE.Mesh(new THREE.SphereGeometry(0.10,6,5), choc);
+    muzzle.scale.set(0.75, 0.6, 2.0);
+    muzzle.position.set(0, 0.41, 0.97);
+    g.add(muzzle);
+
+    const nose = new THREE.Mesh(new THREE.SphereGeometry(0.045,8,8), noseMat);
+    nose.position.set(0, 0.425, 1.16);
+    g.add(nose);
+
+    addEyes(g, 0.078, 0.52, 0.86);
+
+    // very long floppy ears hanging past the jaw
+    [-1, 1].forEach(side=>{
+      const ear = new THREE.Mesh(new THREE.SphereGeometry(0.11,6,5), chocDark);
+      ear.scale.set(0.42, 1.75, 0.24);
+      ear.position.set(side*0.155, 0.40, 0.68);
+      ear.rotation.z = side*0.22;
+      ear.rotation.x = 0.18;
+      ear.castShadow = true;
+      g.add(ear);
+    });
+
+    // thin tail angled up
+    const tailGroup = new THREE.Group();
+    tailGroup.position.set(0, 0.36, -0.72);
+    const seg = new THREE.Mesh(new THREE.CylinderGeometry(0.018,0.032,0.42,5), choc);
+    seg.position.set(0,0.12,-0.10);
+    seg.rotation.x = -0.85;
+    tailGroup.add(seg);
+    const tip = new THREE.Mesh(new THREE.SphereGeometry(0.03,6,5), chocDark);
+    tip.position.set(0, 0.30, -0.24);
+    tailGroup.add(tip);
+    g.add(tailGroup); parts.tail = tailGroup;
+
+    // stubby little legs
+    [[-0.14,-0.48],[0.14,-0.48],[-0.14,0.44],[0.14,0.44]].forEach(([x,z])=>{
+      const legG = new THREE.Group();
+      const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.048,0.055,0.17,7), choc);
+      leg.position.y = 0.085; leg.castShadow = true;
+      legG.add(leg);
+      const paw = new THREE.Mesh(new THREE.SphereGeometry(0.058,8,7), chocDark);
+      paw.scale.set(1,0.6,1.1); paw.position.y = 0.015;
+      legG.add(paw);
+      legG.position.set(x, 0.09, z);
+      g.add(legG); parts.legs.push(legG);
+    });
+  }
+
+  return parts;
+}
+
+/* active dog state (chosen from the menu) */
+let dog = null;
+let dogParts = null;
+
+function selectDog(breed){
+  const prevPos = dog ? dog.position.clone() : new THREE.Vector3(0, 0, 14);
+  const prevYaw = dog ? dogYaw : Math.PI;
+  if(dog) scene.remove(dog);
+  dogParts = buildDog(breed);
+  dog = dogParts.group;
+  dog.position.copy(prevPos);
+  dog.rotation.y = prevYaw;
+  scene.add(dog);
+}
+
+/* ============ MOVEMENT ============ */
+const keys = {};
+window.addEventListener('keydown', e=>{ keys[e.key.toLowerCase()] = true; });
+window.addEventListener('keyup', e=>{ keys[e.key.toLowerCase()] = false; });
+
+let dogYaw = Math.PI; // facing -z initially
+let camAzimuth = Math.PI; // behind the dog
+let camElevation = 0.35;
+let camDist = 5.2;
+
+// Trackpad: swipe with two fingers to look around (fires as a 'wheel' event in browsers)
+renderer.domElement.addEventListener('wheel', e=>{
+  e.preventDefault();
+  if(gamePaused) return;
+  camAzimuth -= e.deltaX*0.003;
+  camElevation = Math.max(0.08, Math.min(0.9, camElevation - e.deltaY*0.002));
+}, {passive:false});
+
+// Touch: drag with a finger to look around (no hover on touchscreens)
+let touchDragging = false, lastTX=0, lastTY=0;
+renderer.domElement.addEventListener('touchstart', e=>{ touchDragging=true; lastTX=e.touches[0].clientX; lastTY=e.touches[0].clientY; }, {passive:true});
+renderer.domElement.addEventListener('touchmove', e=>{
+  if(!touchDragging) return;
+  const dx = e.touches[0].clientX-lastTX, dy = e.touches[0].clientY-lastTY;
+  lastTX=e.touches[0].clientX; lastTY=e.touches[0].clientY;
+  if(Math.hypot(dx,dy) > 3) touchMoved = true;
+  camAzimuth -= dx*0.006;
+  camElevation = Math.max(0.08, Math.min(0.9, camElevation - dy*0.004));
+}, {passive:true});
+renderer.domElement.addEventListener('touchend', ()=> touchDragging=false);
+let touchMoved = false;
+
+
+const BOUNDS = 25.5;
+
+
+function updateMovement(dt, elapsed){
+  if(!dog || !dogParts) return;
+  let moveX=0, moveZ=0;
+  if(keys['w']||keys['arrowup']) moveZ -= 1;
+  if(keys['s']||keys['arrowdown']) moveZ += 1;
+  if(keys['a']||keys['arrowleft']) moveX -= 1;
+  if(keys['d']||keys['arrowright']) moveX += 1;
+
+  const moving = (moveX!==0 || moveZ!==0);
+  if(moving){
+    // movement relative to camera azimuth so controls feel natural
+    const len = Math.hypot(moveX,moveZ) || 1;
+    moveX/=len; moveZ/=len;
+    const worldX = moveX*Math.cos(camAzimuth) + moveZ*Math.sin(camAzimuth);
+    const worldZ = -moveX*Math.sin(camAzimuth) + moveZ*Math.cos(camAzimuth);
+    const speed = 3.2;
+    dog.position.x += worldX*speed*dt;
+    dog.position.z += worldZ*speed*dt;
+    dog.position.x = Math.max(-BOUNDS, Math.min(BOUNDS, dog.position.x));
+    dog.position.z = Math.max(-BOUNDS, Math.min(BOUNDS, dog.position.z));
+
+    // fountain collision: gently push the dog out of the basin
+    const fdx = dog.position.x - PLAZA.x, fdz = dog.position.z - PLAZA.z;
+    const fdist = Math.hypot(fdx, fdz);
+    const FOUNTAIN_R = 2.15;
+    if(fdist < FOUNTAIN_R && fdist > 0.001){
+      dog.position.x = PLAZA.x + (fdx/fdist)*FOUNTAIN_R;
+      dog.position.z = PLAZA.z + (fdz/fdist)*FOUNTAIN_R;
+    }
+
+    const targetYaw = Math.atan2(worldX, worldZ);
+    let diff = targetYaw - dogYaw;
+    while(diff>Math.PI) diff-=Math.PI*2;
+    while(diff<-Math.PI) diff+=Math.PI*2;
+    dogYaw += diff*Math.min(1, dt*8);
+    dog.rotation.y = dogYaw;
+
+    dogParts.legs.forEach((leg, i)=>{
+      const phase = i%2===0? elapsed*9 : elapsed*9+Math.PI;
+      leg.rotation.x = Math.sin(phase)*0.5;
+    });
+    dogParts.tail.rotation.z = Math.sin(elapsed*10)*0.25;
+  } else {
+    dogParts.legs.forEach(leg=> leg.rotation.x *= 0.8);
+    dogParts.tail.rotation.z = Math.sin(elapsed*3)*0.18;
+  }
+  dogParts.body.position.y = dogParts.bodyBaseY + Math.sin(elapsed*(moving?9:2))*(moving?0.015:0.008);
+}
+
+function updateCamera(){
+  const tx = dog ? dog.position.x : PLAZA.x;
+  const tz = dog ? dog.position.z : PLAZA.z;
+  const target = new THREE.Vector3(tx, 0.9, tz);
+  const cx = target.x + camDist*Math.sin(camAzimuth)*Math.cos(camElevation);
+  const cz = target.z + camDist*Math.cos(camAzimuth)*Math.cos(camElevation);
+  const cy = target.y + camDist*Math.sin(camElevation) + 1.1;
+  camera.position.set(cx,cy,cz);
+  camera.lookAt(target.x, target.y+0.3, target.z);
+}
+
+/* ============ RAYCAST INTERACTION ============ */
+const raycaster = new THREE.Raycaster();
+const mouseNDC = new THREE.Vector2();
+const hintEmpty = document.getElementById('hintEmpty');
+const epitaphCard = document.getElementById('epitaphCard');
+let hoveredEmptyPlot = null;
+let hoveredStone = null;
+
+function screenPosFor(worldPos){
+  const v = worldPos.clone().project(camera);
+  return {
+    x: (v.x*0.5+0.5)*window.innerWidth,
+    y: (-v.y*0.5+0.5)*window.innerHeight
+  };
+}
+
+let pendingPlot = null;
+
+function onPointerMove(e){
+  const rect = renderer.domElement.getBoundingClientRect();
+  mouseNDC.x = ((e.clientX-rect.left)/rect.width)*2-1;
+  mouseNDC.y = -((e.clientY-rect.top)/rect.height)*2+1;
+  raycaster.setFromCamera(mouseNDC, camera);
+
+  hoveredEmptyPlot = null;
+  hoveredStone = null;
+
+  const emptyHits = raycaster.intersectObjects(
+    stoneGroup.children.filter(c=>c.userData && c.userData.isEmptyPlot)
+  );
+  if(emptyHits.length){
+    hoveredEmptyPlot = emptyHits[0].object.userData.plotRef;
+  }
+
+  const stoneHits = raycaster.intersectObjects(
+    stoneGroup.children.filter(c=>c.userData && c.userData.isStone), true
+  );
+  if(stoneHits.length){
+    let obj = stoneHits[0].object;
+    while(obj && !(obj.userData && obj.userData.isStone)) obj = obj.parent;
+    if(obj) hoveredStone = obj.userData.data && obj;
+  }
+}
+renderer.domElement.addEventListener('mousemove', onPointerMove);
+
+function onClick(e){
+  if(touchMoved) { touchMoved=false; return; }
+  if(gamePaused) return;
+  const rect = renderer.domElement.getBoundingClientRect();
+  mouseNDC.x = ((e.clientX-rect.left)/rect.width)*2-1;
+  mouseNDC.y = -((e.clientY-rect.top)/rect.height)*2+1;
+  raycaster.setFromCamera(mouseNDC, camera);
+
+  // empty plot -> open modal
+  const emptyHits = raycaster.intersectObjects(
+    stoneGroup.children.filter(c=>c.userData && c.userData.isEmptyPlot)
+  );
+  if(emptyHits.length){
+    pendingPlot = emptyHits[0].object.userData.plotRef;
+    openModal();
+    return;
+  }
+
+  // stone -> just show card (handled by hover, but click also fine on touch)
+  const stoneHits = raycaster.intersectObjects(
+    stoneGroup.children.filter(c=>c.userData && c.userData.isStone), true
+  );
+  if(stoneHits.length) return;
+
+  // ground -> plant flower
+  const groundHits = raycaster.intersectObject(ground);
+  if(groundHits.length){
+    const p = groundHits[0].point;
+    if(Math.abs(p.x)<BOUNDS && Math.abs(p.z)<BOUNDS){
+      plantFlower(p.x, p.z);
+      chime(520, 0.05);
+    }
+  }
+}
+renderer.domElement.addEventListener('click', onClick);
+
+/* ============ MODAL ============ */
+const modalBack = document.getElementById('modalBack');
+const btnAdd = document.getElementById('btnAdd');
+const btnCancel = document.getElementById('btnCancel');
+const btnConfirm = document.getElementById('btnConfirm');
+const inName = document.getElementById('inName');
+const inDates = document.getElementById('inDates');
+const inMsg = document.getElementById('inMsg');
+const inPhoto = document.getElementById('inPhoto');
+const photoPreview = document.getElementById('photoPreview');
+
+let pendingPhotoImg = null;
+let pendingPhotoUrl = null;
+
+inPhoto.addEventListener('change', ()=>{
+  pendingPhotoImg = null; pendingPhotoUrl = null;
+  photoPreview.classList.remove('show');
+  photoPreview.innerHTML = '';
+  const file = inPhoto.files && inPhoto.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = ()=>{
+    const img = new Image();
+    img.onload = ()=>{
+      pendingPhotoImg = img;
+      pendingPhotoUrl = reader.result;
+      photoPreview.innerHTML = `<img src="${reader.result}" alt=""><span>Foto pronta para a lápide</span>`;
+      photoPreview.classList.add('show');
+    };
+    img.src = reader.result;
+  };
+  reader.readAsDataURL(file);
+});
+
+function firstAvailablePlot(){
+  return plots.find(p=>!p.occupied);
+}
+function openModal(){
+  if(!pendingPlot){
+    pendingPlot = firstAvailablePlot();
+    if(!pendingPlot){ showToast('O jardim está completo por agora.'); return; }
+  }
+  modalBack.classList.add('open');
+  inName.value=''; inDates.value=''; inMsg.value='';
+  inPhoto.value = '';
+  pendingPhotoImg = null; pendingPhotoUrl = null;
+  photoPreview.classList.remove('show');
+  photoPreview.innerHTML = '';
+  setTimeout(()=>inName.focus(), 50);
+}
+function closeModal(){
+  modalBack.classList.remove('open');
+  pendingPlot = null;
+}
+btnAdd.addEventListener('click', ()=>{ pendingPlot=null; openModal(); });
+btnCancel.addEventListener('click', closeModal);
+modalBack.addEventListener('click', e=>{ if(e.target===modalBack) closeModal(); });
+
+btnConfirm.addEventListener('click', ()=>{
+  const name = inName.value.trim() || 'Sem nome';
+  const dates = inDates.value.trim();
+  const msg = inMsg.value.trim() || 'Para sempre lembrado com carinho.';
+  if(!pendingPlot){ pendingPlot = firstAvailablePlot(); }
+  if(!pendingPlot){ showToast('O jardim está completo por agora.'); closeModal(); return; }
+
+  const plot = pendingPlot;
+  // remove empty marker visuals
+  stoneGroup.children
+    .filter(c=>c.userData && c.userData.plotRef===plot)
+    .forEach(c=> stoneGroup.remove(c));
+
+  const data = {name, dates, msg, photo: pendingPhotoImg, photoUrl: pendingPhotoUrl};
+  const mesh = buildStone(plot, data);
+  mesh.scale.setScalar(0.01);
+  stoneGroup.add(mesh);
+  plot.occupied = true; plot.mesh = mesh; plot.data = data;
+
+  const start = performance.now();
+  function grow(){
+    const t = Math.min(1, (performance.now()-start)/500);
+    const s = 0.01 + t*0.99;
+    mesh.scale.setScalar(s);
+    if(t<1) requestAnimationFrame(grow);
+  }
+  grow();
+
+  // gather fireflies briefly
+  gatherFireflies(plot.x, plot.z);
+  chime(660, 0.14);
+  showToast(`"${name}" agora descansa no ${plot.section}.`);
+  closeModal();
+});
+
+/* ============ TOAST ============ */
+const toastEl = document.getElementById('toast');
+let toastTimer = null;
+function showToast(text){
+  toastEl.textContent = text;
+  toastEl.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=> toastEl.classList.remove('show'), 3200);
+}
+
+/* ============ FIREFLY GATHER EFFECT ============ */
+let gatherTarget = null;
+let gatherUntil = 0;
+function gatherFireflies(x,z){
+  gatherTarget = {x, z:z};
+  gatherUntil = performance.now() + 3200;
+}
+
+/* ============ SOUND (tiny synth, no external files) ============ */
+let audioCtx = null;
+let soundOn = true;
+const btnSound = document.getElementById('btnSound');
+btnSound.addEventListener('click', ()=>{
+  soundOn = !soundOn;
+  btnSound.textContent = soundOn ? '🔈 Som: ligado' : '🔇 Som: desligado';
+});
+function chime(freq, gain){
+  if(!soundOn) return;
+  try{
+    if(!audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+    const osc = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    osc.type = 'sine';
+    osc.frequency.value = freq;
+    g.gain.value = 0;
+    osc.connect(g); g.connect(audioCtx.destination);
+    const now = audioCtx.currentTime;
+    g.gain.linearRampToValueAtTime(gain, now+0.02);
+    g.gain.exponentialRampToValueAtTime(0.001, now+0.9);
+    osc.start(now);
+    osc.stop(now+0.95);
+  }catch(e){}
+}
+
+/* ============ RENDER LOOP ============ */
+const clock = new THREE.Clock();
+
+function updateHints(){
+  if(hoveredEmptyPlot){
+    const pos = screenPosFor(new THREE.Vector3(hoveredEmptyPlot.x, 0.4, hoveredEmptyPlot.z));
+    hintEmpty.style.left = pos.x+'px';
+    hintEmpty.style.top = pos.y+'px';
+    hintEmpty.style.display = 'block';
+  } else {
+    hintEmpty.style.display = 'none';
+  }
+
+  if(hoveredStone && hoveredStone.userData && hoveredStone.userData.data){
+    const d = hoveredStone.userData.data;
+    const pos = screenPosFor(new THREE.Vector3(hoveredStone.position.x, 1.6, hoveredStone.position.z));
+    document.getElementById('epName').textContent = d.name;
+    document.getElementById('epDates').textContent = d.dates || '';
+    document.getElementById('epMsg').textContent = d.msg;
+    const epPhoto = document.getElementById('epPhoto');
+    if(d.photoUrl){ epPhoto.src = d.photoUrl; epPhoto.style.display = 'block'; }
+    else { epPhoto.style.display = 'none'; }
+    const plotRef = hoveredStone.userData.plotRef;
+    document.getElementById('epSection').textContent = plotRef && plotRef.section ? '🌿 ' + plotRef.section : '';
+    epitaphCard.style.left = pos.x+'px';
+    epitaphCard.style.top = pos.y+'px';
+    epitaphCard.style.display = 'block';
+  } else {
+    epitaphCard.style.display = 'none';
+  }
+}
+
+function animate(){
+  requestAnimationFrame(animate);
+  const dt = Math.min(0.05, clock.getDelta());
+  const elapsed = clock.elapsedTime;
+
+  if(!gamePaused){
+    updateMovement(dt, elapsed);
+  } else {
+    camAzimuth += dt*0.06; // slow cinematic orbit behind the menu
+  }
+  updateCamera();
+
+  fireflies.forEach((f,i)=>{
+    let tx = f.baseX, tz = f.baseZ;
+    if(gatherTarget && performance.now() < gatherUntil && i%2===0){
+      tx = gatherTarget.x + Math.sin(elapsed*2+i)*0.6;
+      tz = gatherTarget.z + Math.cos(elapsed*2+i)*0.6;
+    }
+    f.mesh.position.x = tx + Math.sin(elapsed*f.speed+f.phase)*1.4;
+    f.mesh.position.z = tz + Math.cos(elapsed*f.speed*0.8+f.phase)*1.4;
+    f.mesh.position.y = 0.5 + Math.sin(elapsed*1.3+f.phase)*0.35 + (0.5+0.5*Math.sin(elapsed*0.6+i));
+    const flap = Math.sin(elapsed*14+f.phase)*0.8;
+    f.wingL.rotation.y = flap;
+    f.wingR.rotation.y = -flap;
+  });
+
+  updateHints();
+
+  // fountain water animation
+  fountainDrops.forEach(d=>{
+    d.userData.t += dt * d.userData.speed;
+    if(d.userData.t > 1){
+      d.userData.t = 0;
+      d.userData.angle = Math.random()*Math.PI*2;
+      d.userData.radius = 0.15 + Math.random()*0.45;
+    }
+    const t = d.userData.t;
+    // parabolic arc: up from the jet, out and down into the basin
+    const h = 2.35 + t*0.4 - t*t*2.4;
+    const r = d.userData.radius + t*1.1;
+    d.position.set(Math.cos(d.userData.angle)*r, Math.max(0.4, h), Math.sin(d.userData.angle)*r);
+    d.material.opacity = 0.85 * (1 - t*0.4);
+  });
+  clouds.forEach(c=>{ c.position.x += dt*0.4; if(c.position.x > 58) c.position.x = -58; });
+  waterLow.position.y = 0.38 + Math.sin(elapsed*2.2)*0.012;
+  upperWater.position.y = 1.52 + Math.sin(elapsed*3.1)*0.008;
+  jet.scale.y = 1 + Math.sin(elapsed*6)*0.08;
+
+  renderer.render(scene, camera);
+}
+
+/* ============ MAIN MENU / PAUSE ============ */
+const menuScreen = document.getElementById('menuScreen');
+const menuHome = document.getElementById('menuHome');
+const menuHow = document.getElementById('menuHow');
+const menuAbout = document.getElementById('menuAbout');
+const menuDogs = document.getElementById('menuDogs');
+let gamePaused = true; // starts on the menu
+
+function showMenuPanel(panel){
+  [menuHome, menuHow, menuAbout, menuDogs].forEach(p=> p.classList.remove('active'));
+  panel.classList.add('active');
+}
+function startGame(){
+  menuScreen.classList.add('hidden');
+  gamePaused = false;
+}
+document.getElementById('btnPlay').addEventListener('click', ()=>{
+  if(!dog){ showMenuPanel(menuDogs); return; } // must pick a companion first
+  startGame();
+});
+document.getElementById('btnDogs').addEventListener('click', ()=> showMenuPanel(menuDogs));
+document.getElementById('btnHow').addEventListener('click', ()=> showMenuPanel(menuHow));
+document.getElementById('btnAbout').addEventListener('click', ()=> showMenuPanel(menuAbout));
+document.querySelectorAll('[data-back]').forEach(b=> b.addEventListener('click', ()=> showMenuPanel(menuHome)));
+
+document.querySelectorAll('.dog-card').forEach(card=>{
+  card.addEventListener('click', ()=>{
+    selectDog(card.dataset.breed);
+    startGame();
+  });
+});
+
+window.addEventListener('keydown', e=>{
+  if(e.key === 'Escape'){
+    // if the tribute modal is open, ESC closes it instead
+    if(modalBack.classList.contains('open')){ closeModal(); return; }
+    if(gamePaused){
+      if(!dog){ showMenuPanel(menuDogs); return; } // can't enter without a companion
+      startGame();
+    } else {
+      showMenuPanel(menuHome);
+      menuScreen.classList.remove('hidden');
+      gamePaused = true;
+    }
+  }
+});
+
+/* ============ START ============ */
+document.getElementById('loading').style.display = 'none';
+animate();
+
+})();
+</script>
+</body>
+</html>

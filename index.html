@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Jardim Memorial — Um lugar para lembrar</title>
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div id="app">
+  <div class="loading" id="loading">preparando o jardim…</div>
+
+  <!-- ===== MAIN MENU ===== -->
+  <div class="menu-screen" id="menuScreen">
+    <div class="menu-card">
+
+      <div class="menu-home active" id="menuHome">
+        <div class="paw">🐾</div>
+        <h1>Jardim Memorial</h1>
+        <p class="tagline">Um jardim ensolarado para passear, plantar flores<br>e guardar a memória dos nossos melhores amigos.</p>
+        <div class="menu-btns">
+          <button class="menu-btn primary" id="btnPlay">▶ &nbsp;Entrar no jardim</button>
+          <button class="menu-btn ghost" id="btnDogs">🐾 Escolher cachorro</button>
+          <button class="menu-btn ghost" id="btnHow">Como jogar</button>
+          <button class="menu-btn ghost" id="btnAbout">Sobre</button>
+        </div>
+        <div class="credits">feito com Three.js · aperte ESC no jogo para voltar aqui</div>
+      </div>
+
+      <div class="menu-panel" id="menuDogs">
+        <h2>Escolha seu companheiro</h2>
+        <div class="dog-cards">
+          <button class="dog-card" data-breed="shepherd">
+            <span class="dog-swatch"><i style="background:#c0803d"></i><i style="background:#2b2320"></i></span>
+            <span class="dog-name">Pastor Alemão</span>
+            <span class="dog-desc">Leal e imponente, orelhas sempre em pé</span>
+          </button>
+          <button class="dog-card" data-breed="dachshund">
+            <span class="dog-swatch"><i style="background:#8a4a26"></i><i style="background:#5f3014"></i></span>
+            <span class="dog-name">Dachshund</span>
+            <span class="dog-desc">Comprido, baixinho e cheio de coragem</span>
+          </button>
+          <button class="dog-card" data-breed="golden">
+            <span class="dog-swatch"><i style="background:#dfa14e"></i><i style="background:#f3e3c2"></i></span>
+            <span class="dog-name">Golden Retriever</span>
+            <span class="dog-desc">Dourado, alegre e de rabo abanando</span>
+          </button>
+        </div>
+        <div class="back-row"><button class="menu-btn ghost" data-back>← Voltar</button></div>
+      </div>
+
+      <div class="menu-panel" id="menuHow">
+        <h2>Como jogar</h2>
+        <div class="rule"><span class="ico">🐕</span><span><b>W A S D</b> ou setas movem o cãozinho. Ele sempre anda na direção em que a câmera está olhando.</span></div>
+        <div class="rule"><span class="ico">🎥</span><span><b>Dois dedos no touchpad</b> (ou roda do mouse) giram a câmera ao redor dele.</span></div>
+        <div class="rule"><span class="ico">🌸</span><span><b>Clique no gramado</b> para plantar uma flor colorida onde quiser.</span></div>
+        <div class="rule"><span class="ico">🪦</span><span><b>Clique numa pedra vazia</b> (círculos verdes) para gravar nome, foto, datas e uma mensagem. O jardim tem quatro campos: Recanto do Sol, Bosque da Saudade, Campo das Estrelas e Prado dos Companheiros.</span></div>
+        <div class="rule"><span class="ico">💬</span><span><b>Passe o mouse sobre uma lápide</b> para ler a homenagem gravada nela.</span></div>
+        <div class="rule"><span class="ico">⏸️</span><span><b>ESC</b> pausa e volta para este menu a qualquer momento.</span></div>
+        <div class="back-row"><button class="menu-btn ghost" data-back>← Voltar</button></div>
+      </div>
+
+      <div class="menu-panel" id="menuAbout">
+        <h2>Sobre</h2>
+        <p class="about-text">O Jardim Memorial é um pequeno espaço virtual para celebrar a memória de cães que já partiram. Não há pontuação nem objetivo — apenas um lugar tranquilo para caminhar, plantar flores e deixar palavras de carinho.</p>
+        <p class="about-text">As homenagens ficam gravadas nas pedras durante a sessão. Oito moradores fictícios já têm seu cantinho no jardim; as demais pedras esperam por suas histórias.</p>
+        <div class="back-row"><button class="menu-btn ghost" data-back>← Voltar</button></div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="veil"></div>
+
+  <div class="pause-chip" id="pauseChip"><b>ESC</b> — menu / pausa</div>
+
+  <div class="hud title-block">
+    <h1>Jardim Memorial</h1>
+    <p>Um lugar tranquilo para lembrar. Passeie, plante flores e, se quiser, deixe uma homenagem em uma das pedras vazias.</p>
+  </div>
+
+  <div class="hud action-col">
+    <button class="btn" id="btnAdd">+ Deixar uma homenagem</button>
+    <button class="btn secondary" id="btnSound">🔈 Som: ligado</button>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <div class="hud controls-chip">
+    <div><b>W A S D</b> ou setas — caminhar</div>
+    <div><b>Dois dedos no touchpad</b> — girar a câmera</div>
+    <div><b>Clique no gramado</b> — plantar uma flor</div>
+    <div><b>Clique numa pedra vazia</b> — deixar homenagem</div>
+  </div>
+
+  <div class="hint-empty" id="hintEmpty">clique para deixar uma homenagem aqui</div>
+  <div class="epitaph-card" id="epitaphCard">
+    <img class="ep-photo" id="epPhoto" alt="" style="display:none">
+    <p class="name" id="epName">—</p>
+    <p class="dates" id="epDates">—</p>
+    <p class="msg" id="epMsg">—</p>
+    <p class="section" id="epSection"></p>
+  </div>
+
+  <div class="modal-back" id="modalBack">
+    <div class="modal">
+      <h2>Uma homenagem</h2>
+      <p class="sub">Essas palavras ficarão gravadas na pedra escolhida.</p>
+      <div class="field">
+        <label>Nome</label>
+        <input id="inName" maxlength="24" placeholder="Nome do companheiro">
+      </div>
+      <div class="field">
+        <label>Foto (opcional)</label>
+        <input type="file" id="inPhoto" accept="image/*">
+        <div class="photo-preview" id="photoPreview"></div>
+      </div>
+      <div class="field">
+        <label>Datas (opcional)</label>
+        <input id="inDates" maxlength="24" placeholder="ex: 2012 – 2025">
+      </div>
+      <div class="field">
+        <label>Mensagem</label>
+        <textarea id="inMsg" maxlength="90" placeholder="Uma lembrança, em poucas palavras"></textarea>
+      </div>
+      <div class="modal-actions">
+        <button class="btn secondary" id="btnCancel">Cancelar</button>
+        <button class="btn" id="btnConfirm">Gravar na pedra</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script type="module" src="/js/main.js"></script>
+</body>
+</html>
