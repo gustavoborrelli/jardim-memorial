@@ -80,6 +80,11 @@
   </div>
 
   <div class="hud action-col">
+    <div class="auth-chip" id="authChip">
+      <span id="authEmail"></span>
+      <button class="link-btn" id="btnLogout">Sair</button>
+    </div>
+    <button class="btn secondary" id="btnLoginOpen">Entrar</button>
     <button class="btn" id="btnAdd">+ Deixar uma homenagem</button>
     <button class="btn secondary" id="btnSound">🔈 Som: ligado</button>
   </div>
@@ -100,6 +105,30 @@
     <p class="dates" id="epDates">—</p>
     <p class="msg" id="epMsg">—</p>
     <p class="section" id="epSection"></p>
+  </div>
+
+  <div class="modal-back" id="authModalBack">
+    <div class="modal">
+      <h2 id="authTitle">Entrar</h2>
+      <p class="sub" id="authSub">Entre para deixar uma homenagem no jardim.</p>
+      <div class="field">
+        <label>E-mail</label>
+        <input type="email" id="authEmailInput" placeholder="seu@email.com">
+      </div>
+      <div class="field">
+        <label>Senha</label>
+        <input type="password" id="authPasswordInput" placeholder="mínimo 6 caracteres">
+      </div>
+      <p class="auth-error" id="authError"></p>
+      <div class="modal-actions">
+        <button class="btn secondary" id="btnAuthCancel">Cancelar</button>
+        <button class="btn" id="btnAuthConfirm">Entrar</button>
+      </div>
+      <p class="auth-toggle">
+        <span id="authToggleText">Ainda não tem conta?</span>
+        <button class="link-btn" id="btnAuthToggleMode">Criar conta</button>
+      </p>
+    </div>
   </div>
 
   <div class="modal-back" id="modalBack">

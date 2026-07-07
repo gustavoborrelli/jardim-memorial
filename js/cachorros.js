@@ -274,8 +274,13 @@ export function createDogController(scene, renderer, { isPaused, plaza, bounds }
   let camDist = 5.2;
 
   const keys = {};
-  window.addEventListener('keydown', e=>{ keys[e.key.toLowerCase()] = true; });
-  window.addEventListener('keyup', e=>{ keys[e.key.toLowerCase()] = false; });
+  function isTypingInField(e){
+    const tag = e.target && e.target.tagName;
+    return tag === 'INPUT' || tag === 'TEXTAREA';
+  }
+  window.addEventListener('keydown', e=>{ if(isTypingInField(e)) return; keys[e.key.toLowerCase()] = true; });
+  window.addEventListener('keyup', e=>{ if(isTypingInField(e)) return; keys[e.key.toLowerCase()] = false; });
+  function resetKeys(){ Object.keys(keys).forEach(k=> keys[k]=false); }
 
   // Trackpad: swipe with two fingers to look around (fires as a 'wheel' event in browsers)
   renderer.domElement.addEventListener('wheel', e=>{
@@ -387,5 +392,6 @@ export function createDogController(scene, renderer, { isPaused, plaza, bounds }
     updateCamera,
     orbitIdle,
     consumeTouchMoved,
+    resetKeys,
   };
 }

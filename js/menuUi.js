@@ -12,7 +12,7 @@
   cada frame (updateHints) ou a cada clique (openModalFor, chime).
 */
 
-export function createMenuUi({ camera, lapides, world, dogController, pausedState }) {
+export function createMenuUi({ camera, lapides, world, dogController, pausedState, auth }) {
 
   const menuScreen = document.getElementById('menuScreen');
   const menuHome = document.getElementById('menuHome');
@@ -38,6 +38,114 @@ export function createMenuUi({ camera, lapides, world, dogController, pausedStat
   let pendingPlot = null;
   let pendingPhotoImg = null;
   let pendingPhotoUrl = null;
+
+  /* ============ AUTH (entrar / criar conta) ============ */
+  const authChip = document.getElementById('authChip');
+  const authEmailLabel = document.getElementById('authEmail');
+  const btnLogout = document.getElementById('btnLogout');
+  const btnLoginOpen = document.getElementById('btnLoginOpen');
+  const authModalBack = document.getElementById('authModalBack');
+  const authTitle = document.getElementById('authTitle');
+  const authSub = document.getElementById('authSub');
+  const authEmailInput = document.getElementById('authEmailInput');
+  const authPasswordInput = document.getElementById('authPasswordInput');
+  const authError = document.getElementById('authError');
+  const btnAuthCancel = document.getElementById('btnAuthCancel');
+  const btnAuthConfirm = document.getElementById('btnAuthConfirm');
+  const authToggleText = document.getElementById('authToggleText');
+  const btnAuthToggleMode = document.getElementById('btnAuthToggleMode');
+
+  let authMode = 'signin'; // ou 'signup'
+  let pendingPlotAfterAuth; // undefined = nenhum pedido pendente; null = "qualquer vaga livre"
+
+  function refreshAuthChip(user){
+    if(user){
+      authChip.classList.add('show');
+      authEmailLabel.textContent = user.email;
+      btnLoginOpen.style.display = 'none';
+    } else {
+      authChip.classList.remove('show');
+      btnLoginOpen.style.display = '';
+    }
+  }
+  auth.onChange(refreshAuthChip);
+
+  btnLogout.addEventListener('click', async ()=>{
+    await auth.signOut();
+    showToast('Você saiu da conta.');
+  });
+
+  function setAuthMode(mode){
+    authMode = mode;
+    authError.textContent = '';
+    if(mode === 'signup'){
+      authTitle.textContent = 'Criar conta';
+      authSub.textContent = 'Crie sua conta para deixar homenagens no jardim.';
+      btnAuthConfirm.textContent = 'Criar conta';
+      authToggleText.textContent = 'Já tem conta?';
+      btnAuthToggleMode.textContent = 'Entrar';
+    } else {
+      authTitle.textContent = 'Entrar';
+      authSub.textContent = 'Entre para deixar uma homenagem no jardim.';
+      btnAuthConfirm.textContent = 'Entrar';
+      authToggleText.textContent = 'Ainda não tem conta?';
+      btnAuthToggleMode.textContent = 'Criar conta';
+    }
+  }
+  btnAuthToggleMode.addEventListener('click', ()=> setAuthMode(authMode === 'signin' ? 'signup' : 'signin'));
+
+  function openAuthModal(){
+    dogController.resetKeys();
+    setAuthMode('signin');
+    authEmailInput.value = '';
+    authPasswordInput.value = '';
+    authModalBack.classList.add('open');
+    setTimeout(()=> authEmailInput.focus(), 50);
+  }
+  function closeAuthModal(){
+    authModalBack.classList.remove('open');
+    pendingPlotAfterAuth = undefined;
+  }
+  btnAuthCancel.addEventListener('click', closeAuthModal);
+  authModalBack.addEventListener('click', e=>{ if(e.target===authModalBack) closeAuthModal(); });
+
+  btnAuthConfirm.addEventListener('click', async ()=>{
+    const email = authEmailInput.value.trim();
+    const password = authPasswordInput.value;
+    if(!email || !password){ authError.textContent = 'Preencha e-mail e senha.'; return; }
+
+    btnAuthConfirm.disabled = true;
+    authError.textContent = '';
+    try{
+      if(authMode === 'signup'){
+        const data = await auth.signUp(email, password);
+        if(!data.session){
+          authError.textContent = '';
+          showToast('Conta criada! Se pedirmos confirmação por e-mail, confirme e depois entre.');
+          setAuthMode('signin');
+          return;
+        }
+      } else {
+        await auth.signIn(email, password);
+      }
+      authModalBack.classList.remove('open');
+      chime(660, 0.1);
+      if(pendingPlotAfterAuth !== undefined){
+        const plot = pendingPlotAfterAuth;
+        pendingPlotAfterAuth = undefined;
+        openModalFor(plot);
+      }
+    } catch(err){
+      authError.textContent = err.message || 'Não foi possível completar. Tente de novo.';
+    } finally {
+      btnAuthConfirm.disabled = false;
+    }
+  });
+
+  btnLoginOpen.addEventListener('click', ()=>{
+    pendingPlotAfterAuth = undefined;
+    openAuthModal();
+  });
 
   /* ============ SOUND (tiny synth, no external files) ============ */
   let audioCtx = null;
@@ -95,6 +203,7 @@ export function createMenuUi({ camera, lapides, world, dogController, pausedStat
   });
 
   function openModal(){
+    dogController.resetKeys();
     if(!pendingPlot){
       pendingPlot = lapides.firstAvailablePlot();
       if(!pendingPlot){ showToast('O jardim está completo por agora.'); return; }
@@ -112,6 +221,11 @@ export function createMenuUi({ camera, lapides, world, dogController, pausedStat
     pendingPlot = null;
   }
   function openModalFor(plot){
+    if(!auth.getUser()){
+      pendingPlotAfterAuth = plot || null;
+      openAuthModal();
+      return;
+    }
     pendingPlot = plot || null;
     openModal();
   }
@@ -216,7 +330,8 @@ export function createMenuUi({ camera, lapides, world, dogController, pausedStat
 
   window.addEventListener('keydown', e=>{
     if(e.key === 'Escape'){
-      // if the tribute modal is open, ESC closes it instead
+      // if a modal is open, ESC closes it instead of opening the pause menu
+      if(authModalBack.classList.contains('open')){ closeAuthModal(); return; }
       if(modalBack.classList.contains('open')){ closeModal(); return; }
       if(pausedState.value){
         if(!dogController.getDog()){ showMenuPanel(menuDogs); return; } // can't enter without a companion

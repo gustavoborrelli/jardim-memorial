@@ -16,6 +16,7 @@ import { createWorld } from './mundo.js';
 import { createLapides } from './lapides.js';
 import { createDogController } from './cachorros.js';
 import { createMenuUi } from './menuUi.js';
+import { createAuth } from './auth.js';
 
 /* ============ BASIC SETUP ============ */
 const appEl = document.getElementById('app');
@@ -50,7 +51,8 @@ const dogController = createDogController(scene, renderer, {
   bounds: BOUNDS,
 });
 
-const menuUi = createMenuUi({ camera, lapides, world, dogController, pausedState });
+const auth = createAuth();
+const menuUi = createMenuUi({ camera, lapides, world, dogController, pausedState, auth });
 
 /* ============ RAYCAST INTERACTION ============ */
 const raycaster = new THREE.Raycaster();

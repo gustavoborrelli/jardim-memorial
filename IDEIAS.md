@@ -14,7 +14,13 @@ flores/velas nas lápides dos outros (MVP family & friends).
    `js/supabaseClient.js` faz a conexão via variáveis de ambiente (`.env`,
    nunca commitado). Lápides carregam do banco ao abrir e persistem entre
    sessões. Flores ainda não persistem (fica para a etapa 4).
-3. ⏳ Autenticação simples (quem pode criar uma homenagem?)
+3. ✅ **Autenticação simples** — login por e-mail/senha via Supabase Auth
+   (cadastro aberto, sem convite). Criar homenagem exige login; ver o jardim
+   continua livre para visitantes. RLS em `memoriais`/`storage.objects` agora
+   checa `auth.uid()` (script `supabase/003_auth_rls.sql`); coluna
+   `criado_por` guarda o dono de cada memorial (editar/apagar do próprio já
+   liberado no banco, sem UI ainda). "Confirm email" desligado no dashboard
+   por enquanto — religar no deploy (etapa 6).
 4. ⏳ Persistência de flores/velas deixadas por outras pessoas
 5. ⏳ Escolha de onde fica a lápide (reservar um "plot" específico)
 6. ⏳ Deploy na Vercel
