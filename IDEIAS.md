@@ -8,8 +8,12 @@ flores/velas nas lápides dos outros (MVP family & friends).
 
 1. ✅ **Reorganização do projeto** — HTML/CSS/JS divididos em módulos, Vite como
    servidor de dev, Git inicializado. Nada de comportamento mudou.
-2. ⏳ **Conectar ao Supabase** — trocar os dados "fake" (seedStories, plots em
+2. ✅ **Conectar ao Supabase** — trocar os dados "fake" (seedStories, plots em
    memória) por dados reais num banco Postgres gerenciado pelo Supabase.
+   Tabela `memoriais` + Storage `fotos-memoriais` (scripts em `supabase/`),
+   `js/supabaseClient.js` faz a conexão via variáveis de ambiente (`.env`,
+   nunca commitado). Lápides carregam do banco ao abrir e persistem entre
+   sessões. Flores ainda não persistem (fica para a etapa 4).
 3. ⏳ Autenticação simples (quem pode criar uma homenagem?)
 4. ⏳ Persistência de flores/velas deixadas por outras pessoas
 5. ⏳ Escolha de onde fica a lápide (reservar um "plot" específico)
@@ -23,6 +27,9 @@ flores/velas nas lápides dos outros (MVP family & friends).
 - Vale a pena um modo "convidado" (só vê e deixa flor) vs. "família" (cria
   memorial)?
 - Pensar em um limite de tamanho/qtd de fotos por lápide.
+- Flores: quando forem persistidas (etapa 4), dar uma "vida útil" a elas —
+  murchar/desaparecer depois de alguns dias, em vez de acumular para sempre.
+  Ideia do Gustavo, testando a etapa 2.
 
 ## Notas técnicas para lembrar na fase 2
 

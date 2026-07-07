@@ -11,6 +11,8 @@
   as funções que main.js e menuUi.js precisam para criar novas homenagens.
 */
 
+import { supabase } from './supabaseClient.js';
+
 export function createLapides(scene) {
 
   const stoneMat = new THREE.MeshStandardMaterial({color:0xcbc0b0, roughness:0.85});
@@ -82,16 +84,16 @@ export function createLapides(scene) {
     scene.add(g);
   });
 
-  const seedStories = [
-    ["Bento","2010 – 2023","Sempre esperava na porta."],
-    ["Mel","2014 – 2024","Farejou o mundo com alegria."],
-    ["Thor","2009 – 2021","Guardião fiel do quintal."],
-    ["Luna","2015 – 2022","Dormia enroscada no sol."],
-    ["Fubá","2011 – 2023","Correu atrás de toda bola."],
-    ["Amora","2016 – 2024","Latia para os trovões."],
-    ["Zeca","2008 – 2020","Companheiro de todas as tardes."],
-    ["Nina","2013 – 2022","Adorava água e lama."],
-  ];
+  function loadImage(url){
+    return new Promise(resolve=>{
+      if(!url) return resolve(null);
+      const img = new Image();
+      img.crossOrigin = 'anonymous'; // precisa pra não "sujar" o canvas com imagem de outra origem
+      img.onload = ()=> resolve(img);
+      img.onerror = ()=> resolve(null);
+      img.src = url;
+    });
+  }
 
   function engraveTexture(name, dates, msg, photoImg){
     const c = document.createElement('canvas');
@@ -199,45 +201,90 @@ export function createLapides(scene) {
     stoneGroup.add(stake);
   }
 
-  // seed 2 occupied + leave 2 empty in each of the four sections
-  plots.forEach((plot, i)=>{
-    const withinSection = i % 4; // plots are grouped 4 per section
-    if(withinSection < 2){
-      const [name,dates,msg] = seedStories[Math.floor(i/4)*2 + withinSection];
-      const data = {name,dates,msg};
-      const stoneMesh = buildStone(plot, data);
-      stoneGroup.add(stoneMesh);
-      plot.occupied = true; plot.mesh = stoneMesh; plot.data = data;
-    } else {
-      markEmptyPlot(plot);
-    }
-  });
+  // todas as vagas começam vazias; quem preenche é loadMemoriais(), logo abaixo
+  plots.forEach(plot=> markEmptyPlot(plot));
 
   function firstAvailablePlot(){
     return plots.find(p=>!p.occupied);
   }
 
-  function createTribute(plot, data){
+  function installStone(plot, data, animate){
     // remove empty marker visuals
     stoneGroup.children
       .filter(c=>c.userData && c.userData.plotRef===plot)
       .forEach(c=> stoneGroup.remove(c));
 
     const mesh = buildStone(plot, data);
-    mesh.scale.setScalar(0.01);
     stoneGroup.add(mesh);
     plot.occupied = true; plot.mesh = mesh; plot.data = data;
 
-    const start = performance.now();
-    function grow(){
-      const t = Math.min(1, (performance.now()-start)/500);
-      const s = 0.01 + t*0.99;
-      mesh.scale.setScalar(s);
-      if(t<1) requestAnimationFrame(grow);
+    if(animate){
+      mesh.scale.setScalar(0.01);
+      const start = performance.now();
+      function grow(){
+        const t = Math.min(1, (performance.now()-start)/500);
+        const s = 0.01 + t*0.99;
+        mesh.scale.setScalar(s);
+        if(t<1) requestAnimationFrame(grow);
+      }
+      grow();
     }
-    grow();
 
     return mesh;
+  }
+
+  function createTribute(plot, data){
+    return installStone(plot, data, true);
+  }
+
+  /* ============ SUPABASE: carregar memoriais salvos ============ */
+  async function loadMemoriais(){
+    const { data: rows, error } = await supabase.from('memoriais').select('*');
+    if(error){
+      console.error('Não foi possível carregar os memoriais:', error.message);
+      return;
+    }
+    for(const row of rows){
+      const plot = plots.find(p=>
+        Number(p.x) === Number(row.plot_x) && Number(p.z) === Number(row.plot_z)
+      );
+      if(!plot || plot.occupied) continue;
+      const photo = await loadImage(row.foto_url);
+      installStone(plot, {
+        name: row.nome_pet,
+        dates: row.datas,
+        msg: row.mensagem,
+        photo,
+        photoUrl: row.foto_url,
+      }, false);
+    }
+  }
+  loadMemoriais();
+
+  /* ============ SUPABASE: salvar um novo memorial ============ */
+  async function saveMemorial(plot, { name, dates, msg, photoFile }){
+    let fotoUrl = null;
+    if(photoFile){
+      const ext = (photoFile.name.split('.').pop() || 'jpg').toLowerCase();
+      const path = `${plot.x}_${plot.z}_${Date.now()}.${ext}`;
+      const { error: uploadError } = await supabase.storage
+        .from('fotos-memoriais')
+        .upload(path, photoFile);
+      if(uploadError) throw uploadError;
+      const { data: pub } = supabase.storage.from('fotos-memoriais').getPublicUrl(path);
+      fotoUrl = pub.publicUrl;
+    }
+    const { error } = await supabase.from('memoriais').insert({
+      nome_pet: name,
+      datas: dates,
+      mensagem: msg,
+      setor: plot.section,
+      plot_x: plot.x,
+      plot_z: plot.z,
+      foto_url: fotoUrl,
+    });
+    if(error) throw error;
+    return fotoUrl;
   }
 
   function pickEmptyPlot(raycaster){
@@ -262,6 +309,7 @@ export function createLapides(scene) {
     stoneGroup,
     firstAvailablePlot,
     createTribute,
+    saveMemorial,
     pickEmptyPlot,
     pickStone,
   };

@@ -119,7 +119,7 @@ export function createMenuUi({ camera, lapides, world, dogController, pausedStat
   btnCancel.addEventListener('click', closeModal);
   modalBack.addEventListener('click', e=>{ if(e.target===modalBack) closeModal(); });
 
-  btnConfirm.addEventListener('click', ()=>{
+  btnConfirm.addEventListener('click', async ()=>{
     const name = inName.value.trim() || 'Sem nome';
     const dates = inDates.value.trim();
     const msg = inMsg.value.trim() || 'Para sempre lembrado com carinho.';
@@ -127,14 +127,28 @@ export function createMenuUi({ camera, lapides, world, dogController, pausedStat
     if(!pendingPlot){ showToast('O jardim está completo por agora.'); closeModal(); return; }
 
     const plot = pendingPlot;
-    const data = {name, dates, msg, photo: pendingPhotoImg, photoUrl: pendingPhotoUrl};
-    lapides.createTribute(plot, data);
+    const photoFile = inPhoto.files && inPhoto.files[0] || null;
 
-    // gather fireflies briefly
-    world.gatherFireflies(plot.x, plot.z);
-    chime(660, 0.14);
-    showToast(`"${name}" agora descansa no ${plot.section}.`);
-    closeModal();
+    btnConfirm.disabled = true;
+    btnConfirm.textContent = 'Salvando...';
+    try {
+      await lapides.saveMemorial(plot, { name, dates, msg, photoFile });
+
+      const data = {name, dates, msg, photo: pendingPhotoImg, photoUrl: pendingPhotoUrl};
+      lapides.createTribute(plot, data);
+
+      // gather fireflies briefly
+      world.gatherFireflies(plot.x, plot.z);
+      chime(660, 0.14);
+      showToast(`"${name}" agora descansa no ${plot.section}.`);
+      closeModal();
+    } catch(err){
+      console.error('Erro ao salvar memorial:', err);
+      showToast('Não foi possível salvar. Tente novamente.');
+    } finally {
+      btnConfirm.disabled = false;
+      btnConfirm.textContent = 'Gravar na pedra';
+    }
   });
 
   /* ============ HOVER HINTS (dicas na tela) ============ */
