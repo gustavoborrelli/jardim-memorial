@@ -21,21 +21,26 @@ flores/velas nas lápides dos outros (MVP family & friends).
    `criado_por` guarda o dono de cada memorial (editar/apagar do próprio já
    liberado no banco, sem UI ainda). "Confirm email" desligado no dashboard
    por enquanto — religar no deploy (etapa 6).
-4. ⏳ Persistência de flores/velas deixadas por outras pessoas
+4. ✅ **Persistência de flores/velas** — flores plantadas no gramado agora
+   exigem login (mesma trava `requireAuth` das homenagens, generalizada em
+   `menuUi.js`) e são salvas na tabela `flores` (script
+   `supabase/004_flores.sql`). Vida útil com aleatoriedade: começam a murchar
+   entre 3–4 dias e somem entre 6–7 dias — sem cron job, a própria política
+   de RLS de leitura (`expira_em > now()`) já esconde as expiradas. As 90
+   flores decorativas espalhadas no início (`scatterFlowers`) continuam
+   só visuais, sem dono e sem murchar.
 5. ⏳ Escolha de onde fica a lápide (reservar um "plot" específico)
 6. ⏳ Deploy na Vercel
 
 ## Ideias soltas (não decidido ainda)
 
 - Como impedir que duas pessoas reservem o mesmo plot ao mesmo tempo?
-- Fotos: hoje ficam só na memória do navegador (base64) — vão precisar de um
-  Storage (o próprio Supabase Storage resolve isso).
-- Vale a pena um modo "convidado" (só vê e deixa flor) vs. "família" (cria
-  memorial)?
 - Pensar em um limite de tamanho/qtd de fotos por lápide.
-- Flores: quando forem persistidas (etapa 4), dar uma "vida útil" a elas —
-  murchar/desaparecer depois de alguns dias, em vez de acumular para sempre.
-  Ideia do Gustavo, testando a etapa 2.
+- Flores expiradas continuam existindo na tabela pra sempre (só ficam
+  invisíveis pela RLS) — se a tabela crescer muito com o tempo, pensar numa
+  faxina periódica (pg_cron ou Edge Function) que apaga linhas velhas.
+- Vale a pena limitar quantas flores uma pessoa pode plantar por dia, pra
+  evitar spam visual no jardim?
 
 ## Notas técnicas para lembrar na fase 2
 

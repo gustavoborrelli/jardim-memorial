@@ -90,13 +90,15 @@ function onClick(e){
   const stone = lapides.pickStone(raycaster);
   if(stone) return;
 
-  // ground -> plant flower
+  // ground -> plant flower (exige login)
   const groundHits = raycaster.intersectObject(world.ground);
   if(groundHits.length){
     const p = groundHits[0].point;
     if(Math.abs(p.x)<BOUNDS && Math.abs(p.z)<BOUNDS){
-      world.plantFlower(p.x, p.z);
-      menuUi.chime(520, 0.05);
+      menuUi.requireAuth(()=>{
+        world.plantAndSaveFlor(p.x, p.z);
+        menuUi.chime(520, 0.05);
+      });
     }
   }
 }

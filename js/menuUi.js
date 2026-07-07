@@ -56,7 +56,15 @@ export function createMenuUi({ camera, lapides, world, dogController, pausedStat
   const btnAuthToggleMode = document.getElementById('btnAuthToggleMode');
 
   let authMode = 'signin'; // ou 'signup'
-  let pendingPlotAfterAuth; // undefined = nenhum pedido pendente; null = "qualquer vaga livre"
+  let pendingAuthAction = null; // função a rodar assim que o login for concluído
+
+  // Se já está logado, roda a ação na hora; senão guarda pra depois e abre o login.
+  // Usado tanto por "deixar homenagem" quanto por "plantar flor".
+  function requireAuth(action){
+    if(auth.getUser()){ action(); return; }
+    pendingAuthAction = action;
+    openAuthModal();
+  }
 
   function refreshAuthChip(user){
     if(user){
@@ -104,7 +112,7 @@ export function createMenuUi({ camera, lapides, world, dogController, pausedStat
   }
   function closeAuthModal(){
     authModalBack.classList.remove('open');
-    pendingPlotAfterAuth = undefined;
+    pendingAuthAction = null;
   }
   btnAuthCancel.addEventListener('click', closeAuthModal);
   authModalBack.addEventListener('click', e=>{ if(e.target===authModalBack) closeAuthModal(); });
@@ -130,10 +138,10 @@ export function createMenuUi({ camera, lapides, world, dogController, pausedStat
       }
       authModalBack.classList.remove('open');
       chime(660, 0.1);
-      if(pendingPlotAfterAuth !== undefined){
-        const plot = pendingPlotAfterAuth;
-        pendingPlotAfterAuth = undefined;
-        openModalFor(plot);
+      if(pendingAuthAction){
+        const action = pendingAuthAction;
+        pendingAuthAction = null;
+        action();
       }
     } catch(err){
       authError.textContent = err.message || 'Não foi possível completar. Tente de novo.';
@@ -143,7 +151,7 @@ export function createMenuUi({ camera, lapides, world, dogController, pausedStat
   });
 
   btnLoginOpen.addEventListener('click', ()=>{
-    pendingPlotAfterAuth = undefined;
+    pendingAuthAction = null;
     openAuthModal();
   });
 
@@ -221,13 +229,10 @@ export function createMenuUi({ camera, lapides, world, dogController, pausedStat
     pendingPlot = null;
   }
   function openModalFor(plot){
-    if(!auth.getUser()){
-      pendingPlotAfterAuth = plot || null;
-      openAuthModal();
-      return;
-    }
-    pendingPlot = plot || null;
-    openModal();
+    requireAuth(()=>{
+      pendingPlot = plot || null;
+      openModal();
+    });
   }
   btnAdd.addEventListener('click', ()=> openModalFor(null));
   btnCancel.addEventListener('click', closeModal);
@@ -348,5 +353,6 @@ export function createMenuUi({ camera, lapides, world, dogController, pausedStat
     updateHints,
     chime,
     openModalFor,
+    requireAuth,
   };
 }

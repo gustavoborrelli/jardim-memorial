@@ -12,6 +12,8 @@
   e funções para plantar flores / juntar as borboletas perto de uma lápide.
 */
 
+import { supabase } from './supabaseClient.js';
+
 export function createWorld(scene) {
 
   /* ============ CÉU ============ */
@@ -423,13 +425,18 @@ export function createWorld(scene) {
   const flowerGroup = new THREE.Group();
   scene.add(flowerGroup);
   const flowerColors = [0xe8547a, 0xf5d020, 0xffffff, 0xb14fd8, 0xff8a3d, 0xff5fa0, 0x6fb7ff, 0xfff066];
-  function plantFlower(x,z,instant){
+  const witheringFlowers = []; // só as plantadas por alguém (persistidas); as decorativas nunca murcham
+  const murchaColor = new THREE.Color(0x8a7a5a);
+
+  // lifespan = {murchaEm, expiraEm} em epoch ms; sem isso a flor é só decoração e nunca murcha
+  function plantFlower(x, z, instant, color, lifespan){
     const g = new THREE.Group();
     const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.02,0.02,0.28,5), new THREE.MeshStandardMaterial({color:0x4f6b3f}));
     stem.position.y = 0.14;
     g.add(stem);
-    const color = flowerColors[Math.floor(Math.random()*flowerColors.length)];
-    const bloom = new THREE.Mesh(new THREE.IcosahedronGeometry(0.085,0), new THREE.MeshStandardMaterial({color, roughness:0.6}));
+    const bloomColor = color != null ? color : flowerColors[Math.floor(Math.random()*flowerColors.length)];
+    const bloomMat = new THREE.MeshStandardMaterial({color:bloomColor, roughness:0.6});
+    const bloom = new THREE.Mesh(new THREE.IcosahedronGeometry(0.085,0), bloomMat);
     bloom.position.y = 0.31;
     bloom.rotation.set(Math.random(), Math.random(), Math.random());
     g.add(bloom);
@@ -439,7 +446,13 @@ export function createWorld(scene) {
     g.position.set(x + (Math.random()-0.5)*0.4, 0, z + (Math.random()-0.5)*0.4);
     g.rotation.y = Math.random()*Math.PI*2;
     flowerGroup.add(g);
-    if(instant){ g.scale.setScalar(0.85+Math.random()*0.3); return; }
+
+    if(lifespan){
+      g.userData = { murchaEm: lifespan.murchaEm, expiraEm: lifespan.expiraEm, bloomMat, freshColor: new THREE.Color(bloomColor) };
+      witheringFlowers.push(g);
+    }
+
+    if(instant){ g.scale.setScalar(0.85+Math.random()*0.3); return g; }
     g.scale.setScalar(0);
     const start = performance.now();
     function grow(){
@@ -448,7 +461,46 @@ export function createWorld(scene) {
       if(t<1) requestAnimationFrame(grow);
     }
     grow();
+    return g;
   }
+
+  /* ============ SUPABASE: flores persistentes ============ */
+  const DAY_MS = 24*60*60*1000;
+  function randomLifespan(){
+    return {
+      murchaEm: Date.now() + 3*DAY_MS + Math.random()*DAY_MS,   // começa a murchar entre 3 e 4 dias
+      expiraEm: Date.now() + 6*DAY_MS + Math.random()*DAY_MS,   // some entre 6 e 7 dias
+    };
+  }
+
+  // planta na hora (otimista) e salva no banco em segundo plano
+  function plantAndSaveFlor(x, z){
+    const color = flowerColors[Math.floor(Math.random()*flowerColors.length)];
+    const lifespan = randomLifespan();
+    plantFlower(x, z, false, color, lifespan);
+    supabase.from('flores').insert({
+      x, z, cor: color,
+      murcha_em: new Date(lifespan.murchaEm).toISOString(),
+      expira_em: new Date(lifespan.expiraEm).toISOString(),
+    }).then(({ error })=>{
+      if(error) console.error('Não foi possível salvar a flor:', error.message);
+    });
+  }
+
+  async function loadFlores(){
+    const { data: rows, error } = await supabase.from('flores').select('*');
+    if(error){
+      console.error('Não foi possível carregar as flores:', error.message);
+      return;
+    }
+    rows.forEach(row=>{
+      plantFlower(Number(row.x), Number(row.z), true, row.cor, {
+        murchaEm: new Date(row.murcha_em).getTime(),
+        expiraEm: new Date(row.expira_em).getTime(),
+      });
+    });
+  }
+  loadFlores();
   function isFreeSpot(x,z,plots){
     if(Math.abs(x) < 2.8 || Math.abs(z) < 2.8) return false; // the four avenues
     if(Math.hypot(x-PLAZA.x, z-PLAZA.z) < PLAZA.r + 0.5) return false; // central plaza
@@ -501,8 +553,29 @@ export function createWorld(scene) {
     gatherUntil = performance.now() + 3200;
   }
 
+  /* ============ FLOWERS: murchar e sumir ============ */
+  function updateWither(){
+    const now = Date.now();
+    for(let i=witheringFlowers.length-1; i>=0; i--){
+      const f = witheringFlowers[i];
+      const { murchaEm, expiraEm, bloomMat, freshColor } = f.userData;
+      if(now >= expiraEm){
+        flowerGroup.remove(f);
+        witheringFlowers.splice(i,1);
+        continue;
+      }
+      if(now >= murchaEm){
+        if(f.userData.baseScale == null) f.userData.baseScale = f.scale.x;
+        const t = Math.min(1, (now-murchaEm)/(expiraEm-murchaEm));
+        f.scale.setScalar(f.userData.baseScale * (1 - t*0.55));
+        bloomMat.color.copy(freshColor).lerp(murchaColor, t);
+      }
+    }
+  }
+
   /* ============ PER-FRAME UPDATE ============ */
   function update(dt, elapsed){
+    updateWither();
     fireflies.forEach((f,i)=>{
       let tx = f.baseX, tz = f.baseZ;
       if(gatherTarget && performance.now() < gatherUntil && i%2===0){
@@ -541,7 +614,7 @@ export function createWorld(scene) {
   return {
     ground,
     PLAZA,
-    plantFlower,
+    plantAndSaveFlor,
     scatterFlowers,
     isFreeSpot,
     gatherFireflies,
