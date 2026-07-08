@@ -238,28 +238,40 @@ export function createLapides(scene) {
   }
 
   /* ============ SUPABASE: carregar memoriais salvos ============ */
+  // usada tanto pro carregamento inicial quanto pelos eventos em tempo real
+  async function installFromRow(row, animate){
+    const plot = plots.find(p=>
+      Number(p.x) === Number(row.plot_x) && Number(p.z) === Number(row.plot_z)
+    );
+    if(!plot || plot.occupied) return;
+    const photo = await loadImage(row.foto_url);
+    installStone(plot, {
+      name: row.nome_pet,
+      dates: row.datas,
+      msg: row.mensagem,
+      photo,
+      photoUrl: row.foto_url,
+    }, animate);
+  }
+
   async function loadMemoriais(){
     const { data: rows, error } = await supabase.from('memoriais').select('*');
     if(error){
       console.error('Não foi possível carregar os memoriais:', error.message);
       return;
     }
-    for(const row of rows){
-      const plot = plots.find(p=>
-        Number(p.x) === Number(row.plot_x) && Number(p.z) === Number(row.plot_z)
-      );
-      if(!plot || plot.occupied) continue;
-      const photo = await loadImage(row.foto_url);
-      installStone(plot, {
-        name: row.nome_pet,
-        dates: row.datas,
-        msg: row.mensagem,
-        photo,
-        photoUrl: row.foto_url,
-      }, false);
-    }
+    for(const row of rows) await installFromRow(row, false);
   }
   loadMemoriais();
+
+  /* ============ SUPABASE: lápides novas em tempo real ============ */
+  // se outra pessoa criar uma homenagem enquanto o jardim está aberto aqui,
+  // a lápide nasce na hora, sem precisar recarregar a página.
+  supabase
+    .channel('memoriais-realtime')
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'memoriais' },
+      payload => installFromRow(payload.new, true))
+    .subscribe();
 
   /* ============ SUPABASE: salvar um novo memorial ============ */
   async function saveMemorial(plot, { name, dates, msg, photoFile }){
@@ -283,7 +295,23 @@ export function createLapides(scene) {
       plot_z: plot.z,
       foto_url: fotoUrl,
     });
-    if(error) throw error;
+    if(error){
+      if(error.code === '23505'){
+        // alguém reservou essa vaga entre o momento em que o modal abriu e agora;
+        // busca quem foi e instala a lápide, caso o evento em tempo real ainda não tenha chegado
+        const { data: existing } = await supabase
+          .from('memoriais')
+          .select('*')
+          .eq('plot_x', plot.x)
+          .eq('plot_z', plot.z)
+          .maybeSingle();
+        if(existing) await installFromRow(existing, true);
+        const conflictErr = new Error('Essa vaga acabou de ser reservada por outra pessoa.');
+        conflictErr.code = 'VAGA_OCUPADA';
+        throw conflictErr;
+      }
+      throw error;
+    }
     return fotoUrl;
   }
 

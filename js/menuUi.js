@@ -263,7 +263,12 @@ export function createMenuUi({ camera, lapides, world, dogController, pausedStat
       closeModal();
     } catch(err){
       console.error('Erro ao salvar memorial:', err);
-      showToast('Não foi possível salvar. Tente novamente.');
+      if(err.code === 'VAGA_OCUPADA'){
+        showToast('Essa vaga acabou de ser reservada por outra pessoa. Escolha outra vaga vazia.');
+        closeModal();
+      } else {
+        showToast('Não foi possível salvar. Tente novamente.');
+      }
     } finally {
       btnConfirm.disabled = false;
       btnConfirm.textContent = 'Gravar na pedra';

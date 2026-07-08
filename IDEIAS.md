@@ -29,12 +29,20 @@ flores/velas nas lápides dos outros (MVP family & friends).
    de RLS de leitura (`expira_em > now()`) já esconde as expiradas. As 90
    flores decorativas espalhadas no início (`scatterFlowers`) continuam
    só visuais, sem dono e sem murchar.
-5. ⏳ Escolha de onde fica a lápide (reservar um "plot" específico)
-6. ⏳ Deploy na Vercel
+5. ✅ **Escolha de onde fica a lápide** — clicar numa vaga vazia específica já
+   reservava exatamente aquele lugar desde a etapa 1; o que faltava era tratar
+   bem a corrida entre duas pessoas escolhendo a mesma vaga. O índice único
+   `memoriais_plot_unico` (etapa 2) já impedia a duplicata no banco; agora o
+   erro de conflito (Postgres `23505`) vira uma mensagem amigável e fecha o
+   modal. Além disso, `memoriais` está no Realtime (script
+   `supabase/005_realtime.sql`) — lápides novas aparecem ao vivo pra quem já
+   está com o jardim aberto, sem recarregar, o que também reduz a chance do
+   conflito acontecer.
+6. ⏳ Deploy na Vercel (+ controles de toque pro celular, já que hoje andar
+   com o cachorro exige teclado)
 
 ## Ideias soltas (não decidido ainda)
 
-- Como impedir que duas pessoas reservem o mesmo plot ao mesmo tempo?
 - Pensar em um limite de tamanho/qtd de fotos por lápide.
 - Flores expiradas continuam existindo na tabela pra sempre (só ficam
   invisíveis pela RLS) — se a tabela crescer muito com o tempo, pensar numa
