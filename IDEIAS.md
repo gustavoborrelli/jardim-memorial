@@ -38,8 +38,14 @@ flores/velas nas lápides dos outros (MVP family & friends).
    `supabase/005_realtime.sql`) — lápides novas aparecem ao vivo pra quem já
    está com o jardim aberto, sem recarregar, o que também reduz a chance do
    conflito acontecer.
-6. ⏳ Deploy na Vercel (+ controles de toque pro celular, já que hoje andar
-   com o cachorro exige teclado)
+6. ✅ **Deploy na Vercel** — site no ar em https://jardim-memorial.vercel.app,
+   código no GitHub (`github.com/gustavoborrelli/jardim-memorial`) conectado
+   à Vercel pra publicar sozinho a cada push. Variáveis de ambiente
+   configuradas no painel da Vercel (nunca no código). Adicionado também:
+   joystick de toque pro celular (`js/cachorros.js`), correção do app usando
+   `100dvh` (a barra do navegador mobile cortava o joystick), HUD mais
+   enxuto em telas de toque, e retomada explícita do áudio (`audioCtx.resume()`)
+   porque navegadores desktop suspendem som que não vem direto de um clique.
 
 ## Ideias soltas (não decidido ainda)
 
@@ -53,6 +59,17 @@ flores/velas nas lápides dos outros (MVP family & friends).
   isso, trazer de volta um botão de mute — hoje removido porque os efeitos
   sonoros só tocam em resposta a uma ação do próprio usuário (plantar, logar),
   nunca por conta própria, então mudo dedicado não se justificava.
+- Login com Google: resolveria de vez o problema de e-mail de confirmação
+  (o Google já verificou o e-mail, então o Supabase não precisa mandar link
+  nenhum) e é mais rápido pra família/amigos (um clique, sem senha). Exige
+  configurar um projeto OAuth no Google Cloud Console — mais trabalho que o
+  login por e-mail/senha atual, por isso ficou pra depois.
+- E-mail de confirmação: o Supabase usa um servidor de teste próprio, com
+  limite baixo de envios por hora (ficamos sem receber depois de testar
+  algumas vezes seguidas). "Confirm email" está desligado de novo por causa
+  disso. Quando for mandar o link pra valer pros amigos, vale configurar um
+  provedor de e-mail de verdade (ex: Resend, tem plano grátis) em
+  Authentication → Settings → SMTP, e religar a confirmação.
 
 ## Notas técnicas para lembrar na fase 2
 

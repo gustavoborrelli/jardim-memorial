@@ -158,6 +158,9 @@ export function createMenuUi({ camera, lapides, world, dogController, pausedStat
   function chime(freq, gain){
     try{
       if(!audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+      // navegadores de desktop suspendem o áudio se o som não parecer vir
+      // direto de um clique (comum aqui, já que tocamos depois de um await)
+      if(audioCtx.state === 'suspended') audioCtx.resume();
       const osc = audioCtx.createOscillator();
       const g = audioCtx.createGain();
       osc.type = 'sine';
