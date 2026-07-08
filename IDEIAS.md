@@ -49,6 +49,10 @@ flores/velas nas lápides dos outros (MVP family & friends).
   faxina periódica (pg_cron ou Edge Function) que apaga linhas velhas.
 - Vale a pena limitar quantas flores uma pessoa pode plantar por dia, pra
   evitar spam visual no jardim?
+- Música ambiente / som contínuo (pássaros, vento): se algum dia adicionarmos
+  isso, trazer de volta um botão de mute — hoje removido porque os efeitos
+  sonoros só tocam em resposta a uma ação do próprio usuário (plantar, logar),
+  nunca por conta própria, então mudo dedicado não se justificava.
 
 ## Notas técnicas para lembrar na fase 2
 

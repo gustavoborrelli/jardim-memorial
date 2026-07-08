@@ -280,7 +280,46 @@ export function createDogController(scene, renderer, { isPaused, plaza, bounds }
   }
   window.addEventListener('keydown', e=>{ if(isTypingInField(e)) return; keys[e.key.toLowerCase()] = true; });
   window.addEventListener('keyup', e=>{ if(isTypingInField(e)) return; keys[e.key.toLowerCase()] = false; });
-  function resetKeys(){ Object.keys(keys).forEach(k=> keys[k]=false); }
+
+  // Joystick virtual: só aparece em telas de toque (CSS), mas a lógica roda sempre.
+  const joystickEl = document.getElementById('joystick');
+  const joystickKnob = document.getElementById('joystickKnob');
+  const JOY_RADIUS = 40;
+  let joyX = 0, joyZ = 0, joyPointerId = null;
+
+  function updateJoystick(e){
+    const rect = joystickEl.getBoundingClientRect();
+    let dx = e.clientX - (rect.left + rect.width/2);
+    let dy = e.clientY - (rect.top + rect.height/2);
+    const dist = Math.hypot(dx, dy);
+    if(dist > JOY_RADIUS){ dx = dx/dist*JOY_RADIUS; dy = dy/dist*JOY_RADIUS; }
+    joystickKnob.style.transform = `translate(${dx}px, ${dy}px)`;
+    joyX = dx / JOY_RADIUS; // -1..1
+    joyZ = dy / JOY_RADIUS; // -1..1
+  }
+  function endJoystick(e){
+    if(joyPointerId !== e.pointerId) return;
+    joyPointerId = null;
+    joyX = 0; joyZ = 0;
+    joystickKnob.style.transform = 'translate(0px, 0px)';
+  }
+  if(joystickEl){
+    joystickEl.addEventListener('pointerdown', e=>{
+      if(isPaused()) return;
+      joyPointerId = e.pointerId;
+      joystickEl.setPointerCapture(e.pointerId);
+      updateJoystick(e);
+    });
+    joystickEl.addEventListener('pointermove', e=>{ if(joyPointerId === e.pointerId) updateJoystick(e); });
+    joystickEl.addEventListener('pointerup', endJoystick);
+    joystickEl.addEventListener('pointercancel', endJoystick);
+  }
+
+  function resetKeys(){
+    Object.keys(keys).forEach(k=> keys[k]=false);
+    joyPointerId = null; joyX = 0; joyZ = 0;
+    if(joystickKnob) joystickKnob.style.transform = 'translate(0px, 0px)';
+  }
 
   // Trackpad: swipe with two fingers to look around (fires as a 'wheel' event in browsers)
   renderer.domElement.addEventListener('wheel', e=>{
@@ -321,6 +360,7 @@ export function createDogController(scene, renderer, { isPaused, plaza, bounds }
     if(keys['s']||keys['arrowdown']) moveZ += 1;
     if(keys['a']||keys['arrowleft']) moveX -= 1;
     if(keys['d']||keys['arrowright']) moveX += 1;
+    if(Math.abs(joyX) > 0.08 || Math.abs(joyZ) > 0.08){ moveX = joyX; moveZ = joyZ; }
 
     const moving = (moveX!==0 || moveZ!==0);
     if(moving){

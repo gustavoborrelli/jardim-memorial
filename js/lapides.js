@@ -204,10 +204,6 @@ export function createLapides(scene) {
   // todas as vagas começam vazias; quem preenche é loadMemoriais(), logo abaixo
   plots.forEach(plot=> markEmptyPlot(plot));
 
-  function firstAvailablePlot(){
-    return plots.find(p=>!p.occupied);
-  }
-
   function installStone(plot, data, animate){
     // remove empty marker visuals
     stoneGroup.children
@@ -335,7 +331,6 @@ export function createLapides(scene) {
   return {
     plots,
     stoneGroup,
-    firstAvailablePlot,
     createTribute,
     saveMemorial,
     pickEmptyPlot,

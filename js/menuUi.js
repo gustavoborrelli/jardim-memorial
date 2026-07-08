@@ -20,8 +20,6 @@ export function createMenuUi({ camera, lapides, world, dogController, pausedStat
   const menuAbout = document.getElementById('menuAbout');
   const menuDogs = document.getElementById('menuDogs');
 
-  const btnAdd = document.getElementById('btnAdd');
-  const btnSound = document.getElementById('btnSound');
   const toastEl = document.getElementById('toast');
   const hintEmpty = document.getElementById('hintEmpty');
   const epitaphCard = document.getElementById('epitaphCard');
@@ -157,13 +155,7 @@ export function createMenuUi({ camera, lapides, world, dogController, pausedStat
 
   /* ============ SOUND (tiny synth, no external files) ============ */
   let audioCtx = null;
-  let soundOn = true;
-  btnSound.addEventListener('click', ()=>{
-    soundOn = !soundOn;
-    btnSound.textContent = soundOn ? '🔈 Som: ligado' : '🔇 Som: desligado';
-  });
   function chime(freq, gain){
-    if(!soundOn) return;
     try{
       if(!audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)();
       const osc = audioCtx.createOscillator();
@@ -212,10 +204,6 @@ export function createMenuUi({ camera, lapides, world, dogController, pausedStat
 
   function openModal(){
     dogController.resetKeys();
-    if(!pendingPlot){
-      pendingPlot = lapides.firstAvailablePlot();
-      if(!pendingPlot){ showToast('O jardim está completo por agora.'); return; }
-    }
     modalBack.classList.add('open');
     inName.value=''; inDates.value=''; inMsg.value='';
     inPhoto.value = '';
@@ -230,11 +218,10 @@ export function createMenuUi({ camera, lapides, world, dogController, pausedStat
   }
   function openModalFor(plot){
     requireAuth(()=>{
-      pendingPlot = plot || null;
+      pendingPlot = plot;
       openModal();
     });
   }
-  btnAdd.addEventListener('click', ()=> openModalFor(null));
   btnCancel.addEventListener('click', closeModal);
   modalBack.addEventListener('click', e=>{ if(e.target===modalBack) closeModal(); });
 
@@ -242,9 +229,6 @@ export function createMenuUi({ camera, lapides, world, dogController, pausedStat
     const name = inName.value.trim() || 'Sem nome';
     const dates = inDates.value.trim();
     const msg = inMsg.value.trim() || 'Para sempre lembrado com carinho.';
-    if(!pendingPlot){ pendingPlot = lapides.firstAvailablePlot(); }
-    if(!pendingPlot){ showToast('O jardim está completo por agora.'); closeModal(); return; }
-
     const plot = pendingPlot;
     const photoFile = inPhoto.files && inPhoto.files[0] || null;
 
