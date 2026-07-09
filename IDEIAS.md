@@ -46,20 +46,13 @@ flores/velas nas lápides dos outros (MVP family & friends).
    `100dvh` (a barra do navegador mobile cortava o joystick), HUD mais
    enxuto em telas de toque, e retomada explícita do áudio (`audioCtx.resume()`)
    porque navegadores desktop suspendem som que não vem direto de um clique.
-7. 🔜 **Login com Google** — botão "Continuar com Google" no modal de
+7. ✅ **Login com Google** — botão "Continuar com Google" no modal de
    entrar/criar conta (`js/auth.js` → `signInWithGoogle()`, fluxo OAuth padrão
-   do Supabase com redirect de volta pro próprio site). Código pronto, mas
-   falta configuração fora do repo, feita pelo humano:
-   1. Google Cloud Console → criar projeto (ou usar um existente) → "OAuth
-      consent screen" (tipo External, só precisa de nome/e-mail de suporte)
-      → "Credentials" → criar "OAuth client ID" do tipo "Web application".
-   2. Nesse client, em "Authorized redirect URIs", adicionar exatamente:
-      `https://uxtjooztgtcrdkmpfnxu.supabase.co/auth/v1/callback`
-   3. Copiar o Client ID e o Client Secret gerados.
-   4. No painel do Supabase → Authentication → Providers → Google → colar
-      Client ID/Secret e habilitar.
-   5. Testar o botão no site (local ou já publicado) — deve abrir a tela de
-      login do Google e voltar logado.
+   do Supabase com redirect de volta pro próprio site). OAuth client
+   configurado no Google Cloud Console (redirect URI
+   `https://uxtjooztgtcrdkmpfnxu.supabase.co/auth/v1/callback`) e credenciais
+   habilitadas no Supabase (Authentication → Providers → Google). Testado e
+   funcionando em produção.
    Limitação aceita: como o login redireciona a página inteira pro Google e
    volta, uma ação pendente (ex.: "estava tentando plantar flor quando pediu
    login") se perde no reload — a pessoa só precisa clicar de novo depois de
