@@ -58,6 +58,14 @@ flores/velas nas lápides dos outros (MVP family & friends).
    login") se perde no reload — a pessoa só precisa clicar de novo depois de
    logar. Mesma limitação não existe no login por e-mail/senha, que não sai
    da página.
+8. ✅ **Som ambiente** — vento (ruído filtrado em loop, com "rajadas" de
+   volume aleatórias) e pássaros (blips agudos em intervalos aleatórios de
+   2.5–8.5s), tudo sintetizado via Web Audio API em `js/menuUi.js` — sem
+   arquivos de áudio, mesmo estilo do `chime()` que já existia. Começa a
+   tocar quando o jogo começa (`startGame()`, gesto de clique real, evita o
+   bloqueio de autoplay). Botão de mute de volta, mas no menu principal/pausa
+   (`🔊/🔇 Som ambiente`, embaixo dos botões) em vez do HUD, pra manter o HUD
+   limpo; preferência salva em `localStorage` e sobrevive entre visitas.
 
 ## Ideias soltas (não decidido ainda)
 
@@ -67,10 +75,6 @@ flores/velas nas lápides dos outros (MVP family & friends).
   faxina periódica (pg_cron ou Edge Function) que apaga linhas velhas.
 - Vale a pena limitar quantas flores uma pessoa pode plantar por dia, pra
   evitar spam visual no jardim?
-- Música ambiente / som contínuo (pássaros, vento): se algum dia adicionarmos
-  isso, trazer de volta um botão de mute — hoje removido porque os efeitos
-  sonoros só tocam em resposta a uma ação do próprio usuário (plantar, logar),
-  nunca por conta própria, então mudo dedicado não se justificava.
 - E-mail de confirmação: o Supabase usa um servidor de teste próprio, com
   limite baixo de envios por hora (ficamos sem receber depois de testar
   algumas vezes seguidas). "Confirm email" está desligado de novo por causa

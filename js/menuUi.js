@@ -168,25 +168,117 @@ export function createMenuUi({ camera, lapides, world, dogController, pausedStat
 
   /* ============ SOUND (tiny synth, no external files) ============ */
   let audioCtx = null;
+  function ensureAudioCtx(){
+    if(!audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+    // navegadores de desktop suspendem o áudio se o som não parecer vir
+    // direto de um clique (comum aqui, já que tocamos depois de um await)
+    if(audioCtx.state === 'suspended') audioCtx.resume();
+    return audioCtx;
+  }
   function chime(freq, gain){
     try{
-      if(!audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)();
-      // navegadores de desktop suspendem o áudio se o som não parecer vir
-      // direto de um clique (comum aqui, já que tocamos depois de um await)
-      if(audioCtx.state === 'suspended') audioCtx.resume();
-      const osc = audioCtx.createOscillator();
-      const g = audioCtx.createGain();
+      const ctx = ensureAudioCtx();
+      const osc = ctx.createOscillator();
+      const g = ctx.createGain();
       osc.type = 'sine';
       osc.frequency.value = freq;
       g.gain.value = 0;
-      osc.connect(g); g.connect(audioCtx.destination);
-      const now = audioCtx.currentTime;
+      osc.connect(g); g.connect(ctx.destination);
+      const now = ctx.currentTime;
       g.gain.linearRampToValueAtTime(gain, now+0.02);
       g.gain.exponentialRampToValueAtTime(0.001, now+0.9);
       osc.start(now);
       osc.stop(now+0.95);
     }catch(e){}
   }
+
+  /* ============ SOM AMBIENTE (vento + pássaros, sintetizado em loop) ============ */
+  const btnAmbientToggle = document.getElementById('btnAmbientToggle');
+  let ambientMuted = localStorage.getItem('jardimAmbientMuted') === '1';
+  let ambientStarted = false;
+  let ambientMasterGain = null;
+
+  function startWind(ctx, destination){
+    const bufferSize = 2 * ctx.sampleRate;
+    const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for(let i=0; i<bufferSize; i++) data[i] = Math.random()*2-1;
+
+    const noise = ctx.createBufferSource();
+    noise.buffer = buffer;
+    noise.loop = true;
+
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.frequency.value = 500;
+    filter.Q.value = 0.6;
+
+    const gain = ctx.createGain();
+    gain.gain.value = 0.02;
+
+    noise.connect(filter); filter.connect(gain); gain.connect(destination);
+    noise.start();
+
+    // vento "respira": o volume sobe e desce devagar, como rajadas
+    (function swell(){
+      const target = 0.012 + Math.random()*0.022;
+      const dur = 3 + Math.random()*4;
+      gain.gain.linearRampToValueAtTime(target, ctx.currentTime+dur);
+      setTimeout(swell, dur*1000);
+    })();
+  }
+
+  function startBirds(ctx, destination){
+    function chirpOnce(){
+      const now = ctx.currentTime;
+      const baseFreq = 1800 + Math.random()*1400;
+      const notes = 2 + Math.floor(Math.random()*3);
+      for(let i=0; i<notes; i++){
+        const t = now + i*0.12;
+        const osc = ctx.createOscillator();
+        const g = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(baseFreq*(0.9+Math.random()*0.3), t);
+        osc.frequency.exponentialRampToValueAtTime(baseFreq*(1.2+Math.random()*0.4), t+0.08);
+        g.gain.value = 0;
+        osc.connect(g); g.connect(destination);
+        g.gain.linearRampToValueAtTime(0.045, t+0.01);
+        g.gain.exponentialRampToValueAtTime(0.001, t+0.1);
+        osc.start(t);
+        osc.stop(t+0.12);
+      }
+    }
+    (function scheduleNext(){
+      const delay = 2500 + Math.random()*6000;
+      setTimeout(()=>{ chirpOnce(); scheduleNext(); }, delay);
+    })();
+  }
+
+  function startAmbient(){
+    if(ambientStarted) return;
+    ambientStarted = true;
+    const ctx = ensureAudioCtx();
+    ambientMasterGain = ctx.createGain();
+    ambientMasterGain.gain.value = ambientMuted ? 0 : 1;
+    ambientMasterGain.connect(ctx.destination);
+    startWind(ctx, ambientMasterGain);
+    startBirds(ctx, ambientMasterGain);
+  }
+
+  function refreshAmbientButton(){
+    btnAmbientToggle.textContent = ambientMuted ? '🔇 Som ambiente' : '🔊 Som ambiente';
+    btnAmbientToggle.setAttribute('aria-pressed', String(!ambientMuted));
+  }
+  function setAmbientMuted(muted){
+    ambientMuted = muted;
+    localStorage.setItem('jardimAmbientMuted', muted ? '1' : '0');
+    if(ambientMasterGain){
+      ambientMasterGain.gain.linearRampToValueAtTime(muted ? 0 : 1, audioCtx.currentTime+0.3);
+    }
+    refreshAmbientButton();
+  }
+  btnAmbientToggle.addEventListener('click', ()=> setAmbientMuted(!ambientMuted));
+  refreshAmbientButton();
 
   /* ============ TOAST ============ */
   let toastTimer = null;
@@ -321,6 +413,7 @@ export function createMenuUi({ camera, lapides, world, dogController, pausedStat
   function startGame(){
     menuScreen.classList.add('hidden');
     pausedState.value = false;
+    startAmbient();
   }
   document.getElementById('btnPlay').addEventListener('click', ()=>{
     if(!dogController.getDog()){ showMenuPanel(menuDogs); return; } // must pick a companion first
