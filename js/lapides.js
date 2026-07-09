@@ -56,7 +56,12 @@ export function createLapides(scene) {
     ctx.strokeRect(4,4,504,102);
     ctx.fillStyle = '#f4ead8';
     ctx.textAlign = 'center';
-    ctx.font = 'italic 46px Georgia, serif';
+    const maxWidth = 460; // deixa margem dentro da moldura de 504px
+    let fontSize = 46;
+    do {
+      ctx.font = `italic ${fontSize}px Georgia, serif`;
+      fontSize -= 2;
+    } while (ctx.measureText(text).width > maxWidth && fontSize > 20);
     ctx.fillText(text, 256, 70);
     return new THREE.CanvasTexture(c);
   }
@@ -80,7 +85,10 @@ export function createLapides(scene) {
     g.add(plank);
     // stand at the edge of the N-S avenue, marking the walk-in entrance to the quadrant
     g.position.set(sec.sx*4.7, 0, sec.sz*12);
-    g.rotation.y = Math.PI/2; // walk through it along the x direction
+    // face the readable (non-mirrored) side of the double-sided plank toward
+    // whoever is walking in from the avenue, which is the opposite side from
+    // the quadrant itself
+    g.rotation.y = -sec.sx * Math.PI/2;
     scene.add(g);
   });
 

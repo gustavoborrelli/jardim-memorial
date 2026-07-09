@@ -95,6 +95,19 @@ flores/velas nas lápides dos outros (MVP family & friends).
     exatamente isso pras 90 flores decorativas espalhadas no início
     (etapa 4) — só faltava o clique do jogador usar a mesma checagem.
     Reaproveitada em vez de duplicar a lógica das avenidas/praça.
+12. ✅ **Placas das seções corrigidas** — as 4 placas de entrada (arcos de
+    madeira, `js/lapides.js` → `makeSectionSign`) tinham dois bugs. (1) A
+    rotação do arco (`g.rotation.y`) era fixa pra todo mundo, mas a tábua é
+    de dupla face e o verso mostra o texto espelhado — como só o Bosque da
+    Saudade e o Prado dos Companheiros (ambos do lado -x) ficavam com a
+    face legível voltada pra quem entra vindo da avenida, os outros dois
+    (Recanto do Sol e Campo das Estrelas, lado +x) apareciam invertidos.
+    Corrigido tornando a rotação dependente de `sec.sx`. (2) O tamanho da
+    fonte era fixo (46px numa tela de 512px), então nomes longos como
+    "Campo das Estrelas" e "Prado dos Companheiros" estouravam a moldura;
+    agora o tamanho diminui automaticamente até caber. Verificado com
+    screenshots (Playwright, câmera posicionada manualmente em frente a
+    cada arco) mostrando as 4 placas legíveis.
 
 ## Ideias soltas (não decidido ainda)
 
