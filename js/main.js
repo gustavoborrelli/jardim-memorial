@@ -86,9 +86,9 @@ function onClick(e){
     return;
   }
 
-  // stone -> just show card (handled by hover, but click also fine on touch)
+  // stone -> card já é mostrado pelo hover; o clique só faz algo pra admin
   const stone = lapides.pickStone(raycaster);
-  if(stone) return;
+  if(stone){ menuUi.handleStoneClick(stone); return; }
 
   // ground -> plant flower (exige login)
   const groundHits = raycaster.intersectObject(world.ground);

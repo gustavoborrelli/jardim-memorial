@@ -72,17 +72,22 @@ flores/velas nas lápides dos outros (MVP family & friends).
    essas flores de todo mundo desde a etapa 4; isso só evita que a tabela
    cresça pra sempre com linhas mortas. Precisou habilitar a extensão
    `pg_cron` no painel (Database → Extensions) antes de rodar o script.
-10. ✅ **Apagar homenagem** — botão "🗑 Apagar homenagem" no card que aparece
-    ao passar o mouse numa lápide, visível só pro autor (`auth.getUser().id
-    === criadoPor`). Usa a policy de delete que já existia desde a etapa 3
-    (`js/lapides.js` → `deleteMemorial()`), com confirmação antes de apagar
-    de vez. `memoriais` também ganhou o evento `DELETE` no Realtime — se o
-    dono apagar, a lápide some na hora pra quem mais estiver com o jardim
-    aberto. Limitação: lápides criadas antes da etapa 3 (login) têm
-    `criado_por = null` no banco e não têm dono pra nenhuma conta bater — só
-    dá pra apagar essas pelo SQL Editor (`delete from memoriais where
-    criado_por is null;`), não tem como liberar isso pela UI sem enfraquecer
-    a regra de "só o dono apaga o seu".
+10. ✅ **Apagar homenagem (admin)** — primeira tentativa foi um botão "🗑
+    Apagar homenagem" dentro do card de hover, mas o card só existe enquanto
+    o mouse está sobre a lápide (raycasting 3D); mover o mouse até o botão
+    tirava o cursor da pedra e escondia tudo antes de dar tempo de clicar.
+    Trocado por: clicar direto na lápide (`js/main.js` → `onClick`) só faz
+    algo se `auth.getUser().email` for a conta admin
+    (`gustavolimaborrelli@gmail.com`, hardcoded em `js/menuUi.js` →
+    `handleStoneClick()`) — aí abre um `confirm()` nativo e apaga de vez.
+    Pra qualquer outra conta (ou deslogado), clicar numa lápide continua sem
+    fazer nada, igual antes — nada de novo poluindo a UI. A policy de delete
+    também mudou: em vez de "só o dono apaga o seu" (etapa 3), agora é "essa
+    conta específica apaga qualquer memorial"
+    (`supabase/008_admin_apaga_memorial.sql`, via `auth.jwt()->>'email'`) —
+    as duas convivem (RLS junta com OR). Isso também resolveu de vez as 6
+    lápides de teste com `criado_por = null` (de antes do login existir),
+    que a regra por dono nunca ia conseguir liberar pra ninguém.
 
 ## Ideias soltas (não decidido ainda)
 

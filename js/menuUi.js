@@ -24,9 +24,6 @@ export function createMenuUi({ camera, lapides, world, dogController, pausedStat
   const hintEmpty = document.getElementById('hintEmpty');
   const epitaphCard = document.getElementById('epitaphCard');
 
-  const btnDeleteMemorial = document.getElementById('btnDeleteMemorial');
-  let hoveredStoneForDelete = null;
-
   const modalBack = document.getElementById('modalBack');
   const btnCancel = document.getElementById('btnCancel');
   const btnConfirm = document.getElementById('btnConfirm');
@@ -407,32 +404,34 @@ export function createMenuUi({ camera, lapides, world, dogController, pausedStat
       epitaphCard.style.left = pos.x+'px';
       epitaphCard.style.top = pos.y+'px';
       epitaphCard.style.display = 'block';
-      hoveredStoneForDelete = hoveredStone;
-      const user = auth.getUser();
-      btnDeleteMemorial.style.display = (user && d.criadoPor && user.id === d.criadoPor) ? 'block' : 'none';
     } else {
       epitaphCard.style.display = 'none';
-      hoveredStoneForDelete = null;
     }
   }
 
-  btnDeleteMemorial.addEventListener('click', async ()=>{
-    const stone = hoveredStoneForDelete;
-    if(!stone) return;
+  /* ============ ADMIN: apagar qualquer homenagem clicando nela ============
+     Sem botão no card (some rápido demais pra clicar, e polui a UI pra todo
+     mundo). Só a conta admin vê algum efeito ao clicar numa lápide — pra
+     todo mundo mais, clicar numa lápide continua sem fazer nada, igual
+     antes. A policy que libera o delete de qualquer memorial (não só o
+     próprio) está em supabase/008_admin_apaga_memorial.sql. */
+  const ADMIN_EMAIL = 'gustavolimaborrelli@gmail.com';
+  function isAdmin(){
+    const user = auth.getUser();
+    return !!user && user.email === ADMIN_EMAIL;
+  }
+  async function handleStoneClick(stone){
+    if(!isAdmin()) return;
     const name = stone.userData.data.name;
-    if(!window.confirm(`Apagar a homenagem de "${name}"? Essa ação não pode ser desfeita.`)) return;
-    btnDeleteMemorial.disabled = true;
+    if(!window.confirm(`[admin] Apagar a homenagem de "${name}"? Essa ação não pode ser desfeita.`)) return;
     try{
       await lapides.deleteMemorial(stone);
       epitaphCard.style.display = 'none';
-      hoveredStoneForDelete = null;
       showToast('Homenagem apagada.');
     } catch(err){
       showToast('Não foi possível apagar. Tente de novo.');
-    } finally {
-      btnDeleteMemorial.disabled = false;
     }
-  });
+  }
 
   /* ============ MAIN MENU / PAUSE ============ */
   function showMenuPanel(panel){
@@ -481,5 +480,6 @@ export function createMenuUi({ camera, lapides, world, dogController, pausedStat
     chime,
     openModalFor,
     requireAuth,
+    handleStoneClick,
   };
 }
