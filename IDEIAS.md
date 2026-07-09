@@ -88,6 +88,13 @@ flores/velas nas lápides dos outros (MVP family & friends).
     as duas convivem (RLS junta com OR). Isso também resolveu de vez as 6
     lápides de teste com `criado_por = null` (de antes do login existir),
     que a regra por dono nunca ia conseguir liberar pra ninguém.
+11. ✅ **Flor só na grama** — o clique de plantar flor (`js/main.js` →
+    `onClick`) só checava os limites do mapa antes de plantar, então dava
+    pra colocar flor em cima das avenidas de concreto e da praça central.
+    A função `world.isFreeSpot()` já existia em `js/mundo.js` e resolvia
+    exatamente isso pras 90 flores decorativas espalhadas no início
+    (etapa 4) — só faltava o clique do jogador usar a mesma checagem.
+    Reaproveitada em vez de duplicar a lógica das avenidas/praça.
 
 ## Ideias soltas (não decidido ainda)
 

@@ -90,11 +90,11 @@ function onClick(e){
   const stone = lapides.pickStone(raycaster);
   if(stone){ menuUi.handleStoneClick(stone); return; }
 
-  // ground -> plant flower (exige login)
+  // ground -> plant flower (exige login, só na grama)
   const groundHits = raycaster.intersectObject(world.ground);
   if(groundHits.length){
     const p = groundHits[0].point;
-    if(Math.abs(p.x)<BOUNDS && Math.abs(p.z)<BOUNDS){
+    if(Math.abs(p.x)<BOUNDS && Math.abs(p.z)<BOUNDS && world.isFreeSpot(p.x, p.z, lapides.plots)){
       menuUi.requireAuth(()=>{
         world.plantAndSaveFlor(p.x, p.z);
         menuUi.chime(520, 0.05);
