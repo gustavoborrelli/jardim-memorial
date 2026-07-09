@@ -66,13 +66,16 @@ flores/velas nas lápides dos outros (MVP family & friends).
    bloqueio de autoplay). Botão de mute de volta, mas no menu principal/pausa
    (`🔊/🔇 Som ambiente`, embaixo dos botões) em vez do HUD, pra manter o HUD
    limpo; preferência salva em `localStorage` e sobrevive entre visitas.
+9. ✅ **Faxina de flores expiradas** — job `pg_cron` (script
+   `supabase/007_faxina_flores.sql`) roda toda madrugada às 3h e apaga de
+   vez as linhas de `flores` com `expira_em` no passado. A RLS já escondia
+   essas flores de todo mundo desde a etapa 4; isso só evita que a tabela
+   cresça pra sempre com linhas mortas. Precisou habilitar a extensão
+   `pg_cron` no painel (Database → Extensions) antes de rodar o script.
 
 ## Ideias soltas (não decidido ainda)
 
 - Pensar em um limite de tamanho/qtd de fotos por lápide.
-- Flores expiradas continuam existindo na tabela pra sempre (só ficam
-  invisíveis pela RLS) — se a tabela crescer muito com o tempo, pensar numa
-  faxina periódica (pg_cron ou Edge Function) que apaga linhas velhas.
 - Vale a pena limitar quantas flores uma pessoa pode plantar por dia, pra
   evitar spam visual no jardim?
 - E-mail de confirmação: o Supabase usa um servidor de teste próprio, com
