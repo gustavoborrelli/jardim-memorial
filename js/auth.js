@@ -47,10 +47,21 @@ export function createAuth() {
     return data;
   }
 
+  // Redireciona pro Google e volta pro jardim já logado (fluxo OAuth padrão
+  // do Supabase). Como a página recarrega, quem chamou isso a partir de uma
+  // ação pendente (ex.: "plantar flor") precisa refazer o clique depois.
+  async function signInWithGoogle() {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: window.location.origin },
+    });
+    if (error) throw error;
+  }
+
   async function signOut() {
     const { error } = await supabase.auth.signOut();
     if (error) throw error;
   }
 
-  return { onChange, getUser, signUp, signIn, signOut };
+  return { onChange, getUser, signUp, signIn, signInWithGoogle, signOut };
 }

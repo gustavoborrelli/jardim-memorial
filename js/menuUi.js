@@ -52,6 +52,7 @@ export function createMenuUi({ camera, lapides, world, dogController, pausedStat
   const btnAuthConfirm = document.getElementById('btnAuthConfirm');
   const authToggleText = document.getElementById('authToggleText');
   const btnAuthToggleMode = document.getElementById('btnAuthToggleMode');
+  const btnGoogleLogin = document.getElementById('btnGoogleLogin');
 
   let authMode = 'signin'; // ou 'signup'
   let pendingAuthAction = null; // função a rodar assim que o login for concluído
@@ -151,6 +152,18 @@ export function createMenuUi({ camera, lapides, world, dogController, pausedStat
   btnLoginOpen.addEventListener('click', ()=>{
     pendingAuthAction = null;
     openAuthModal();
+  });
+
+  btnGoogleLogin.addEventListener('click', async ()=>{
+    btnGoogleLogin.disabled = true;
+    authError.textContent = '';
+    try{
+      await auth.signInWithGoogle();
+      // a página vai redirecionar pro Google agora; nada mais a fazer aqui.
+    } catch(err){
+      authError.textContent = err.message || 'Não foi possível continuar com o Google.';
+      btnGoogleLogin.disabled = false;
+    }
   });
 
   /* ============ SOUND (tiny synth, no external files) ============ */

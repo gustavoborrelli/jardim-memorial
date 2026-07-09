@@ -46,6 +46,25 @@ flores/velas nas lápides dos outros (MVP family & friends).
    `100dvh` (a barra do navegador mobile cortava o joystick), HUD mais
    enxuto em telas de toque, e retomada explícita do áudio (`audioCtx.resume()`)
    porque navegadores desktop suspendem som que não vem direto de um clique.
+7. 🔜 **Login com Google** — botão "Continuar com Google" no modal de
+   entrar/criar conta (`js/auth.js` → `signInWithGoogle()`, fluxo OAuth padrão
+   do Supabase com redirect de volta pro próprio site). Código pronto, mas
+   falta configuração fora do repo, feita pelo humano:
+   1. Google Cloud Console → criar projeto (ou usar um existente) → "OAuth
+      consent screen" (tipo External, só precisa de nome/e-mail de suporte)
+      → "Credentials" → criar "OAuth client ID" do tipo "Web application".
+   2. Nesse client, em "Authorized redirect URIs", adicionar exatamente:
+      `https://uxtjooztgtcrdkmpfnxu.supabase.co/auth/v1/callback`
+   3. Copiar o Client ID e o Client Secret gerados.
+   4. No painel do Supabase → Authentication → Providers → Google → colar
+      Client ID/Secret e habilitar.
+   5. Testar o botão no site (local ou já publicado) — deve abrir a tela de
+      login do Google e voltar logado.
+   Limitação aceita: como o login redireciona a página inteira pro Google e
+   volta, uma ação pendente (ex.: "estava tentando plantar flor quando pediu
+   login") se perde no reload — a pessoa só precisa clicar de novo depois de
+   logar. Mesma limitação não existe no login por e-mail/senha, que não sai
+   da página.
 
 ## Ideias soltas (não decidido ainda)
 
@@ -59,11 +78,6 @@ flores/velas nas lápides dos outros (MVP family & friends).
   isso, trazer de volta um botão de mute — hoje removido porque os efeitos
   sonoros só tocam em resposta a uma ação do próprio usuário (plantar, logar),
   nunca por conta própria, então mudo dedicado não se justificava.
-- Login com Google: resolveria de vez o problema de e-mail de confirmação
-  (o Google já verificou o e-mail, então o Supabase não precisa mandar link
-  nenhum) e é mais rápido pra família/amigos (um clique, sem senha). Exige
-  configurar um projeto OAuth no Google Cloud Console — mais trabalho que o
-  login por e-mail/senha atual, por isso ficou pra depois.
 - E-mail de confirmação: o Supabase usa um servidor de teste próprio, com
   limite baixo de envios por hora (ficamos sem receber depois de testar
   algumas vezes seguidas). "Confirm email" está desligado de novo por causa
