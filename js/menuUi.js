@@ -24,6 +24,9 @@ export function createMenuUi({ camera, lapides, world, dogController, pausedStat
   const hintEmpty = document.getElementById('hintEmpty');
   const epitaphCard = document.getElementById('epitaphCard');
 
+  const btnDeleteMemorial = document.getElementById('btnDeleteMemorial');
+  let hoveredStoneForDelete = null;
+
   const modalBack = document.getElementById('modalBack');
   const btnCancel = document.getElementById('btnCancel');
   const btnConfirm = document.getElementById('btnConfirm');
@@ -343,9 +346,13 @@ export function createMenuUi({ camera, lapides, world, dogController, pausedStat
     btnConfirm.disabled = true;
     btnConfirm.textContent = 'Salvando...';
     try {
-      await lapides.saveMemorial(plot, { name, dates, msg, photoFile });
+      const saved = await lapides.saveMemorial(plot, { name, dates, msg, photoFile });
 
-      const data = {name, dates, msg, photo: pendingPhotoImg, photoUrl: pendingPhotoUrl};
+      const data = {
+        name, dates, msg,
+        photo: pendingPhotoImg, photoUrl: pendingPhotoUrl,
+        id: saved.id, criadoPor: saved.criadoPor,
+      };
       lapides.createTribute(plot, data);
 
       // gather fireflies briefly
@@ -400,10 +407,32 @@ export function createMenuUi({ camera, lapides, world, dogController, pausedStat
       epitaphCard.style.left = pos.x+'px';
       epitaphCard.style.top = pos.y+'px';
       epitaphCard.style.display = 'block';
+      hoveredStoneForDelete = hoveredStone;
+      const user = auth.getUser();
+      btnDeleteMemorial.style.display = (user && d.criadoPor && user.id === d.criadoPor) ? 'block' : 'none';
     } else {
       epitaphCard.style.display = 'none';
+      hoveredStoneForDelete = null;
     }
   }
+
+  btnDeleteMemorial.addEventListener('click', async ()=>{
+    const stone = hoveredStoneForDelete;
+    if(!stone) return;
+    const name = stone.userData.data.name;
+    if(!window.confirm(`Apagar a homenagem de "${name}"? Essa ação não pode ser desfeita.`)) return;
+    btnDeleteMemorial.disabled = true;
+    try{
+      await lapides.deleteMemorial(stone);
+      epitaphCard.style.display = 'none';
+      hoveredStoneForDelete = null;
+      showToast('Homenagem apagada.');
+    } catch(err){
+      showToast('Não foi possível apagar. Tente de novo.');
+    } finally {
+      btnDeleteMemorial.disabled = false;
+    }
+  });
 
   /* ============ MAIN MENU / PAUSE ============ */
   function showMenuPanel(panel){

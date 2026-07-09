@@ -242,12 +242,27 @@ export function createLapides(scene) {
     if(!plot || plot.occupied) return;
     const photo = await loadImage(row.foto_url);
     installStone(plot, {
+      id: row.id,
+      criadoPor: row.criado_por,
       name: row.nome_pet,
       dates: row.datas,
       msg: row.mensagem,
       photo,
       photoUrl: row.foto_url,
     }, animate);
+  }
+
+  // tira a lápide da cena e devolve a vaga como vazia (usado tanto por quem
+  // apaga quanto pelo evento em tempo real que avisa os outros navegadores)
+  function removeStoneById(id){
+    const mesh = stoneGroup.children.find(c=>
+      c.userData && c.userData.isStone && c.userData.data && c.userData.data.id === id
+    );
+    if(!mesh) return;
+    const plot = mesh.userData.plotRef;
+    stoneGroup.remove(mesh);
+    plot.occupied = false; plot.mesh = null; plot.data = null;
+    markEmptyPlot(plot);
   }
 
   async function loadMemoriais(){
@@ -267,6 +282,8 @@ export function createLapides(scene) {
     .channel('memoriais-realtime')
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'memoriais' },
       payload => installFromRow(payload.new, true))
+    .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'memoriais' },
+      payload => removeStoneById(payload.old.id))
     .subscribe();
 
   /* ============ SUPABASE: salvar um novo memorial ============ */
@@ -282,7 +299,7 @@ export function createLapides(scene) {
       const { data: pub } = supabase.storage.from('fotos-memoriais').getPublicUrl(path);
       fotoUrl = pub.publicUrl;
     }
-    const { error } = await supabase.from('memoriais').insert({
+    const { data: inserted, error } = await supabase.from('memoriais').insert({
       nome_pet: name,
       datas: dates,
       mensagem: msg,
@@ -290,7 +307,7 @@ export function createLapides(scene) {
       plot_x: plot.x,
       plot_z: plot.z,
       foto_url: fotoUrl,
-    });
+    }).select('id, criado_por').single();
     if(error){
       if(error.code === '23505'){
         // alguém reservou essa vaga entre o momento em que o modal abriu e agora;
@@ -308,7 +325,16 @@ export function createLapides(scene) {
       }
       throw error;
     }
-    return fotoUrl;
+    return { id: inserted.id, criadoPor: inserted.criado_por, fotoUrl };
+  }
+
+  // só o autor consegue apagar (RLS de 003_auth_rls.sql); remove local na
+  // hora, sem esperar o evento de Realtime voltar pra quem clicou.
+  async function deleteMemorial(stone){
+    const { id } = stone.userData.data;
+    const { error } = await supabase.from('memoriais').delete().eq('id', id);
+    if(error) throw error;
+    removeStoneById(id);
   }
 
   function pickEmptyPlot(raycaster){
@@ -333,6 +359,7 @@ export function createLapides(scene) {
     stoneGroup,
     createTribute,
     saveMemorial,
+    deleteMemorial,
     pickEmptyPlot,
     pickStone,
   };

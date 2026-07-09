@@ -72,6 +72,17 @@ flores/velas nas lápides dos outros (MVP family & friends).
    essas flores de todo mundo desde a etapa 4; isso só evita que a tabela
    cresça pra sempre com linhas mortas. Precisou habilitar a extensão
    `pg_cron` no painel (Database → Extensions) antes de rodar o script.
+10. ✅ **Apagar homenagem** — botão "🗑 Apagar homenagem" no card que aparece
+    ao passar o mouse numa lápide, visível só pro autor (`auth.getUser().id
+    === criadoPor`). Usa a policy de delete que já existia desde a etapa 3
+    (`js/lapides.js` → `deleteMemorial()`), com confirmação antes de apagar
+    de vez. `memoriais` também ganhou o evento `DELETE` no Realtime — se o
+    dono apagar, a lápide some na hora pra quem mais estiver com o jardim
+    aberto. Limitação: lápides criadas antes da etapa 3 (login) têm
+    `criado_por = null` no banco e não têm dono pra nenhuma conta bater — só
+    dá pra apagar essas pelo SQL Editor (`delete from memoriais where
+    criado_por is null;`), não tem como liberar isso pela UI sem enfraquecer
+    a regra de "só o dono apaga o seu".
 
 ## Ideias soltas (não decidido ainda)
 
