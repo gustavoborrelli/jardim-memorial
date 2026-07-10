@@ -328,11 +328,24 @@ export function createDogController(scene, renderer, { isPaused, plaza, bounds }
     if(joystickKnob) joystickKnob.style.transform = 'translate(0px, 0px)';
   }
 
+  // "olhar" (girar horizontalmente): em 1ª pessoa gira o próprio cachorro
+  // (dogYaw), já que W/S/A/D passam a ser relativos a pra onde ele está
+  // olhando; em 3ª pessoa continua girando só a câmera livre (camAzimuth)
+  // ao redor dele, como sempre foi.
+  function look(deltaAzimuth){
+    if(firstPerson){
+      dogYaw -= deltaAzimuth;
+      if(dog) dog.rotation.y = dogYaw;
+    } else {
+      camAzimuth -= deltaAzimuth;
+    }
+  }
+
   // Trackpad: swipe with two fingers to look around (fires as a 'wheel' event in browsers)
   renderer.domElement.addEventListener('wheel', e=>{
     e.preventDefault();
     if(isPaused()) return;
-    camAzimuth -= e.deltaX*0.003;
+    look(e.deltaX*0.003);
     camElevation = Math.max(0.08, Math.min(0.9, camElevation - e.deltaY*0.002));
   }, {passive:false});
 
@@ -344,7 +357,7 @@ export function createDogController(scene, renderer, { isPaused, plaza, bounds }
     const dx = e.touches[0].clientX-lastTX, dy = e.touches[0].clientY-lastTY;
     lastTX=e.touches[0].clientX; lastTY=e.touches[0].clientY;
     if(Math.hypot(dx,dy) > 3) touchMoved = true;
-    camAzimuth -= dx*0.006;
+    look(dx*0.006);
     camElevation = Math.max(0.08, Math.min(0.9, camElevation - dy*0.004));
   }, {passive:true});
   renderer.domElement.addEventListener('touchend', ()=> touchDragging=false);
@@ -372,11 +385,27 @@ export function createDogController(scene, renderer, { isPaused, plaza, bounds }
     const moving = (moveX!==0 || moveZ!==0);
     isMoving = moving;
     if(moving){
-      // movement relative to camera azimuth so controls feel natural
       const len = Math.hypot(moveX,moveZ) || 1;
       moveX/=len; moveZ/=len;
-      const worldX = moveX*Math.cos(camAzimuth) + moveZ*Math.sin(camAzimuth);
-      const worldZ = -moveX*Math.sin(camAzimuth) + moveZ*Math.cos(camAzimuth);
+
+      let worldX, worldZ;
+      if(firstPerson){
+        // 1ª pessoa: W/S/A/D são sempre relativos a pra onde o cachorro está
+        // de fato olhando (dogYaw), que só muda quando você "olha" (touchpad/
+        // roda/arrasto). Assim W é sempre pra frente e S é sempre pra trás
+        // na tela, sem depender de onde a câmera livre ficou apontando da
+        // última vez — é o que fazia às vezes "trás" parecer "frente".
+        const fwdX = Math.sin(dogYaw), fwdZ = Math.cos(dogYaw);
+        const rightX = Math.cos(dogYaw), rightZ = -Math.sin(dogYaw);
+        worldX = fwdX*(-moveZ) + rightX*moveX;
+        worldZ = fwdZ*(-moveZ) + rightZ*moveX;
+      } else {
+        // 3ª pessoa: relativo à câmera orbital livre, e o cachorro sempre
+        // vira de frente pro rumo — comportamento de sempre.
+        worldX = moveX*Math.cos(camAzimuth) + moveZ*Math.sin(camAzimuth);
+        worldZ = -moveX*Math.sin(camAzimuth) + moveZ*Math.cos(camAzimuth);
+      }
+
       const speed = 3.2;
       dog.position.x += worldX*speed*dt;
       dog.position.z += worldZ*speed*dt;
@@ -392,12 +421,14 @@ export function createDogController(scene, renderer, { isPaused, plaza, bounds }
         dog.position.z = plaza.z + (fdz/fdist)*FOUNTAIN_R;
       }
 
-      const targetYaw = Math.atan2(worldX, worldZ);
-      let diff = targetYaw - dogYaw;
-      while(diff>Math.PI) diff-=Math.PI*2;
-      while(diff<-Math.PI) diff+=Math.PI*2;
-      dogYaw += diff*Math.min(1, dt*8);
-      dog.rotation.y = dogYaw;
+      if(!firstPerson){
+        const targetYaw = Math.atan2(worldX, worldZ);
+        let diff = targetYaw - dogYaw;
+        while(diff>Math.PI) diff-=Math.PI*2;
+        while(diff<-Math.PI) diff+=Math.PI*2;
+        dogYaw += diff*Math.min(1, dt*8);
+        dog.rotation.y = dogYaw;
+      }
 
       dogParts.legs.forEach((leg, i)=>{
         const phase = i%2===0? elapsed*9 : elapsed*9+Math.PI;
@@ -417,9 +448,10 @@ export function createDogController(scene, renderer, { isPaused, plaza, bounds }
 
     if(firstPerson && dog){
       // câmera presa na cabeça do cachorro de verdade: usa dogYaw (pra onde
-      // o corpo está de fato virado), não o azimute livre da câmera — assim,
-      // quando o cachorro vira pra andar de costas, a visão vira junto em
-      // vez de só deslizar pra trás feito espectador.
+      // ele está de fato olhando) — controlado só pelo "olhar" (touchpad/
+      // roda/arrasto), nunca pelo WASD. W/S/A/D andam relativos a essa mesma
+      // direção (ver updateMovement), então frente/trás na tela batem sempre
+      // com o que as teclas fazem, feito controle de FPS de verdade.
       // eyeForward passa do focinho de cada raça, senão a câmera renderiza
       // de dentro da própria cabeça do cachorro.
       const fwdX = Math.sin(dogYaw), fwdZ = Math.cos(dogYaw);
@@ -449,6 +481,12 @@ export function createDogController(scene, renderer, { isPaused, plaza, bounds }
 
   function toggleFirstPerson(){
     firstPerson = !firstPerson;
+    if(!firstPerson){
+      // volta pra 3ª pessoa: alinha a câmera orbital livre com a direção
+      // que o cachorro ficou olhando em 1ª pessoa, senão ela pularia pro
+      // ângulo antigo, de antes de entrar na visão de olhos
+      camAzimuth = dogYaw + Math.PI;
+    }
     return firstPerson;
   }
   function isFirstPerson(){
