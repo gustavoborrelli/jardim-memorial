@@ -28,7 +28,10 @@ function addEyes(g, x, y, z){
 
 export function buildDog(breed){
   const g = new THREE.Group();
-  const parts = {group:g, legs:[], tail:null, body:null, bodyBaseY:0.42, breed};
+  // eyeHeight/eyeForward: onde ficam os "olhos" de cada raça, usado pela
+  // câmera em 1ª pessoa (precisa passar do focinho, senão a câmera fica
+  // dentro da cabeça do cachorro)
+  const parts = {group:g, legs:[], tail:null, body:null, bodyBaseY:0.42, eyeHeight:0.62, eyeForward:0.9, breed};
 
   if(breed === 'golden'){
     /* ---- GOLDEN RETRIEVER: warm gold coat, floppy ears, happy feathered tail ---- */
@@ -111,6 +114,7 @@ export function buildDog(breed){
     body.scale.set(1, 0.74, 1.45);
     body.position.y = 0.44; body.castShadow = true;
     g.add(body); parts.body = body; parts.bodyBaseY = 0.44;
+    parts.eyeHeight = 0.66; parts.eyeForward = 1.0;
 
     // black saddle draped over the back — the breed signature
     const saddle = new THREE.Mesh(new THREE.SphereGeometry(0.31,6,5), black);
@@ -193,6 +197,7 @@ export function buildDog(breed){
     body.scale.set(0.9, 0.68, 2.35);
     body.position.y = 0.30; body.castShadow = true;
     g.add(body); parts.body = body; parts.bodyBaseY = 0.30;
+    parts.eyeHeight = 0.45; parts.eyeForward = 1.3;
 
     const chest = new THREE.Mesh(new THREE.SphereGeometry(0.19,6,5), chocLight);
     chest.scale.set(0.8, 0.5, 1.4);
@@ -272,6 +277,7 @@ export function createDogController(scene, renderer, { isPaused, plaza, bounds }
   let camAzimuth = Math.PI; // behind the dog
   let camElevation = 0.35;
   let camDist = 5.2;
+  let firstPerson = false;
 
   const keys = {};
   function isTypingInField(e){
@@ -406,12 +412,34 @@ export function createDogController(scene, renderer, { isPaused, plaza, bounds }
   function updateCamera(camera){
     const tx = dog ? dog.position.x : plaza.x;
     const tz = dog ? dog.position.z : plaza.z;
+
+    if(firstPerson && dog){
+      // câmera nos "olhos" do cachorro: mesma direção que o azimute usa pro
+      // "pra frente" do W, então andar em 1ª pessoa continua natural.
+      // eyeForward passa do focinho de cada raça, senão a câmera renderiza
+      // de dentro da própria cabeça do cachorro.
+      const eyeY = dogParts.eyeHeight;
+      const fwdX = -Math.sin(camAzimuth), fwdZ = -Math.cos(camAzimuth);
+      const px = tx + fwdX*dogParts.eyeForward, pz = tz + fwdZ*dogParts.eyeForward;
+      camera.position.set(px, eyeY, pz);
+      camera.lookAt(px + fwdX, eyeY, pz + fwdZ);
+      return;
+    }
+
     const target = new THREE.Vector3(tx, 0.9, tz);
     const cx = target.x + camDist*Math.sin(camAzimuth)*Math.cos(camElevation);
     const cz = target.z + camDist*Math.cos(camAzimuth)*Math.cos(camElevation);
     const cy = target.y + camDist*Math.sin(camElevation) + 1.1;
     camera.position.set(cx,cy,cz);
     camera.lookAt(target.x, target.y+0.3, target.z);
+  }
+
+  function toggleFirstPerson(){
+    firstPerson = !firstPerson;
+    return firstPerson;
+  }
+  function isFirstPerson(){
+    return firstPerson;
   }
 
   function orbitIdle(dt){
@@ -433,5 +461,7 @@ export function createDogController(scene, renderer, { isPaused, plaza, bounds }
     orbitIdle,
     consumeTouchMoved,
     resetKeys,
+    toggleFirstPerson,
+    isFirstPerson,
   };
 }

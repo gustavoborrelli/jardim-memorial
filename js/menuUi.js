@@ -472,7 +472,25 @@ export function createMenuUi({ camera, lapides, world, dogController, pausedStat
         menuScreen.classList.remove('hidden');
         pausedState.value = true;
       }
+      return;
     }
+    if(e.key.toLowerCase() === 'v'){
+      const tag = e.target && e.target.tagName;
+      if(tag === 'INPUT' || tag === 'TEXTAREA') return; // não intercepta enquanto digita
+      if(pausedState.value || !dogController.getDog()) return;
+      toggleView();
+    }
+  });
+
+  const btnViewToggle = document.getElementById('btnViewToggle');
+  function toggleView(){
+    const on = dogController.toggleFirstPerson();
+    btnViewToggle.classList.toggle('active', on);
+    btnViewToggle.textContent = on ? '👁️' : '🐾';
+  }
+  btnViewToggle.addEventListener('click', ()=>{
+    if(pausedState.value || !dogController.getDog()) return;
+    toggleView();
   });
 
   return {

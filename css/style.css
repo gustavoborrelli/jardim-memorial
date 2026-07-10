@@ -272,8 +272,36 @@ canvas{display:block;outline:none;}
   border:1px solid rgba(244,239,230,0.5);
   pointer-events:none;
 }
+/* botão pra alternar 1ª/3ª pessoa — fica no canto livre nos dois layouts
+   (desktop usa a tecla V, mas o botão também funciona pra quem não tem
+   teclado; em telas de toque é o único jeito de alternar) */
+.view-toggle{
+  position:absolute;
+  right:26px; bottom:22px;
+  width:52px; height:52px;
+  border-radius:50%;
+  background:rgba(30,22,38,0.55);
+  border:1px solid rgba(244,239,230,0.28);
+  backdrop-filter:blur(6px);
+  color:var(--cream);
+  font-size:20px;
+  line-height:1;
+  display:flex; align-items:center; justify-content:center;
+  cursor:pointer;
+  z-index:8;
+  transition:background 0.15s ease, transform 0.15s ease, border-color 0.15s ease;
+}
+.view-toggle:hover{ transform:translateY(-1px); background:rgba(30,22,38,0.75); }
+.view-toggle:active{ transform:translateY(0) scale(0.96); }
+.view-toggle.active{
+  background:rgba(232,185,120,0.9);
+  color:var(--plum);
+  border-color:transparent;
+}
+
 @media (pointer:coarse){
   .joystick{ display:block; bottom:calc(26px + env(safe-area-inset-bottom, 0px)); }
+  .view-toggle{ bottom:calc(22px + env(safe-area-inset-bottom, 0px)); right:18px; width:48px; height:48px; font-size:18px; }
 
   /* HUD mais enxuto em telas de toque: sem dicas de teclado (não existe),
      sem o aviso de ESC (idem), título mais discreto, botões mais compactos */
