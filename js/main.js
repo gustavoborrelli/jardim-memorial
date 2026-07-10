@@ -122,7 +122,7 @@ function animate(){
   } else {
     dogController.orbitIdle(dt);
   }
-  dogController.updateCamera(camera);
+  dogController.updateCamera(camera, elapsed);
 
   world.update(dt, elapsed);
   menuUi.updateHints(hoveredEmptyPlot, hoveredStone);

@@ -278,6 +278,7 @@ export function createDogController(scene, renderer, { isPaused, plaza, bounds }
   let camElevation = 0.35;
   let camDist = 5.2;
   let firstPerson = false;
+  let isMoving = false;
 
   const keys = {};
   function isTypingInField(e){
@@ -369,6 +370,7 @@ export function createDogController(scene, renderer, { isPaused, plaza, bounds }
     if(Math.abs(joyX) > 0.08 || Math.abs(joyZ) > 0.08){ moveX = joyX; moveZ = joyZ; }
 
     const moving = (moveX!==0 || moveZ!==0);
+    isMoving = moving;
     if(moving){
       // movement relative to camera azimuth so controls feel natural
       const len = Math.hypot(moveX,moveZ) || 1;
@@ -409,18 +411,29 @@ export function createDogController(scene, renderer, { isPaused, plaza, bounds }
     dogParts.body.position.y = dogParts.bodyBaseY + Math.sin(elapsed*(moving?9:2))*(moving?0.015:0.008);
   }
 
-  function updateCamera(camera){
+  function updateCamera(camera, elapsed=0){
     const tx = dog ? dog.position.x : plaza.x;
     const tz = dog ? dog.position.z : plaza.z;
 
     if(firstPerson && dog){
-      // câmera nos "olhos" do cachorro: mesma direção que o azimute usa pro
-      // "pra frente" do W, então andar em 1ª pessoa continua natural.
+      // câmera presa na cabeça do cachorro de verdade: usa dogYaw (pra onde
+      // o corpo está de fato virado), não o azimute livre da câmera — assim,
+      // quando o cachorro vira pra andar de costas, a visão vira junto em
+      // vez de só deslizar pra trás feito espectador.
       // eyeForward passa do focinho de cada raça, senão a câmera renderiza
       // de dentro da própria cabeça do cachorro.
-      const eyeY = dogParts.eyeHeight;
-      const fwdX = -Math.sin(camAzimuth), fwdZ = -Math.cos(camAzimuth);
-      const px = tx + fwdX*dogParts.eyeForward, pz = tz + fwdZ*dogParts.eyeForward;
+      const fwdX = Math.sin(dogYaw), fwdZ = Math.cos(dogYaw);
+      const rightX = Math.cos(dogYaw), rightZ = -Math.sin(dogYaw);
+
+      // leve embalo de andada: sobe/desce no dobro da passada, balanço
+      // lateral na passada — só pra não parecer uma câmera de espectador
+      // flutuando, mesmo sutil.
+      const bobY = Math.sin(elapsed*18) * (isMoving ? 0.022 : 0.006);
+      const bobX = Math.sin(elapsed*9) * (isMoving ? 0.016 : 0);
+
+      const px = tx + fwdX*dogParts.eyeForward + rightX*bobX;
+      const pz = tz + fwdZ*dogParts.eyeForward + rightZ*bobX;
+      const eyeY = dogParts.eyeHeight + bobY;
       camera.position.set(px, eyeY, pz);
       camera.lookAt(px + fwdX, eyeY, pz + fwdZ);
       return;
