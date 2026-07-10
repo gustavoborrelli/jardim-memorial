@@ -15,9 +15,43 @@ import { supabase } from './supabaseClient.js';
 
 export function createLapides(scene) {
 
-  const stoneMat = new THREE.MeshStandardMaterial({color:0xcbc0b0, roughness:0.85});
   const stoneGroup = new THREE.Group();
   scene.add(stoneGroup);
+
+  /* variedade das pedras: 3 tons de pedra + 3 silhuetas, escolhidos de
+     forma determinística a partir da posição do plot (mesmo plot sempre
+     rende a mesma pedra, mesmo depois de recarregar a página) */
+  function hash01(x, z){
+    const h = Math.sin(x*127.1 + z*311.7) * 43758.5453;
+    return h - Math.floor(h);
+  }
+  function makeGraveTexture(tint){
+    const c = document.createElement('canvas');
+    c.width = c.height = 128;
+    const ctx = c.getContext('2d');
+    ctx.fillStyle = tint.base;
+    ctx.fillRect(0,0,128,128);
+    for(let i=0;i<260;i++){
+      const shade = Math.random()*40-20;
+      ctx.fillStyle = `rgba(${tint.speck[0]+shade},${tint.speck[1]+shade},${tint.speck[2]+shade},0.28)`;
+      ctx.fillRect(Math.random()*128, Math.random()*128, 2.2,2.2);
+    }
+    if(tint.moss){
+      ctx.fillStyle = 'rgba(94,124,72,0.16)';
+      for(let i=0;i<7;i++){
+        const x = Math.random()*128, y = 90+Math.random()*38, r = 8+Math.random()*14;
+        ctx.beginPath(); ctx.ellipse(x,y,r,r*0.6,0,0,Math.PI*2); ctx.fill();
+      }
+    }
+    return new THREE.CanvasTexture(c);
+  }
+  const STONE_TINTS = [
+    {base:'#cbc0b0', speck:[150,140,120], moss:false},   // arenito quente
+    {base:'#b7bcc2', speck:[120,126,132], moss:true},    // granito frio
+    {base:'#c3c2a4', speck:[140,142,110], moss:true},     // pedra musgosa
+  ];
+  const stoneMats = STONE_TINTS.map(t => new THREE.MeshStandardMaterial({map:makeGraveTexture(t), color:0xffffff, roughness:0.9}));
+  const charmMat = new THREE.MeshStandardMaterial({color:0xd8b978, roughness:0.6});
 
   /* four named sections, one per quadrant */
   const SECTIONS = [
@@ -167,46 +201,111 @@ export function createLapides(scene) {
 
   function buildStone(plot, data){
     const g = new THREE.Group();
+    const r1 = hash01(plot.x, plot.z);
+    const r2 = hash01(plot.z, plot.x);
+    const variant = Math.floor(r1*3);       // silhueta: 0 arco, 1 lousa reta, 2 arco+charme
+    const stoneMat = stoneMats[Math.floor(r2*3)];
+    const jitterRot = (r1-0.5)*0.12;
+    const jitterTilt = (r2-0.5)*0.035;
+    const scaleVar = 0.94 + r2*0.14;
+
     const base = new THREE.Mesh(new THREE.BoxGeometry(1.15,0.18,0.5), stoneMat);
     base.position.y = 0.09;
     base.castShadow = true; base.receiveShadow = true;
     g.add(base);
 
-    const bodyGeo = new THREE.BoxGeometry(1.0, 1.1, 0.28);
-    const body = new THREE.Mesh(bodyGeo, stoneMat);
-    body.position.y = 0.18 + 0.55;
-    body.castShadow = true; body.receiveShadow = true;
-    g.add(body);
+    let bodyH = 1.1, plaqueY;
+    if(variant === 1){
+      // lousa reta e um pouco mais larga, sem topo arredondado
+      bodyH = 0.86;
+      const body = new THREE.Mesh(new THREE.BoxGeometry(1.08, bodyH, 0.28), stoneMat);
+      body.position.y = 0.18 + bodyH/2;
+      body.castShadow = true; body.receiveShadow = true;
+      g.add(body);
+      const ridge = new THREE.Mesh(new THREE.BoxGeometry(1.14,0.06,0.32), stoneMat);
+      ridge.position.y = 0.18 + bodyH + 0.02;
+      ridge.castShadow = true;
+      g.add(ridge);
+      plaqueY = 0.18 + bodyH*0.56;
+    } else {
+      const body = new THREE.Mesh(new THREE.BoxGeometry(1.0, bodyH, 0.28), stoneMat);
+      body.position.y = 0.18 + 0.55;
+      body.castShadow = true; body.receiveShadow = true;
+      g.add(body);
 
-    const cap = new THREE.Mesh(new THREE.SphereGeometry(0.5,8,4,0,Math.PI*2,0,Math.PI/2), stoneMat);
-    cap.scale.set(1,0.42,0.56);
-    cap.position.y = 0.18 + 1.1;
-    cap.castShadow = true;
-    g.add(cap);
+      const cap = new THREE.Mesh(new THREE.SphereGeometry(0.5,8,4,0,Math.PI*2,0,Math.PI/2), stoneMat);
+      cap.scale.set(1,0.42,0.56);
+      cap.position.y = 0.18 + 1.1;
+      cap.castShadow = true;
+      g.add(cap);
+      plaqueY = 0.18+0.58;
+
+      if(variant === 2){
+        // pequeno charme de pata no topo — um carinho a mais pra homenagem
+        const charm = new THREE.Group();
+        const pad = new THREE.Mesh(new THREE.SphereGeometry(0.075,7,6), charmMat);
+        pad.scale.set(1,0.62,0.9);
+        charm.add(pad);
+        [[-0.055,0.048],[0.055,0.048],[-0.032,0.09],[0.032,0.09]].forEach(([x,z])=>{
+          const toe = new THREE.Mesh(new THREE.SphereGeometry(0.028,6,5), charmMat);
+          toe.position.set(x,0.01,z);
+          charm.add(toe);
+        });
+        charm.position.y = 0.18 + 1.29;
+        charm.rotation.x = -0.15;
+        g.add(charm);
+      }
+    }
 
     const tex = engraveTexture(data.name, data.dates, data.msg, data.photo || null);
     const plaqueMat = new THREE.MeshStandardMaterial({map:tex, transparent:true, roughness:0.9});
     const plaque = new THREE.Mesh(new THREE.PlaneGeometry(0.92,1.0), plaqueMat);
-    plaque.position.set(0, 0.18+0.58, 0.145);
+    plaque.position.set(0, plaqueY, 0.145);
     g.add(plaque);
 
+    g.scale.setScalar(scaleVar);
+    g.rotation.z = jitterTilt;
     g.position.set(plot.x, 0, plot.z);
-    g.userData = { isStone:true, plotRef:plot, data };
+    g.userData = { isStone:true, plotRef:plot, data, baseRotY: jitterRot };
+    g.rotation.y = jitterRot;
     return g;
   }
 
   function markEmptyPlot(plot){
-    const marker = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.55,0.6,0.04,8),
-      new THREE.MeshStandardMaterial({color:0x94a67f, roughness:1, transparent:true, opacity:0.55})
+    // disco fino e quase invisível cobrindo toda a vaga — é o alvo real do
+    // clique (a área precisa ficar igual à de antes, só o visual mudou)
+    const hitDisc = new THREE.Mesh(
+      new THREE.CircleGeometry(0.58,16),
+      new THREE.MeshStandardMaterial({color:0xe8caa0, roughness:1, transparent:true, opacity:0.16})
     );
-    marker.position.set(plot.x, 0.021, plot.z);
-    marker.userData = { isEmptyPlot:true, plotRef:plot };
-    stoneGroup.add(marker);
-    plot.marker = marker;
-    const stake = new THREE.Mesh(new THREE.ConeGeometry(0.05,0.35,6), new THREE.MeshStandardMaterial({color:0x6b5744}));
-    stake.position.set(plot.x, 0.17, plot.z);
+    hitDisc.rotation.x = -Math.PI/2;
+    hitDisc.position.set(plot.x, 0.02, plot.z);
+    hitDisc.userData = { isEmptyPlot:true, plotRef:plot };
+    stoneGroup.add(hitDisc);
+    plot.marker = hitDisc;
+
+    // ringue decorativo por cima, com um leve brilho quente — convida a
+    // clicar sem parecer uma mancha sólida na grama
+    const ring = new THREE.Mesh(
+      new THREE.RingGeometry(0.42,0.58,20),
+      new THREE.MeshStandardMaterial({color:0xe8caa0, roughness:1, transparent:true, opacity:0.5, side:THREE.DoubleSide, emissive:0xffdca0, emissiveIntensity:0.15})
+    );
+    ring.rotation.x = -Math.PI/2;
+    ring.position.set(plot.x, 0.023, plot.z);
+    ring.userData = { plotRef:plot };
+    stoneGroup.add(ring);
+
+    // pequena estaca com um charme de patinha, no lugar do cone simples
+    const stakeMat = new THREE.MeshStandardMaterial({color:0x8a6a48, roughness:0.9});
+    const stake = new THREE.Mesh(new THREE.CylinderGeometry(0.025,0.03,0.3,6), stakeMat);
+    stake.position.set(plot.x, 0.15, plot.z);
+    stake.userData = { plotRef:plot };
     stoneGroup.add(stake);
+    const pad = new THREE.Mesh(new THREE.SphereGeometry(0.045,7,6), charmMat);
+    pad.scale.set(1,0.6,0.85);
+    pad.position.set(plot.x, 0.31, plot.z);
+    pad.userData = { plotRef:plot };
+    stoneGroup.add(pad);
   }
 
   // todas as vagas começam vazias; quem preenche é loadMemoriais(), logo abaixo

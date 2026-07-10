@@ -22,10 +22,14 @@ export function createWorld(scene) {
     c.width = 8; c.height = 256;
     const ctx = c.getContext('2d');
     const g = ctx.createLinearGradient(0,0,0,256);
-    g.addColorStop(0, '#3f8edb');
-    g.addColorStop(0.45, '#74bdea');
-    g.addColorStop(0.75, '#cfe6f2');
-    g.addColorStop(1, '#ffe9c9');
+    // fim de tarde: lavanda no zênite, passando por pêssego até um
+    // horizonte dourado — mais quente e com mais profundidade que um
+    // dia-claro genérico, sem escurecer a cena.
+    g.addColorStop(0, '#7484b8');
+    g.addColorStop(0.38, '#c992a0');
+    g.addColorStop(0.68, '#f2ae82');
+    g.addColorStop(0.86, '#ffd39b');
+    g.addColorStop(1, '#fff0cf');
     ctx.fillStyle = g;
     ctx.fillRect(0,0,8,256);
     const tex = new THREE.CanvasTexture(c);
@@ -33,41 +37,49 @@ export function createWorld(scene) {
     return tex;
   }
   scene.background = makeSkyTexture();
-  scene.fog = new THREE.Fog(0xcfe8f5, 42, 115);
+  scene.fog = new THREE.Fog(0xe8b98f, 36, 122);
 
   /* ============ LIGHTING ============ */
-  const hemi = new THREE.HemisphereLight(0xcfe6ff, 0xd9b98a, 0.9);
+  // luz de ambiente (céu/chão) puxando pro quente, senão a sombra parece cinza morta
+  const hemi = new THREE.HemisphereLight(0xcfc4ff, 0xd9b471, 0.55);
   scene.add(hemi);
 
-  const sun = new THREE.DirectionalLight(0xffe9c2, 1.25);
-  sun.position.set(-14, 30, 16);
+  const sun = new THREE.DirectionalLight(0xffcf8e, 1.0);
+  sun.position.set(-16, 24, 18);
   sun.castShadow = true;
-  sun.shadow.mapSize.set(1536,1536);
+  sun.shadow.mapSize.set(2048,2048);
   sun.shadow.camera.left = -35;
   sun.shadow.camera.right = 35;
   sun.shadow.camera.top = 35;
   sun.shadow.camera.bottom = -35;
   sun.shadow.camera.far = 80;
   sun.shadow.bias = -0.0015;
+  sun.shadow.radius = 3.2;
   scene.add(sun);
+
+  // luz de contorno fria e suave do lado oposto ao sol, só pra separar as
+  // formas na sombra do dourado geral (contraste quente/frio, sem ficar dura)
+  const rimLight = new THREE.DirectionalLight(0x8fb4dd, 0.15);
+  rimLight.position.set(18, 14, -14);
+  scene.add(rimLight);
 
   // friendly little sun disc up in the sky, purely visual
   const sunDisc = new THREE.Mesh(
-    new THREE.CircleGeometry(2.4, 24),
-    new THREE.MeshBasicMaterial({color:0xfff2b0, transparent:true, opacity:0.9})
+    new THREE.CircleGeometry(2.6, 24),
+    new THREE.MeshBasicMaterial({color:0xfff1c4, transparent:true, opacity:0.92})
   );
-  sunDisc.position.set(-30, 34, -20);
+  sunDisc.position.set(-32, 26, -22);
   sunDisc.lookAt(0,10,0);
   scene.add(sunDisc);
   const sunGlow = new THREE.Mesh(
-    new THREE.CircleGeometry(4.2, 24),
-    new THREE.MeshBasicMaterial({color:0xfff8d8, transparent:true, opacity:0.35})
+    new THREE.CircleGeometry(5.4, 24),
+    new THREE.MeshBasicMaterial({color:0xffcf95, transparent:true, opacity:0.3})
   );
   sunGlow.position.copy(sunDisc.position);
   sunGlow.lookAt(0,10,0);
   scene.add(sunGlow);
 
-  const fillLight = new THREE.PointLight(0xfff0c0, 0.35, 30);
+  const fillLight = new THREE.PointLight(0xffdca0, 0.2, 30);
   fillLight.position.set(0, 6, 20);
   scene.add(fillLight);
 
@@ -96,24 +108,46 @@ export function createWorld(scene) {
   /* ============ GROUND ============ */
   function makeGrassTexture(){
     const c = document.createElement('canvas');
-    c.width = c.height = 256;
+    c.width = c.height = 512;
     const ctx = c.getContext('2d');
-    ctx.fillStyle = '#6fae4e';
-    ctx.fillRect(0,0,256,256);
-    for(let i=0;i<3200;i++){
-      const x = Math.random()*256, y = Math.random()*256;
-      const shade = 110 + Math.random()*80;
-      ctx.fillStyle = `rgba(${shade-40},${shade+30},${shade-60},0.5)`;
-      ctx.fillRect(x, y, 1.6, 1.6);
+    ctx.fillStyle = '#74a852';
+    ctx.fillRect(0,0,512,512);
+
+    // manchas macias de relevo, poucas e bem contrastadas, sem empilhar
+    // camadas translúcidas demais (isso é o que deixava tudo acinzentado)
+    const patches = [
+      ['#82b862', 20], ['#5f9847', 16], ['#8fc06a', 12],
+    ];
+    patches.forEach(([color, count])=>{
+      ctx.fillStyle = color;
+      ctx.globalAlpha = 0.85;
+      for(let i=0;i<count;i++){
+        const x = Math.random()*512, y = Math.random()*512, r = 20+Math.random()*44;
+        ctx.beginPath();
+        ctx.ellipse(x, y, r, r*(0.6+Math.random()*0.4), Math.random()*Math.PI, 0, Math.PI*2);
+        ctx.fill();
+      }
+    });
+    ctx.globalAlpha = 1;
+
+    // grão fino por cima, quente (tira o aspecto "plano demais")
+    for(let i=0;i<4200;i++){
+      const x = Math.random()*512, y = Math.random()*512;
+      const dark = Math.random() < 0.5;
+      ctx.fillStyle = dark ? 'rgba(60,96,44,0.3)' : 'rgba(158,196,110,0.35)';
+      ctx.fillRect(x, y, 1.8, 1.8);
     }
     const tex = new THREE.CanvasTexture(c);
     tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
-    tex.repeat.set(14,14);
+    tex.repeat.set(16,16);
     return tex;
   }
   const groundGeo = new THREE.PlaneGeometry(130, 130, 44, 44);
   {
-    const RISE_START = 44; // além da cerca, senão o morro come os cantos do terreno
+    // relevo elevado só bem longe da cerca (cerca vai até ±27, diagonal até
+    // ~38.2) — antes começava em d>29 e "comia" a cerca nos cantos; agora só
+    // sobe depois de d>44, sempre fora da área caminhável do jardim.
+    const RISE_START = 44;
     const pos = groundGeo.attributes.position;
     for(let i=0;i<pos.count;i++){
       const gx = pos.getX(i), gy = pos.getY(i);
@@ -125,7 +159,7 @@ export function createWorld(scene) {
     }
     groundGeo.computeVertexNormals();
   }
-  const groundMat = new THREE.MeshStandardMaterial({color:0x8cb56a, roughness:1});
+  const groundMat = new THREE.MeshStandardMaterial({color:0x8fb56d, roughness:1});
   const ground = new THREE.Mesh(groundGeo, groundMat);
   ground.rotation.x = -Math.PI/2;
   ground.receiveShadow = true;
@@ -134,21 +168,35 @@ export function createWorld(scene) {
   /* path */
   function makeStoneTexture(){
     const c = document.createElement('canvas');
-    c.width = c.height = 128;
+    c.width = c.height = 256;
     const ctx = c.getContext('2d');
-    ctx.fillStyle = '#b7ac9c';
-    ctx.fillRect(0,0,128,128);
-    for(let i=0;i<400;i++){
-      const shade = 150 + Math.random()*60;
-      ctx.fillStyle = `rgba(${shade},${shade-10},${shade-25},0.4)`;
-      ctx.fillRect(Math.random()*128, Math.random()*128, 3,3);
+    ctx.fillStyle = '#d9c7a0';
+    ctx.fillRect(0,0,256,256);
+    // desgaste: uma faixa mais clara no centro do caminho (pisada) e
+    // bordas mais escuras/terrosas se misturando com a grama
+    const wear = ctx.createLinearGradient(0,0,256,0);
+    wear.addColorStop(0, 'rgba(120,96,58,0.28)');
+    wear.addColorStop(0.5, 'rgba(255,240,205,0.35)');
+    wear.addColorStop(1, 'rgba(120,96,58,0.28)');
+    ctx.fillStyle = wear;
+    ctx.fillRect(0,0,256,256);
+    for(let i=0;i<820;i++){
+      const shade = 150 + Math.random()*70;
+      ctx.fillStyle = `rgba(${shade},${shade-14},${shade-32},0.35)`;
+      ctx.fillRect(Math.random()*256, Math.random()*256, 2.6,2.6);
+    }
+    // pedrinhas esparsas
+    for(let i=0;i<26;i++){
+      const x = Math.random()*256, y = Math.random()*256, r = 2+Math.random()*3.5;
+      ctx.fillStyle = 'rgba(150,130,100,0.5)';
+      ctx.beginPath(); ctx.ellipse(x,y,r,r*0.7,Math.random()*Math.PI,0,Math.PI*2); ctx.fill();
     }
     const tex = new THREE.CanvasTexture(c);
     tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
     tex.repeat.set(1,7);
     return tex;
   }
-  const pathMat = new THREE.MeshStandardMaterial({color:0xe2cfa6, roughness:1});
+  const pathMat = new THREE.MeshStandardMaterial({map:makeStoneTexture(), color:0xe2cfa6, roughness:1});
   // four symmetric avenues radiating from the central plaza (N, S, E, W)
   [[0,-16.5,0],[0,16.5,0],[-16.5,0,Math.PI/2],[16.5,0,Math.PI/2]].forEach(([px,pz,rz])=>{
     const av = new THREE.Mesh(new THREE.PlaneGeometry(4.2, 22), pathMat);
@@ -204,37 +252,66 @@ export function createWorld(scene) {
   scene.add(lintel);
 
   /* ============ TREES ============ */
-  // type: 'pine' (original conifer, default), 'leafy' (copa redonda frondosa)
-  // ou 'blossom' (cerejeira florida rosa)
-  function makeTree(x,z,scale=1,type='pine'){
+  // três variedades pra dar mais vida ao jardim: pinheiro (a original),
+  // frondosa (copa redonda, mais sombra) e cerejeira (florida, um toque
+  // alegre e colorido) — escolhidas por ficarem bonitas e leves, sem pesar
+  // o tom contemplativo do lugar.
+  function makeTree(x,z,scale=1,type){
     const g = new THREE.Group();
-    const trunk = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.16*scale, 0.26*scale, 1.4*scale, 5),
-      new THREE.MeshStandardMaterial({color: type==='blossom' ? 0x5c4436 : 0x6e4a30, roughness:1})
-    );
-    trunk.position.y = 0.7*scale;
-    trunk.castShadow = true;
-    g.add(trunk);
+    const t = type || 'pine';
 
-    if(type === 'leafy' || type === 'blossom'){
-      // copa redonda frondosa: cacho de esferas facetadas se sobrepondo
-      const palette = type === 'blossom'
-        ? [0xffb7d5, 0xffc9de, 0xff9dc4, 0xfff0f5]
-        : [0x4e8a4a, 0x5e9e56, 0x74b061];
-      const pick = Math.floor(Math.random()*palette.length);
-      const puffs = [[0,1.55,0,1.0],[0.55,1.35,0.3,0.68],[-0.5,1.3,-0.25,0.65],[0.15,1.9,-0.3,0.6],[-0.3,1.75,0.35,0.58]];
-      puffs.forEach(([px,py,pz,ps],i)=>{
+    if(t === 'blossom'){
+      const trunk = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.13*scale, 0.2*scale, 1.05*scale, 6),
+        new THREE.MeshStandardMaterial({color:0x6b5044, roughness:1})
+      );
+      trunk.position.y = 0.53*scale;
+      trunk.rotation.z = 0.08;
+      trunk.castShadow = true;
+      g.add(trunk);
+      const pinks = [0xffc4d6, 0xffb7c5, 0xffd9e6, 0xffe6ee];
+      [[0.05,1.05,0,0.95],[0.65,0.75,0.25,0.62],[-0.55,0.7,-0.2,0.66],[0.15,1.4,-0.25,0.58],[-0.3,1.3,0.35,0.55]].forEach(([px,py,pz,ps],i)=>{
         const puff = new THREE.Mesh(
-          new THREE.IcosahedronGeometry(0.85*scale,0),
-          new THREE.MeshStandardMaterial({color:palette[(i+pick)%palette.length], roughness: type==='blossom' ? 0.85 : 0.95})
+          new THREE.IcosahedronGeometry(ps*scale,0),
+          new THREE.MeshStandardMaterial({color:pinks[i%pinks.length], roughness:0.7})
         );
-        puff.position.set(px*scale, py*scale, pz*scale);
-        puff.scale.setScalar(ps);
-        puff.rotation.y = Math.random()*Math.PI;
+        puff.position.set(px*scale, py*scale + 0.5*scale, pz*scale);
+        puff.castShadow = true;
+        g.add(puff);
+      });
+      const dotMat = new THREE.MeshStandardMaterial({color:0xff6fa0, roughness:0.5});
+      for(let i=0;i<8;i++){
+        const dot = new THREE.Mesh(new THREE.IcosahedronGeometry(0.08*scale,0), dotMat);
+        const a = Math.random()*Math.PI*2, r = (0.45+Math.random()*0.55)*scale, y = (1.1+Math.random()*0.85)*scale;
+        dot.position.set(Math.cos(a)*r, y, Math.sin(a)*r);
+        g.add(dot);
+      }
+    } else if(t === 'leafy'){
+      const trunk = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.16*scale, 0.24*scale, 1.0*scale, 6),
+        new THREE.MeshStandardMaterial({color:0x6b4a34, roughness:1})
+      );
+      trunk.position.y = 0.5*scale;
+      trunk.castShadow = true;
+      g.add(trunk);
+      const greens = [0x5e9e56, 0x74b061, 0x8fc06a, 0x4e8a4a];
+      [[0,0.95,0,1.05],[0.62,0.65,0.2,0.7],[-0.6,0.6,-0.25,0.72],[0.1,1.35,-0.3,0.65],[-0.35,1.25,0.4,0.6]].forEach(([px,py,pz,ps],i)=>{
+        const puff = new THREE.Mesh(
+          new THREE.IcosahedronGeometry(ps*scale,0),
+          new THREE.MeshStandardMaterial({color:greens[i%greens.length], roughness:0.95})
+        );
+        puff.position.set(px*scale, py*scale + 0.5*scale, pz*scale);
         puff.castShadow = true;
         g.add(puff);
       });
     } else {
+      const trunk = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.16*scale, 0.26*scale, 1.4*scale, 5),
+        new THREE.MeshStandardMaterial({color:0x6e4a30, roughness:1})
+      );
+      trunk.position.y = 0.7*scale;
+      trunk.castShadow = true;
+      g.add(trunk);
       const greens = [0x4e8a4a, 0x5e9e56, 0x74b061];
       const pick = Math.floor(Math.random()*3);
       [[1.5,1.6,1.15],[1.15,1.35,2.05],[0.8,1.1,2.85]].forEach(([r,h,y],i)=>{
@@ -251,75 +328,96 @@ export function createWorld(scene) {
     g.position.set(x,0,z);
     return g;
   }
-  // as 6 árvores "soltas": uma por jardim (a mais isolada de cada quadrante
-  // vira uma cerejeira grande) + 2 extras fora das seções, que seguem pinheiro
-  [
-    {x:-22, z:-22, type:'blossom', scale:1.5}, // Bosque da Saudade
-    {x: 22, z:-22, type:'blossom', scale:1.5}, // Recanto do Sol
-    {x:-22, z: 20, type:'blossom', scale:1.5}, // Prado dos Companheiros
-    {x: 22, z: 21, type:'blossom', scale:1.5}, // Campo das Estrelas
-    {x:-24, z:  2, type:'pine',    scale:0.8}, // extra, fora das seções
-    {x: 24, z: -2, type:'pine',    scale:0.85},// extra, fora das seções
-  ].forEach(({x,z,type,scale})=>{
-    scene.add(makeTree(x,z,scale,type));
+  // uma cerejeira grande em cada um dos quatro jardins (seções de lápides),
+  // como marco colorido e alegre na árvore mais isolada de cada um; as duas
+  // árvores extras junto às avenidas continuam pinheiro
+  [[-22,-22,1.5,'blossom'],[22,-22,1.5,'blossom'],[-22,20,1.5,'blossom'],[22,21,1.5,'blossom'],[-24,2,0.8,'pine'],[24,-2,0.85,'pine']].forEach(([x,z,s,type])=>{
+    scene.add(makeTree(x,z,s,type));
   });
 
-  // tree-lined avenues: both sides of all four avenues, symmetric — sempre pinheiro
+  // tree-lined avenues: sempre pinheiros, ladeando a fonte e os caminhos
   [9, 15, 21].forEach(d=>{
     [-3.6, 3.6].forEach(off=>{
       const s = 0.6 + Math.random()*0.12;
-      scene.add(makeTree(off,  d, s));
-      scene.add(makeTree(off, -d, 0.6 + Math.random()*0.12));
-      scene.add(makeTree( d, off, 0.6 + Math.random()*0.12));
-      scene.add(makeTree(-d, off, 0.6 + Math.random()*0.12));
+      scene.add(makeTree(off,  d, s, 'pine'));
+      scene.add(makeTree(off, -d, 0.6 + Math.random()*0.12, 'pine'));
+      scene.add(makeTree( d, off, 0.6 + Math.random()*0.12, 'pine'));
+      scene.add(makeTree(-d, off, 0.6 + Math.random()*0.12, 'pine'));
     });
   });
 
+  /* pequenos detalhes espalhados pelo gramado — pedrinhas e tufos de grama,
+     só pra quebrar a repetição da textura e dar profundidade ao chão */
+  function scatterGroundDetail(){
+    const pebbleMat = new THREE.MeshStandardMaterial({color:0xb7ab90, roughness:0.9});
+    const tuftMats = [0x5e9450, 0x74a85e, 0x8fae5a].map(c=> new THREE.MeshStandardMaterial({color:c, roughness:0.95}));
+    let placed = 0, tries = 0;
+    while(placed < 70 && tries < 500){
+      tries++;
+      const x = (Math.random()-0.5)*2*24;
+      const z = (Math.random()-0.5)*2*24;
+      if(Math.abs(x) < 3.2 || Math.abs(z) < 3.2) continue; // avenidas
+      if(Math.hypot(x,z) < PLAZA_R_GUARD) continue; // praça
+      placed++;
+      if(Math.random() < 0.45){
+        const peb = new THREE.Mesh(new THREE.IcosahedronGeometry(0.08+Math.random()*0.07,0), pebbleMat);
+        peb.scale.y = 0.55;
+        peb.position.set(x, 0.04, z);
+        peb.rotation.y = Math.random()*Math.PI;
+        peb.receiveShadow = true;
+        scene.add(peb);
+      } else {
+        const tuft = new THREE.Group();
+        const mat = tuftMats[Math.floor(Math.random()*tuftMats.length)];
+        for(let b=0;b<3;b++){
+          const blade = new THREE.Mesh(new THREE.ConeGeometry(0.035,0.22+Math.random()*0.1,4), mat);
+          blade.position.set((Math.random()-0.5)*0.1, 0.11, (Math.random()-0.5)*0.1);
+          blade.rotation.z = (Math.random()-0.5)*0.5;
+          tuft.add(blade);
+        }
+        tuft.position.set(x,0,z);
+        tuft.rotation.y = Math.random()*Math.PI;
+        scene.add(tuft);
+      }
+    }
+  }
+  const PLAZA_R_GUARD = 6.2;
+  scatterGroundDetail();
+
   /* benches + lamps arranged symmetrically around the central plaza */
-  const benchMat = new THREE.MeshStandardMaterial({color:0x8a6a48, roughness:0.85});
-  const benchFootMat = new THREE.MeshStandardMaterial({color:0x2e2620, roughness:0.7});
-  // assento em 3 ripas, encosto inclinado de 2 ripas, braços de madeira e pés escuros
+  const benchMat = new THREE.MeshStandardMaterial({color:0x6b5744, roughness:0.9});
+  const benchDarkMat = new THREE.MeshStandardMaterial({color:0x59493a, roughness:0.9});
+  // banco de jardim: assento em ripas, encosto inclinado e braços — mais
+  // convidativo que a tábua lisa de antes
   function makeBench(){
     const g = new THREE.Group();
-    const seatY = 0.46;
-
-    // assento: 3 ripas com pequenos vãos entre elas
-    const slatSpan = 1.6, slatDepth = 0.14, slatGap = 0.04;
-    [-(slatDepth+slatGap), 0, (slatDepth+slatGap)].forEach(zOff=>{
-      const slat = new THREE.Mesh(new THREE.BoxGeometry(slatSpan, 0.06, slatDepth), benchMat);
-      slat.position.set(0, seatY, zOff);
+    for(let i=0;i<3;i++){
+      const slat = new THREE.Mesh(new THREE.BoxGeometry(1.6,0.06,0.15), benchMat);
+      slat.position.set(0, 0.45, -0.18+i*0.18);
       slat.castShadow = true;
       g.add(slat);
-    });
-
-    // encosto: 2 ripas, levemente inclinado pra trás
-    const backGroup = new THREE.Group();
-    backGroup.position.set(0, seatY + 0.02, -0.24);
-    backGroup.rotation.x = -0.35;
-    [0.18, 0.42].forEach(h=>{
-      const slat = new THREE.Mesh(new THREE.BoxGeometry(slatSpan, 0.16, 0.05), benchMat);
-      slat.position.set(0, h, 0);
-      slat.castShadow = true;
-      backGroup.add(slat);
-    });
-    g.add(backGroup);
-
-    // braços de madeira nas duas pontas, apoiados num pé escuro
-    [-1, 1].forEach(side=>{
-      const arm = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.05, 0.52), benchMat);
-      arm.position.set(side*0.79, seatY + 0.22, -0.05);
+    }
+    const back = new THREE.Group();
+    for(let i=0;i<2;i++){
+      const slat = new THREE.Mesh(new THREE.BoxGeometry(1.6,0.16,0.06), benchMat);
+      slat.position.set(0, 0.22+i*0.22, 0);
+      back.add(slat);
+    }
+    back.position.set(0, 0.55, -0.24);
+    back.rotation.x = -0.18;
+    g.add(back);
+    [-0.78, 0.78].forEach(x=>{
+      const arm = new THREE.Mesh(new THREE.BoxGeometry(0.06,0.05,0.42), benchDarkMat);
+      arm.position.set(x, 0.68, -0.03);
       arm.castShadow = true;
       g.add(arm);
-      const armPost = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.22, 0.06), benchFootMat);
-      armPost.position.set(side*0.79, seatY + 0.10, -0.18);
-      armPost.castShadow = true;
+      const armPost = new THREE.Mesh(new THREE.BoxGeometry(0.07,0.24,0.07), benchDarkMat);
+      armPost.position.set(x, 0.56, 0.14);
       g.add(armPost);
     });
-
-    // pés escuros
-    [[-0.68,-0.18],[0.68,-0.18],[-0.68,0.18],[0.68,0.18]].forEach(([x,z])=>{
-      const leg = new THREE.Mesh(new THREE.BoxGeometry(0.08,0.45,0.08), benchFootMat);
-      leg.position.set(x,0.225,z);
+    [[-0.7,0.18],[0.7,0.18],[-0.7,-0.2],[0.7,-0.2]].forEach(([x,z])=>{
+      const leg = new THREE.Mesh(new THREE.BoxGeometry(0.09,0.45,0.09), benchDarkMat);
+      leg.position.set(x,0.22,z);
       leg.castShadow = true;
       g.add(leg);
     });
@@ -343,40 +441,34 @@ export function createWorld(scene) {
     l.position.set(sx*5.0, 0, sz*5.0);
     scene.add(l);
   });
-  // 4 benches a bit further out on the diagonals, facing the fountain
-  [[1,1],[1,-1],[-1,1],[-1,-1]].forEach(([sx,sz])=>{
+  // bancos em todos os vãos entre dois pinheiros da mesma fileira, exceto
+  // os que ficam bem ao lado do letreiro de entrada de cada jardim (ali o
+  // banco brigava visualmente com a placa)
+  const AVENUE_BENCH_SPOTS = [
+    // avenida norte-sul, lado leste (x=3.6) — vão perto da praça (z=12)
+    // fica de fora por causa dos letreiros "Campo das Estrelas"/"Recanto do Sol"
+    { x: 3.6, z: 18,  rot: -Math.PI/2 },
+    { x: 3.6, z: -18, rot: -Math.PI/2 },
+    // avenida norte-sul, lado oeste (x=-3.6) — mesma exceção pros letreiros
+    // "Prado dos Companheiros"/"Bosque da Saudade"
+    { x: -3.6, z: 18,  rot: Math.PI/2 },
+    { x: -3.6, z: -18, rot: Math.PI/2 },
+    // avenida leste-oeste, lado norte (z=3.6) — sem letreiros por perto
+    { x: 12, z: 3.6,  rot: Math.PI },
+    { x: 18, z: 3.6,  rot: Math.PI },
+    { x: -12, z: 3.6, rot: Math.PI },
+    { x: -18, z: 3.6, rot: Math.PI },
+    // avenida leste-oeste, lado sul (z=-3.6)
+    { x: 12, z: -3.6,  rot: 0 },
+    { x: 18, z: -3.6,  rot: 0 },
+    { x: -12, z: -3.6, rot: 0 },
+    { x: -18, z: -3.6, rot: 0 },
+  ];
+  AVENUE_BENCH_SPOTS.forEach(spot=>{
     const b = makeBench();
-    b.position.set(sx*6.4, 0, sz*6.4);
-    b.rotation.y = Math.atan2(-sx, -sz) + Math.PI/2;
+    b.position.set(spot.x, 0, spot.z);
+    b.rotation.y = spot.rot;
     scene.add(b);
-  });
-
-  // bancos nos vãos entre pinheiros das avenidas, virados pro caminho.
-  // as árvores de cada fileira ficam em d=9,15,21, então os vãos caem em 12 e 18.
-  // o vão em 12 na avenida N-S coincide com a placa de entrada de cada jardim
-  // (ver lapides.js: placa em x=sec.sx*4.7, z=sec.sz*12), então é pulado ali.
-  const AVENUE_TREE_OFFSETS = [-3.6, 3.6];
-  const AVENUE_GAPS = [12, 18];
-  AVENUE_TREE_OFFSETS.forEach(off=>{
-    [1,-1].forEach(sign=>{
-      AVENUE_GAPS.forEach(mid=>{
-        if(mid === 12) return; // vão ao lado da placa do jardim, deixa livre
-        const b = makeBench();
-        b.position.set(off, 0, mid*sign);
-        b.rotation.y = Math.atan2(-Math.sign(off), 0);
-        scene.add(b);
-      });
-    });
-  });
-  AVENUE_TREE_OFFSETS.forEach(off=>{
-    [1,-1].forEach(sign=>{
-      AVENUE_GAPS.forEach(mid=>{
-        const b = makeBench();
-        b.position.set(mid*sign, 0, off);
-        b.rotation.y = Math.atan2(0, -Math.sign(off));
-        scene.add(b);
-      });
-    });
   });
 
   /* ============ CENTRAL PLAZA + FOUNTAIN ============ */
@@ -410,7 +502,7 @@ export function createWorld(scene) {
   }
   const plazaFloor = new THREE.Mesh(
     new THREE.CircleGeometry(PLAZA.r, 24),
-    new THREE.MeshStandardMaterial({color:0xd9c49a, roughness:1})
+    new THREE.MeshStandardMaterial({map:makePlazaTexture(), color:0xddc79e, roughness:1})
   );
   plazaFloor.rotation.x = -Math.PI/2;
   plazaFloor.position.set(PLAZA.x, 0.03, PLAZA.z);
@@ -426,8 +518,30 @@ export function createWorld(scene) {
 
   // fountain
   const fountain = new THREE.Group();
-  const basinMat = new THREE.MeshStandardMaterial({color:0xb8ac98, roughness:0.8});
-  const waterMat = new THREE.MeshStandardMaterial({color:0x5fb7e8, roughness:0.15, metalness:0.1, transparent:true, opacity:0.85});
+  function makeBasinStoneTexture(){
+    const c = document.createElement('canvas');
+    c.width = 256; c.height = 128;
+    const ctx = c.getContext('2d');
+    ctx.fillStyle = '#cabfa4';
+    ctx.fillRect(0,0,256,128);
+    for(let i=0;i<520;i++){
+      const shade = 150+Math.random()*60;
+      ctx.fillStyle = `rgba(${shade},${shade-10},${shade-24},0.35)`;
+      ctx.fillRect(Math.random()*256, Math.random()*128, 2.4,2.4);
+    }
+    // leve mancha de musgo perto da base, por causa da água
+    ctx.fillStyle = 'rgba(94,124,72,0.22)';
+    for(let i=0;i<10;i++){
+      const x = Math.random()*256, r = 10+Math.random()*16;
+      ctx.beginPath(); ctx.ellipse(x, 118, r, r*0.5, 0, 0, Math.PI*2); ctx.fill();
+    }
+    const tex = new THREE.CanvasTexture(c);
+    tex.wrapS = THREE.RepeatWrapping;
+    tex.repeat.set(3,1);
+    return tex;
+  }
+  const basinMat = new THREE.MeshStandardMaterial({map:makeBasinStoneTexture(), color:0xe3d8bd, roughness:0.85});
+  const waterMat = new THREE.MeshStandardMaterial({color:0x5cc2c9, emissive:0x2a6a72, emissiveIntensity:0.18, roughness:0.12, metalness:0.15, transparent:true, opacity:0.82});
 
   // outer basin wall
   const basinWall = new THREE.Mesh(new THREE.CylinderGeometry(1.7,1.85,0.5,12,1,true), basinMat);
@@ -492,6 +606,34 @@ export function createWorld(scene) {
     fountain.add(d);
     fountainDrops.push(d);
   }
+
+  // brilhos do sol na água: pontinhos brancos que piscam em posições
+  // aleatórias da superfície, como reflexo tremulando
+  const sparkleMat = new THREE.MeshBasicMaterial({color:0xfff6df, transparent:true, opacity:0});
+  const waterSparkles = [];
+  [[waterLow, 1.55, 0.39],[upperWater, 0.5, 1.53]].forEach(([surface, radius, y])=>{
+    for(let i=0;i<6;i++){
+      const s = new THREE.Mesh(new THREE.CircleGeometry(0.03,6), sparkleMat.clone());
+      s.rotation.x = -Math.PI/2;
+      const a = Math.random()*Math.PI*2, r = Math.random()*radius;
+      s.position.set(Math.cos(a)*r, y+0.005, Math.sin(a)*r);
+      s.userData = { phase: Math.random()*Math.PI*2, speed: 0.8+Math.random()*1.4 };
+      fountain.add(s);
+      waterSparkles.push(s);
+    }
+  });
+
+  // ondinhas: anéis finos que nascem no centro da bacia de baixo e se
+  // expandem até sumir, em loop, pra água não parecer parada
+  const rippleMat = new THREE.MeshBasicMaterial({color:0xe8fbff, transparent:true, opacity:0.5, side:THREE.DoubleSide});
+  const ripples = [0,1,2].map(i=>{
+    const r = new THREE.Mesh(new THREE.RingGeometry(0.05,0.09,20), rippleMat.clone());
+    r.rotation.x = -Math.PI/2;
+    r.position.y = 0.385;
+    r.userData = { t: i/3 };
+    fountain.add(r);
+    return r;
+  });
 
   fountain.position.set(PLAZA.x, 0, PLAZA.z);
   scene.add(fountain);
@@ -706,6 +848,19 @@ export function createWorld(scene) {
     waterLow.position.y = 0.38 + Math.sin(elapsed*2.2)*0.012;
     upperWater.position.y = 1.52 + Math.sin(elapsed*3.1)*0.008;
     jet.scale.y = 1 + Math.sin(elapsed*6)*0.08;
+
+    waterSparkles.forEach(s=>{
+      const tw = Math.sin(elapsed*s.userData.speed + s.userData.phase);
+      s.material.opacity = Math.max(0, tw*0.8 - 0.35);
+    });
+    ripples.forEach(r=>{
+      r.userData.t += dt*0.18;
+      if(r.userData.t > 1) r.userData.t -= 1;
+      const t = r.userData.t;
+      const s = 0.15 + t*1.35;
+      r.scale.set(s,s,s);
+      r.material.opacity = 0.5*(1-t);
+    });
   }
 
   return {

@@ -29,6 +29,11 @@ renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+// tonemapping + color: dá aquele contraste suave e quente de "golden hour"
+// em vez do visual "cru" padrão do WebGL, sem perder o look baixo-poli.
+renderer.outputEncoding = THREE.sRGBEncoding;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 0.62;
 appEl.insertBefore(renderer.domElement, appEl.firstChild);
 
 window.addEventListener('resize', ()=>{
