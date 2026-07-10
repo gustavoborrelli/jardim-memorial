@@ -396,7 +396,7 @@ export function createDogController(scene, renderer, { isPaused, plaza, bounds }
         // na tela, sem depender de onde a câmera livre ficou apontando da
         // última vez — é o que fazia às vezes "trás" parecer "frente".
         const fwdX = Math.sin(dogYaw), fwdZ = Math.cos(dogYaw);
-        const rightX = Math.cos(dogYaw), rightZ = -Math.sin(dogYaw);
+        const rightX = -Math.cos(dogYaw), rightZ = Math.sin(dogYaw);
         worldX = fwdX*(-moveZ) + rightX*moveX;
         worldZ = fwdZ*(-moveZ) + rightZ*moveX;
       } else {
