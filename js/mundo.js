@@ -113,12 +113,13 @@ export function createWorld(scene) {
   }
   const groundGeo = new THREE.PlaneGeometry(130, 130, 44, 44);
   {
+    const RISE_START = 44; // além da cerca, senão o morro come os cantos do terreno
     const pos = groundGeo.attributes.position;
     for(let i=0;i<pos.count;i++){
       const gx = pos.getX(i), gy = pos.getY(i);
       const d = Math.hypot(gx, gy);
-      if(d > 29){
-        const t = d - 29;
+      if(d > RISE_START){
+        const t = d - RISE_START;
         pos.setZ(i, t*0.22 + Math.sin(gx*0.33)*Math.cos(gy*0.29)*t*0.12 + Math.random()*0.5);
       }
     }
@@ -203,35 +204,67 @@ export function createWorld(scene) {
   scene.add(lintel);
 
   /* ============ TREES ============ */
-  function makeTree(x,z,scale=1){
+  // type: 'pine' (original conifer, default), 'leafy' (copa redonda frondosa)
+  // ou 'blossom' (cerejeira florida rosa)
+  function makeTree(x,z,scale=1,type='pine'){
     const g = new THREE.Group();
     const trunk = new THREE.Mesh(
       new THREE.CylinderGeometry(0.16*scale, 0.26*scale, 1.4*scale, 5),
-      new THREE.MeshStandardMaterial({color:0x6e4a30, roughness:1})
+      new THREE.MeshStandardMaterial({color: type==='blossom' ? 0x5c4436 : 0x6e4a30, roughness:1})
     );
     trunk.position.y = 0.7*scale;
     trunk.castShadow = true;
     g.add(trunk);
-    const greens = [0x4e8a4a, 0x5e9e56, 0x74b061];
-    const pick = Math.floor(Math.random()*3);
-    [[1.5,1.6,1.15],[1.15,1.35,2.05],[0.8,1.1,2.85]].forEach(([r,h,y],i)=>{
-      const cone = new THREE.Mesh(
-        new THREE.ConeGeometry(r*scale, h*scale, 6),
-        new THREE.MeshStandardMaterial({color:greens[(i+pick)%3], roughness:0.95})
-      );
-      cone.position.y = y*scale;
-      cone.rotation.y = Math.random()*Math.PI;
-      cone.castShadow = true;
-      g.add(cone);
-    });
+
+    if(type === 'leafy' || type === 'blossom'){
+      // copa redonda frondosa: cacho de esferas facetadas se sobrepondo
+      const palette = type === 'blossom'
+        ? [0xffb7d5, 0xffc9de, 0xff9dc4, 0xfff0f5]
+        : [0x4e8a4a, 0x5e9e56, 0x74b061];
+      const pick = Math.floor(Math.random()*palette.length);
+      const puffs = [[0,1.55,0,1.0],[0.55,1.35,0.3,0.68],[-0.5,1.3,-0.25,0.65],[0.15,1.9,-0.3,0.6],[-0.3,1.75,0.35,0.58]];
+      puffs.forEach(([px,py,pz,ps],i)=>{
+        const puff = new THREE.Mesh(
+          new THREE.IcosahedronGeometry(0.85*scale,0),
+          new THREE.MeshStandardMaterial({color:palette[(i+pick)%palette.length], roughness: type==='blossom' ? 0.85 : 0.95})
+        );
+        puff.position.set(px*scale, py*scale, pz*scale);
+        puff.scale.setScalar(ps);
+        puff.rotation.y = Math.random()*Math.PI;
+        puff.castShadow = true;
+        g.add(puff);
+      });
+    } else {
+      const greens = [0x4e8a4a, 0x5e9e56, 0x74b061];
+      const pick = Math.floor(Math.random()*3);
+      [[1.5,1.6,1.15],[1.15,1.35,2.05],[0.8,1.1,2.85]].forEach(([r,h,y],i)=>{
+        const cone = new THREE.Mesh(
+          new THREE.ConeGeometry(r*scale, h*scale, 6),
+          new THREE.MeshStandardMaterial({color:greens[(i+pick)%3], roughness:0.95})
+        );
+        cone.position.y = y*scale;
+        cone.rotation.y = Math.random()*Math.PI;
+        cone.castShadow = true;
+        g.add(cone);
+      });
+    }
     g.position.set(x,0,z);
     return g;
   }
-  [[-22,-22,1.2],[22,-22,1],[-22,20,0.9],[22,21,1.15],[-24,2,0.8],[24,-2,0.85]].forEach(([x,z,s])=>{
-    scene.add(makeTree(x,z,s));
+  // as 6 árvores "soltas": uma por jardim (a mais isolada de cada quadrante
+  // vira uma cerejeira grande) + 2 extras fora das seções, que seguem pinheiro
+  [
+    {x:-22, z:-22, type:'blossom', scale:1.5}, // Bosque da Saudade
+    {x: 22, z:-22, type:'blossom', scale:1.5}, // Recanto do Sol
+    {x:-22, z: 20, type:'blossom', scale:1.5}, // Prado dos Companheiros
+    {x: 22, z: 21, type:'blossom', scale:1.5}, // Campo das Estrelas
+    {x:-24, z:  2, type:'pine',    scale:0.8}, // extra, fora das seções
+    {x: 24, z: -2, type:'pine',    scale:0.85},// extra, fora das seções
+  ].forEach(({x,z,type,scale})=>{
+    scene.add(makeTree(x,z,scale,type));
   });
 
-  // tree-lined avenues: both sides of all four avenues, symmetric
+  // tree-lined avenues: both sides of all four avenues, symmetric — sempre pinheiro
   [9, 15, 21].forEach(d=>{
     [-3.6, 3.6].forEach(off=>{
       const s = 0.6 + Math.random()*0.12;
@@ -243,15 +276,51 @@ export function createWorld(scene) {
   });
 
   /* benches + lamps arranged symmetrically around the central plaza */
-  const benchMat = new THREE.MeshStandardMaterial({color:0x6b5744, roughness:0.9});
+  const benchMat = new THREE.MeshStandardMaterial({color:0x8a6a48, roughness:0.85});
+  const benchFootMat = new THREE.MeshStandardMaterial({color:0x2e2620, roughness:0.7});
+  // assento em 3 ripas, encosto inclinado de 2 ripas, braços de madeira e pés escuros
   function makeBench(){
     const g = new THREE.Group();
-    const seat = new THREE.Mesh(new THREE.BoxGeometry(1.6,0.12,0.5), benchMat);
-    seat.position.y = 0.45; seat.castShadow = true;
-    g.add(seat);
-    [[-0.65,-0.2],[0.65,-0.2],[-0.65,0.2],[0.65,0.2]].forEach(([x,z])=>{
-      const leg = new THREE.Mesh(new THREE.BoxGeometry(0.08,0.45,0.08), benchMat);
-      leg.position.set(x,0.22,z);
+    const seatY = 0.46;
+
+    // assento: 3 ripas com pequenos vãos entre elas
+    const slatSpan = 1.6, slatDepth = 0.14, slatGap = 0.04;
+    [-(slatDepth+slatGap), 0, (slatDepth+slatGap)].forEach(zOff=>{
+      const slat = new THREE.Mesh(new THREE.BoxGeometry(slatSpan, 0.06, slatDepth), benchMat);
+      slat.position.set(0, seatY, zOff);
+      slat.castShadow = true;
+      g.add(slat);
+    });
+
+    // encosto: 2 ripas, levemente inclinado pra trás
+    const backGroup = new THREE.Group();
+    backGroup.position.set(0, seatY + 0.02, -0.24);
+    backGroup.rotation.x = -0.35;
+    [0.18, 0.42].forEach(h=>{
+      const slat = new THREE.Mesh(new THREE.BoxGeometry(slatSpan, 0.16, 0.05), benchMat);
+      slat.position.set(0, h, 0);
+      slat.castShadow = true;
+      backGroup.add(slat);
+    });
+    g.add(backGroup);
+
+    // braços de madeira nas duas pontas, apoiados num pé escuro
+    [-1, 1].forEach(side=>{
+      const arm = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.05, 0.52), benchMat);
+      arm.position.set(side*0.79, seatY + 0.22, -0.05);
+      arm.castShadow = true;
+      g.add(arm);
+      const armPost = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.22, 0.06), benchFootMat);
+      armPost.position.set(side*0.79, seatY + 0.10, -0.18);
+      armPost.castShadow = true;
+      g.add(armPost);
+    });
+
+    // pés escuros
+    [[-0.68,-0.18],[0.68,-0.18],[-0.68,0.18],[0.68,0.18]].forEach(([x,z])=>{
+      const leg = new THREE.Mesh(new THREE.BoxGeometry(0.08,0.45,0.08), benchFootMat);
+      leg.position.set(x,0.225,z);
+      leg.castShadow = true;
       g.add(leg);
     });
     return g;
@@ -280,6 +349,34 @@ export function createWorld(scene) {
     b.position.set(sx*6.4, 0, sz*6.4);
     b.rotation.y = Math.atan2(-sx, -sz) + Math.PI/2;
     scene.add(b);
+  });
+
+  // bancos nos vãos entre pinheiros das avenidas, virados pro caminho.
+  // as árvores de cada fileira ficam em d=9,15,21, então os vãos caem em 12 e 18.
+  // o vão em 12 na avenida N-S coincide com a placa de entrada de cada jardim
+  // (ver lapides.js: placa em x=sec.sx*4.7, z=sec.sz*12), então é pulado ali.
+  const AVENUE_TREE_OFFSETS = [-3.6, 3.6];
+  const AVENUE_GAPS = [12, 18];
+  AVENUE_TREE_OFFSETS.forEach(off=>{
+    [1,-1].forEach(sign=>{
+      AVENUE_GAPS.forEach(mid=>{
+        if(mid === 12) return; // vão ao lado da placa do jardim, deixa livre
+        const b = makeBench();
+        b.position.set(off, 0, mid*sign);
+        b.rotation.y = Math.atan2(-Math.sign(off), 0);
+        scene.add(b);
+      });
+    });
+  });
+  AVENUE_TREE_OFFSETS.forEach(off=>{
+    [1,-1].forEach(sign=>{
+      AVENUE_GAPS.forEach(mid=>{
+        const b = makeBench();
+        b.position.set(mid*sign, 0, off);
+        b.rotation.y = Math.atan2(0, -Math.sign(off));
+        scene.add(b);
+      });
+    });
   });
 
   /* ============ CENTRAL PLAZA + FOUNTAIN ============ */
