@@ -113,6 +113,10 @@ canvas{display:block;outline:none;}
   z-index:20;
 }
 .modal-back.open{ display:flex; }
+/* login pode ser pedido com o modal de mensagens já aberto atrás dele
+   (diferente do modal de homenagem, que só abre depois do login) — garante
+   que o login sempre fique por cima, não importa a ordem no DOM */
+#authModalBack{ z-index:30; }
 .modal{
   width:min(420px, 88vw);
   background:linear-gradient(180deg, #2c2438, #221c2c);
@@ -197,6 +201,61 @@ canvas{display:block;outline:none;}
 .modal-actions{
   display:flex; justify-content:flex-end; gap:10px; margin-top:6px;
 }
+.btn.danger{
+  background:rgba(30,22,38,0.55);
+  color:#e88a8a;
+  border:1px solid rgba(232,138,138,0.4);
+  margin-right:auto;
+}
+
+/* mensagens (livro de visitas por lápide) */
+.messages-list{
+  max-height:180px;
+  overflow-y:auto;
+  margin-bottom:14px;
+  padding-right:4px;
+}
+.message-item{
+  padding:8px 0;
+  border-bottom:1px solid rgba(244,239,230,0.1);
+  position:relative;
+}
+.message-item:last-child{ border-bottom:none; }
+.message-meta{
+  display:flex; align-items:baseline; gap:8px;
+  margin-bottom:2px;
+}
+.message-author{
+  font-size:11px; font-weight:600;
+  color:var(--amber);
+}
+.message-date{
+  font-size:10.5px;
+  color:rgba(244,239,230,0.5);
+}
+.message-text{
+  font-size:13px;
+  color:var(--cream);
+  line-height:1.4;
+  margin:0;
+  padding-right:20px;
+}
+.message-empty{
+  font-size:12.5px;
+  font-style:italic;
+  color:rgba(244,239,230,0.5);
+  padding:6px 0;
+}
+.message-delete{
+  position:absolute;
+  top:6px; right:0;
+  background:none; border:none;
+  color:rgba(232,138,138,0.75);
+  font-size:13px;
+  cursor:pointer;
+  padding:2px 4px;
+}
+.message-delete:hover{ color:#e88a8a; }
 
 /* auth */
 .auth-chip{
@@ -299,9 +358,36 @@ canvas{display:block;outline:none;}
   border-color:transparent;
 }
 
+/* botão pra escolher se o clique no gramado planta flor ou vela — mesmo
+   estilo redondo do botão de visão, empilhado logo acima dele */
+.plant-toggle{
+  position:absolute;
+  right:26px; bottom:86px;
+  width:52px; height:52px;
+  border-radius:50%;
+  background:rgba(30,22,38,0.55);
+  border:1px solid rgba(244,239,230,0.28);
+  backdrop-filter:blur(6px);
+  color:var(--cream);
+  font-size:20px;
+  line-height:1;
+  display:flex; align-items:center; justify-content:center;
+  cursor:pointer;
+  z-index:8;
+  transition:background 0.15s ease, transform 0.15s ease, border-color 0.15s ease;
+}
+.plant-toggle:hover{ transform:translateY(-1px); background:rgba(30,22,38,0.75); }
+.plant-toggle:active{ transform:translateY(0) scale(0.96); }
+.plant-toggle.vela{
+  background:rgba(232,185,120,0.9);
+  color:var(--plum);
+  border-color:transparent;
+}
+
 @media (pointer:coarse){
   .joystick{ display:block; bottom:calc(26px + env(safe-area-inset-bottom, 0px)); }
   .view-toggle{ bottom:calc(22px + env(safe-area-inset-bottom, 0px)); right:18px; width:48px; height:48px; font-size:18px; }
+  .plant-toggle{ bottom:calc(78px + env(safe-area-inset-bottom, 0px)); right:18px; width:48px; height:48px; font-size:18px; }
 
   /* HUD mais enxuto em telas de toque: sem dicas de teclado (não existe),
      sem o aviso de ESC (idem), título mais discreto, botões mais compactos */

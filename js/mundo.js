@@ -762,6 +762,117 @@ export function createWorld(scene) {
     }
   }
 
+  /* ============ VELAS (segundo tipo de tributo, vida útil mais longa) ============ */
+  const candleGroup = new THREE.Group();
+  scene.add(candleGroup);
+  const witheringCandles = []; // igual witheringFlowers, mas com apagaEm/expiraEm
+
+  function makeGlowTexture(){
+    const c = document.createElement('canvas');
+    c.width = c.height = 64;
+    const ctx = c.getContext('2d');
+    const g = ctx.createRadialGradient(32,32,0, 32,32,32);
+    g.addColorStop(0, 'rgba(255,214,140,0.9)');
+    g.addColorStop(0.4, 'rgba(255,170,80,0.45)');
+    g.addColorStop(1, 'rgba(255,170,80,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0,0,64,64);
+    return new THREE.CanvasTexture(c);
+  }
+  const glowTexture = makeGlowTexture();
+  const waxColors = [0xf4ead8, 0xe8caa0, 0xd9b98c];
+
+  // lifespan = {apagaEm, expiraEm} em epoch ms; sem isso a vela nunca apaga nem some
+  function plantCandle(x, z, instant, lifespan){
+    const g = new THREE.Group();
+    const waxColor = waxColors[Math.floor(Math.random()*waxColors.length)];
+    const body = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.055,0.06,0.26,8),
+      new THREE.MeshStandardMaterial({color:waxColor, roughness:0.7})
+    );
+    body.position.y = 0.13;
+    g.add(body);
+    const wick = new THREE.Mesh(new THREE.CylinderGeometry(0.006,0.006,0.05,5), new THREE.MeshStandardMaterial({color:0x2a2018}));
+    wick.position.y = 0.285;
+    g.add(wick);
+
+    const flameMat = new THREE.MeshBasicMaterial({color:0xffb347});
+    const flame = new THREE.Mesh(new THREE.SphereGeometry(0.03,6,6), flameMat);
+    flame.scale.set(0.7,1.3,0.7);
+    flame.position.y = 0.335;
+    g.add(flame);
+
+    const glowMat = new THREE.SpriteMaterial({map:glowTexture, transparent:true, opacity:0.7, depthWrite:false});
+    const glow = new THREE.Sprite(glowMat);
+    glow.scale.set(0.55,0.55,1);
+    glow.position.y = 0.32;
+    g.add(glow);
+
+    g.position.set(x + (Math.random()-0.5)*0.4, 0, z + (Math.random()-0.5)*0.4);
+    candleGroup.add(g);
+
+    const flickerPhase = Math.random()*Math.PI*2;
+    g.userData = { flame, glow, flickerPhase, lit:true };
+    if(lifespan){
+      g.userData.apagaEm = lifespan.apagaEm;
+      g.userData.expiraEm = lifespan.expiraEm;
+      witheringCandles.push(g);
+    }
+
+    if(instant){ g.scale.setScalar(0.9+Math.random()*0.2); return g; }
+    g.scale.setScalar(0);
+    const start = performance.now();
+    function grow(){
+      const t = Math.min(1,(performance.now()-start)/380);
+      g.scale.setScalar(t);
+      if(t<1) requestAnimationFrame(grow);
+    }
+    grow();
+    return g;
+  }
+
+  function extinguishCandle(g){
+    g.userData.lit = false;
+    g.userData.flame.visible = false;
+    g.userData.glow.visible = false;
+  }
+
+  /* ============ SUPABASE: velas persistentes ============ */
+  function randomVelaLifespan(){
+    return {
+      apagaEm: Date.now() + 8*DAY_MS + Math.random()*2*DAY_MS,   // queima entre 8 e 10 dias
+      expiraEm: Date.now() + 14*DAY_MS + Math.random()*2*DAY_MS, // some entre 14 e 16 dias
+    };
+  }
+
+  function plantAndSaveVela(x, z){
+    const lifespan = randomVelaLifespan();
+    plantCandle(x, z, false, lifespan);
+    supabase.from('velas').insert({
+      x, z,
+      apaga_em: new Date(lifespan.apagaEm).toISOString(),
+      expira_em: new Date(lifespan.expiraEm).toISOString(),
+    }).then(({ error })=>{
+      if(error) console.error('Não foi possível salvar a vela:', error.message);
+    });
+  }
+
+  async function loadVelas(){
+    const { data: rows, error } = await supabase.from('velas').select('*');
+    if(error){
+      console.error('Não foi possível carregar as velas:', error.message);
+      return;
+    }
+    rows.forEach(row=>{
+      const g = plantCandle(Number(row.x), Number(row.z), true, {
+        apagaEm: new Date(row.apaga_em).getTime(),
+        expiraEm: new Date(row.expira_em).getTime(),
+      });
+      if(Date.now() >= g.userData.apagaEm) extinguishCandle(g);
+    });
+  }
+  loadVelas();
+
   /* ============ BUTTERFLIES ============ */
   const fireflyGroup = new THREE.Group();
   scene.add(fireflyGroup);
@@ -812,9 +923,31 @@ export function createWorld(scene) {
     }
   }
 
+  /* ============ VELAS: apagar e sumir ============ */
+  function updateCandles(elapsed){
+    const now = Date.now();
+    for(let i=witheringCandles.length-1; i>=0; i--){
+      const c = witheringCandles[i];
+      const { apagaEm, expiraEm } = c.userData;
+      if(now >= expiraEm){
+        candleGroup.remove(c);
+        witheringCandles.splice(i,1);
+        continue;
+      }
+      if(c.userData.lit && now >= apagaEm) extinguishCandle(c);
+    }
+    candleGroup.children.forEach(g=>{
+      if(!g.userData.lit) return;
+      const flicker = 0.85 + Math.sin(elapsed*9 + g.userData.flickerPhase)*0.12 + Math.sin(elapsed*23 + g.userData.flickerPhase)*0.05;
+      g.userData.flame.scale.set(0.7*flicker, 1.3*flicker, 0.7*flicker);
+      g.userData.glow.material.opacity = 0.55 + flicker*0.2;
+    });
+  }
+
   /* ============ PER-FRAME UPDATE ============ */
   function update(dt, elapsed){
     updateWither();
+    updateCandles(elapsed);
     fireflies.forEach((f,i)=>{
       let tx = f.baseX, tz = f.baseZ;
       if(gatherTarget && performance.now() < gatherUntil && i%2===0){
@@ -867,6 +1000,7 @@ export function createWorld(scene) {
     ground,
     PLAZA,
     plantAndSaveFlor,
+    plantAndSaveVela,
     scatterFlowers,
     isFreeSpot,
     gatherFireflies,

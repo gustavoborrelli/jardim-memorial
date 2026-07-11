@@ -108,12 +108,59 @@ flores/velas nas lápides dos outros (MVP family & friends).
     agora o tamanho diminui automaticamente até caber. Verificado com
     screenshots (Playwright, câmera posicionada manualmente em frente a
     cada arco) mostrando as 4 placas legíveis.
+13. ✅ **Mensagens na lápide** — primeiro passo de tornar o jardim mais
+    dinâmico com interação social. Clicar numa lápide agora abre um modal
+    (`js/menuUi.js` → `openMessagesFor`/`renderMessages`) com um livro de
+    visitas: todo mundo pode ler as mensagens já deixadas ali e, se
+    logado, deixar a sua (nome opcional — sem preencher, aparece como
+    "Anônimo"; e-mail nunca aparece em lugar nenhum público). Nova tabela
+    `mensagens` (`supabase/009_mensagens.sql`), RLS pública pra leitura,
+    insert só autenticado, `on delete cascade` quando o memorial é apagado.
+    Isso substituiu o comportamento antigo (etapa 10) de clicar numa lápide
+    apagar na hora só pra conta admin: agora o clique sempre abre o modal
+    de mensagens pra qualquer um, e a conta admin ganha, dentro desse mesmo
+    modal, um botão "🗑 Apagar homenagem" e um ícone de apagar por
+    mensagem — a moderação virou parte da mesma interação em vez de um
+    comportamento escondido só no clique.
+14. ✅ **Velas** — segundo tipo de tributo, ao lado da flor (etapa 4).
+    Um botão novo perto do de trocar visão (`🌼 Flor` / `🕯️ Vela`,
+    `js/menuUi.js` → `btnPlantToggle`/`getPlantMode`) escolhe o que o
+    clique no gramado planta; `js/main.js` só decide entre
+    `world.plantAndSaveFlor`/`plantAndSaveVela` conforme esse estado.
+    Visual em `js/mundo.js`: corpo de cera + pavio + chama (esfera achatada
+    com material emissivo) + um `THREE.Sprite` com textura de brilho radial
+    (sempre de frente pra câmera, sem custo de luz dinâmica de verdade —
+    decisão consciente de performance, já que velas plantadas por usuários
+    não têm limite, igual as flores). A vida útil é bem mais longa que a da
+    flor: queima entre 8–10 dias (`apaga_em`, equivalente ao `murcha_em` da
+    flor) e some entre 14–16 dias (`expira_em`) — quando apaga, a chama e o
+    brilho somem e só sobra o coto de cera. Nova tabela `velas`
+    (`supabase/010_velas.sql`), mesmo padrão de RLS e faxina via `pg_cron`
+    das flores (`004_flores.sql`/`007_faxina_flores.sql`).
+15. ✅ **Presença em tempo real** — terceiro e último passo da leva de
+    dinamismo social. Os cachorros de quem mais está com o jardim aberto
+    agora aparecem andando de verdade pra todo mundo, ao vivo. Diferente
+    das duas etapas anteriores, não precisou de tabela nem RLS: é estado
+    efêmero (posição de quem está andando não precisa sobreviver a um F5),
+    então usa o Supabase Realtime em modo Presence (só pra saber quem está
+    conectado agora, criar/remover o cachorro-fantasma na hora certa) +
+    Broadcast (posição/direção em alta frequência, throttled a cada
+    150ms). Novo módulo `js/presenca.js` reaproveita `buildDog()` (já
+    exportado de `js/cachorros.js`) pra montar o modelo de cada
+    cachorro-fantasma com a raça certa, e interpola posição/rotação
+    suavemente entre as mensagens recebidas em vez de "teleportar". Não
+    exige login, igual andar pelo jardim hoje já não exige. Testado com
+    duas abas reais do navegador (Playwright): o cachorro de uma aba
+    aparece e anda na outra, e some quando a aba fecha.
 
 ## Ideias soltas (não decidido ainda)
 
+- A leva de dinamismo social planejada em conjunto está completa: (1)
+  mensagens na lápide — etapa 13; (2) velas — etapa 14; (3) presença em
+  tempo real — etapa 15. Próximas ideias ainda por decidir, abaixo.
 - Pensar em um limite de tamanho/qtd de fotos por lápide.
-- Vale a pena limitar quantas flores uma pessoa pode plantar por dia, pra
-  evitar spam visual no jardim?
+- Vale a pena limitar quantas flores/mensagens uma pessoa pode deixar por
+  dia, pra evitar spam visual no jardim?
 - E-mail de confirmação: o Supabase usa um servidor de teste próprio, com
   limite baixo de envios por hora (ficamos sem receber depois de testar
   algumas vezes seguidas). "Confirm email" está desligado de novo por causa

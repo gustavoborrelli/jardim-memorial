@@ -507,6 +507,7 @@ export function createDogController(scene, renderer, { isPaused, plaza, bounds }
   return {
     selectDog,
     getDog: () => dog,
+    getBreed: () => dogParts && dogParts.breed,
     updateMovement,
     updateCamera,
     orbitIdle,

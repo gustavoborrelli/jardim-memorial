@@ -54,7 +54,7 @@
         <h2>Como jogar</h2>
         <div class="rule"><span class="ico">🐕</span><span><b>W A S D</b> ou setas movem o cãozinho. Ele sempre anda na direção em que a câmera está olhando.</span></div>
         <div class="rule"><span class="ico">🎥</span><span><b>Dois dedos no touchpad</b> (ou roda do mouse) giram a câmera ao redor dele.</span></div>
-        <div class="rule"><span class="ico">🌸</span><span><b>Clique no gramado</b> para plantar uma flor colorida onde quiser.</span></div>
+        <div class="rule"><span class="ico">🌸</span><span><b>Clique no gramado</b> para plantar uma flor colorida onde quiser. O botão 🌼/🕯️ no canto alterna entre plantar flor ou vela — a vela dura bem mais tempo.</span></div>
         <div class="rule"><span class="ico">🪦</span><span><b>Clique numa pedra vazia</b> (círculos verdes) para gravar nome, foto, datas e uma mensagem. O jardim tem quatro campos: Recanto do Sol, Bosque da Saudade, Campo das Estrelas e Prado dos Companheiros.</span></div>
         <div class="rule"><span class="ico">💬</span><span><b>Passe o mouse sobre uma lápide</b> para ler a homenagem gravada nela.</span></div>
         <div class="rule"><span class="ico">⏸️</span><span><b>ESC</b> pausa e volta para este menu a qualquer momento.</span></div>
@@ -94,13 +94,15 @@
     <div><b>W A S D</b> ou setas — caminhar</div>
     <div><b>Dois dedos no touchpad</b> — girar a câmera</div>
     <div><b>V</b> — alternar visão 1ª/3ª pessoa</div>
-    <div><b>Clique no gramado</b> — plantar uma flor</div>
+    <div><b>Clique no gramado</b> — plantar flor ou vela (veja o botão)</div>
     <div><b>Clique numa pedra vazia</b> — deixar homenagem</div>
+    <div><b>Clique numa lápide</b> — ler e deixar mensagens</div>
   </div>
 
   <div class="joystick" id="joystick"><div class="joystick-knob" id="joystickKnob"></div></div>
 
   <button class="view-toggle" id="btnViewToggle" title="Alternar visão 1ª/3ª pessoa (V)">🐾</button>
+  <button class="plant-toggle" id="btnPlantToggle" title="Alternar entre plantar flor ou vela">🌼</button>
 
   <div class="hint-empty" id="hintEmpty">clique para deixar uma homenagem aqui</div>
   <div class="epitaph-card" id="epitaphCard">
@@ -169,6 +171,27 @@
       <div class="modal-actions">
         <button class="btn secondary" id="btnCancel">Cancelar</button>
         <button class="btn" id="btnConfirm">Gravar na pedra</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-back" id="messagesModalBack">
+    <div class="modal">
+      <h2 id="msgStoneName">—</h2>
+      <p class="sub" id="msgStoneMeta"></p>
+      <div class="messages-list" id="messagesList"></div>
+      <div class="field">
+        <label>Seu nome (opcional)</label>
+        <input id="inMsgAuthor" maxlength="30" placeholder="Deixe em branco para ficar anônimo">
+      </div>
+      <div class="field">
+        <label>Mensagem</label>
+        <textarea id="inMsgText" maxlength="140" placeholder="Uma lembrança, um carinho..."></textarea>
+      </div>
+      <div class="modal-actions">
+        <button class="btn secondary" id="btnMsgCancel">Fechar</button>
+        <button class="btn danger" id="btnAdminDeleteStone" style="display:none">🗑 Apagar homenagem</button>
+        <button class="btn" id="btnMsgConfirm">Deixar mensagem</button>
       </div>
     </div>
   </div>

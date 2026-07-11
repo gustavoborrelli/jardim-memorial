@@ -37,6 +37,19 @@ export function createMenuUi({ camera, lapides, world, dogController, pausedStat
   let pendingPhotoImg = null;
   let pendingPhotoUrl = null;
 
+  /* ============ MENSAGENS (livro de visitas por lápide) ============ */
+  const messagesModalBack = document.getElementById('messagesModalBack');
+  const msgStoneName = document.getElementById('msgStoneName');
+  const msgStoneMeta = document.getElementById('msgStoneMeta');
+  const messagesList = document.getElementById('messagesList');
+  const inMsgAuthor = document.getElementById('inMsgAuthor');
+  const inMsgText = document.getElementById('inMsgText');
+  const btnMsgCancel = document.getElementById('btnMsgCancel');
+  const btnMsgConfirm = document.getElementById('btnMsgConfirm');
+  const btnAdminDeleteStone = document.getElementById('btnAdminDeleteStone');
+
+  let pendingStone = null;
+
   /* ============ AUTH (entrar / criar conta) ============ */
   const authChip = document.getElementById('authChip');
   const authEmailLabel = document.getElementById('authEmail');
@@ -409,29 +422,133 @@ export function createMenuUi({ camera, lapides, world, dogController, pausedStat
     }
   }
 
-  /* ============ ADMIN: apagar qualquer homenagem clicando nela ============
-     Sem botão no card (some rápido demais pra clicar, e polui a UI pra todo
-     mundo). Só a conta admin vê algum efeito ao clicar numa lápide — pra
-     todo mundo mais, clicar numa lápide continua sem fazer nada, igual
-     antes. A policy que libera o delete de qualquer memorial (não só o
-     próprio) está em supabase/008_admin_apaga_memorial.sql. */
+  /* ============ ADMIN (conta única, apaga qualquer coisa) ============
+     A policy que libera o delete de qualquer memorial/mensagem (não só a
+     própria) está em supabase/008_admin_apaga_memorial.sql e
+     supabase/009_mensagens.sql. */
   const ADMIN_EMAIL = 'gustavolimaborrelli@gmail.com';
   function isAdmin(){
     const user = auth.getUser();
     return !!user && user.email === ADMIN_EMAIL;
   }
-  async function handleStoneClick(stone){
-    if(!isAdmin()) return;
-    const name = stone.userData.data.name;
+
+  /* ============ MENSAGENS: modal de "ler e deixar mensagens" ============
+     Clicar numa lápide sempre abre este modal, pra qualquer um. A conta
+     admin ganha um botão extra aqui dentro pra apagar a homenagem inteira
+     (antes isso acontecia direto no clique — virou parte do mesmo modal
+     pra não competir com a nova interação de mensagens). */
+  function formatRelative(isoString){
+    const diffMs = Date.now() - new Date(isoString).getTime();
+    const min = Math.floor(diffMs/60000);
+    if(min < 1) return 'agora';
+    if(min < 60) return `há ${min} min`;
+    const h = Math.floor(min/60);
+    if(h < 24) return `há ${h} h`;
+    const d = Math.floor(h/24);
+    if(d < 30) return `há ${d} dia${d>1?'s':''}`;
+    return new Date(isoString).toLocaleDateString('pt-BR');
+  }
+
+  function renderMessages(list){
+    messagesList.innerHTML = '';
+    if(!list.length){
+      messagesList.innerHTML = '<p class="message-empty">Nenhuma mensagem ainda. Seja o primeiro a deixar uma.</p>';
+      return;
+    }
+    list.forEach(m=>{
+      const item = document.createElement('div');
+      item.className = 'message-item';
+      const author = (m.autor_nome || 'Anônimo').replace(/</g,'&lt;');
+      const text = m.texto.replace(/</g,'&lt;');
+      item.innerHTML = `
+        <div class="message-meta">
+          <span class="message-author">${author}</span>
+          <span class="message-date">${formatRelative(m.criado_em)}</span>
+        </div>
+        <p class="message-text">${text}</p>
+      `;
+      if(isAdmin()){
+        const del = document.createElement('button');
+        del.className = 'message-delete';
+        del.textContent = '🗑';
+        del.title = 'Apagar mensagem';
+        del.addEventListener('click', async ()=>{
+          if(!window.confirm('[admin] Apagar essa mensagem?')) return;
+          try{
+            await lapides.deleteMessage(m.id);
+            item.remove();
+            if(!messagesList.children.length) renderMessages([]);
+          } catch(err){
+            showToast('Não foi possível apagar a mensagem.');
+          }
+        });
+        item.appendChild(del);
+      }
+      messagesList.appendChild(item);
+    });
+  }
+
+  async function openMessagesFor(stone){
+    pendingStone = stone;
+    const d = stone.userData.data;
+    const plotRef = stone.userData.plotRef;
+    msgStoneName.textContent = d.name;
+    msgStoneMeta.textContent = [d.dates, plotRef && plotRef.section].filter(Boolean).join(' · ');
+    inMsgAuthor.value = '';
+    inMsgText.value = '';
+    btnAdminDeleteStone.style.display = isAdmin() ? '' : 'none';
+    messagesList.innerHTML = '<p class="message-empty">Carregando…</p>';
+    messagesModalBack.classList.add('open');
+    dogController.resetKeys();
+    const list = await lapides.getMessages(d.id);
+    if(pendingStone === stone) renderMessages(list);
+  }
+  function closeMessagesModal(){
+    messagesModalBack.classList.remove('open');
+    pendingStone = null;
+  }
+  btnMsgCancel.addEventListener('click', closeMessagesModal);
+  messagesModalBack.addEventListener('click', e=>{ if(e.target===messagesModalBack) closeMessagesModal(); });
+
+  btnMsgConfirm.addEventListener('click', ()=>{
+    const texto = inMsgText.value.trim();
+    if(!texto) return;
+    const autorNome = inMsgAuthor.value.trim();
+    const stone = pendingStone;
+    if(!stone) return;
+    requireAuth(async ()=>{
+      btnMsgConfirm.disabled = true;
+      try{
+        await lapides.saveMessage(stone.userData.data.id, { texto, autorNome });
+        if(pendingStone === stone){
+          const list = await lapides.getMessages(stone.userData.data.id);
+          renderMessages(list);
+        }
+        inMsgAuthor.value = '';
+        inMsgText.value = '';
+        chime(660, 0.1);
+        showToast('Mensagem deixada.');
+      } catch(err){
+        showToast('Não foi possível salvar a mensagem. Tente de novo.');
+      } finally {
+        btnMsgConfirm.disabled = false;
+      }
+    });
+  });
+
+  btnAdminDeleteStone.addEventListener('click', async ()=>{
+    if(!pendingStone) return;
+    const name = pendingStone.userData.data.name;
     if(!window.confirm(`[admin] Apagar a homenagem de "${name}"? Essa ação não pode ser desfeita.`)) return;
     try{
-      await lapides.deleteMemorial(stone);
+      await lapides.deleteMemorial(pendingStone);
       epitaphCard.style.display = 'none';
+      closeMessagesModal();
       showToast('Homenagem apagada.');
     } catch(err){
       showToast('Não foi possível apagar. Tente de novo.');
     }
-  }
+  });
 
   /* ============ MAIN MENU / PAUSE ============ */
   function showMenuPanel(panel){
@@ -464,6 +581,7 @@ export function createMenuUi({ camera, lapides, world, dogController, pausedStat
       // if a modal is open, ESC closes it instead of opening the pause menu
       if(authModalBack.classList.contains('open')){ closeAuthModal(); return; }
       if(modalBack.classList.contains('open')){ closeModal(); return; }
+      if(messagesModalBack.classList.contains('open')){ closeMessagesModal(); return; }
       if(pausedState.value){
         if(!dogController.getDog()){ showMenuPanel(menuDogs); return; } // can't enter without a companion
         startGame();
@@ -493,11 +611,23 @@ export function createMenuUi({ camera, lapides, world, dogController, pausedStat
     toggleView();
   });
 
+  /* ============ FLOR OU VELA (o que o clique no gramado planta) ============ */
+  const btnPlantToggle = document.getElementById('btnPlantToggle');
+  let plantMode = 'flor';
+  function getPlantMode(){ return plantMode; }
+  btnPlantToggle.addEventListener('click', ()=>{
+    plantMode = plantMode === 'flor' ? 'vela' : 'flor';
+    btnPlantToggle.classList.toggle('vela', plantMode === 'vela');
+    btnPlantToggle.textContent = plantMode === 'flor' ? '🌼' : '🕯️';
+    btnPlantToggle.title = plantMode === 'flor' ? 'Plantando flor — clique pra trocar pra vela' : 'Acendendo vela — clique pra trocar pra flor';
+  });
+
   return {
     updateHints,
     chime,
     openModalFor,
     requireAuth,
-    handleStoneClick,
+    openMessagesFor,
+    getPlantMode,
   };
 }

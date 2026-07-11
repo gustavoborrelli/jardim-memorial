@@ -17,6 +17,7 @@ import { createLapides } from './lapides.js';
 import { createDogController } from './cachorros.js';
 import { createMenuUi } from './menuUi.js';
 import { createAuth } from './auth.js';
+import { createPresence } from './presenca.js';
 
 /* ============ BASIC SETUP ============ */
 const appEl = document.getElementById('app');
@@ -58,6 +59,7 @@ const dogController = createDogController(scene, renderer, {
 
 const auth = createAuth();
 const menuUi = createMenuUi({ camera, lapides, world, dogController, pausedState, auth });
+const presence = createPresence({ scene, dogController, pausedState });
 
 /* ============ RAYCAST INTERACTION ============ */
 const raycaster = new THREE.Raycaster();
@@ -91,18 +93,23 @@ function onClick(e){
     return;
   }
 
-  // stone -> card já é mostrado pelo hover; o clique só faz algo pra admin
+  // stone -> abre o modal de ler/deixar mensagens (card do hover continua só leitura)
   const stone = lapides.pickStone(raycaster);
-  if(stone){ menuUi.handleStoneClick(stone); return; }
+  if(stone){ menuUi.openMessagesFor(stone); return; }
 
-  // ground -> plant flower (exige login, só na grama)
+  // ground -> plant flower or candle, conforme o botão de alternar (exige login, só na grama)
   const groundHits = raycaster.intersectObject(world.ground);
   if(groundHits.length){
     const p = groundHits[0].point;
     if(Math.abs(p.x)<BOUNDS && Math.abs(p.z)<BOUNDS && world.isFreeSpot(p.x, p.z, lapides.plots)){
       menuUi.requireAuth(()=>{
-        world.plantAndSaveFlor(p.x, p.z);
-        menuUi.chime(520, 0.05);
+        if(menuUi.getPlantMode() === 'vela'){
+          world.plantAndSaveVela(p.x, p.z);
+          menuUi.chime(440, 0.06);
+        } else {
+          world.plantAndSaveFlor(p.x, p.z);
+          menuUi.chime(520, 0.05);
+        }
       });
     }
   }
@@ -125,6 +132,7 @@ function animate(){
   dogController.updateCamera(camera, elapsed);
 
   world.update(dt, elapsed);
+  presence.update(dt, elapsed);
   menuUi.updateHints(hoveredEmptyPlot, hoveredStone);
 
   renderer.render(scene, camera);

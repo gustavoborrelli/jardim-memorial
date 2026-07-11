@@ -444,6 +444,32 @@ export function createLapides(scene) {
     removeStoneById(id);
   }
 
+  /* ============ SUPABASE: mensagens (livro de visitas por homenagem) ============ */
+  async function getMessages(memorialId){
+    const { data, error } = await supabase
+      .from('mensagens')
+      .select('*')
+      .eq('memorial_id', memorialId)
+      .order('criado_em', { ascending: true });
+    if(error){ console.error('Não foi possível carregar as mensagens:', error.message); return []; }
+    return data;
+  }
+
+  async function saveMessage(memorialId, { texto, autorNome }){
+    const { data, error } = await supabase.from('mensagens').insert({
+      memorial_id: memorialId,
+      texto,
+      autor_nome: autorNome || null,
+    }).select().single();
+    if(error) throw error;
+    return data;
+  }
+
+  async function deleteMessage(id){
+    const { error } = await supabase.from('mensagens').delete().eq('id', id);
+    if(error) throw error;
+  }
+
   function pickEmptyPlot(raycaster){
     const hits = raycaster.intersectObjects(
       stoneGroup.children.filter(c=>c.userData && c.userData.isEmptyPlot)
@@ -467,6 +493,9 @@ export function createLapides(scene) {
     createTribute,
     saveMemorial,
     deleteMemorial,
+    getMessages,
+    saveMessage,
+    deleteMessage,
     pickEmptyPlot,
     pickStone,
   };
