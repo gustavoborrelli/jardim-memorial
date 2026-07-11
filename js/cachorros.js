@@ -280,6 +280,13 @@ export function createDogController(scene, renderer, { isPaused, plaza, bounds }
   let firstPerson = false;
   let isMoving = false;
 
+  // em tela de toque, um dedo já vai pro joystick — não sobra outro fácil
+  // pra girar a câmera junto. Por isso, só em telas de toque, a câmera de
+  // 3ª pessoa se alinha sozinha atrás do cachorro enquanto ele anda (ver
+  // updateMovement), a não ser que a pessoa esteja arrastando a tela na
+  // hora (aí o gesto manual manda, como sempre).
+  const isTouchDevice = window.matchMedia && window.matchMedia('(pointer:coarse)').matches;
+
   const keys = {};
   function isTypingInField(e){
     const tag = e.target && e.target.tagName;
@@ -428,6 +435,16 @@ export function createDogController(scene, renderer, { isPaused, plaza, bounds }
         while(diff<-Math.PI) diff+=Math.PI*2;
         dogYaw += diff*Math.min(1, dt*8);
         dog.rotation.y = dogYaw;
+
+        // toque: câmera acompanha sozinha, um pouco mais devagar que o
+        // giro do cachorro (fica "chegando por trás" em vez de grudar),
+        // exceto se a pessoa estiver arrastando a tela pra olhar na mão
+        if(isTouchDevice && !touchDragging){
+          let camDiff = (dogYaw + Math.PI) - camAzimuth;
+          while(camDiff>Math.PI) camDiff-=Math.PI*2;
+          while(camDiff<-Math.PI) camDiff+=Math.PI*2;
+          camAzimuth += camDiff*Math.min(1, dt*3);
+        }
       }
 
       dogParts.legs.forEach((leg, i)=>{

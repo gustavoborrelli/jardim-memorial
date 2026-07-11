@@ -152,6 +152,19 @@ flores/velas nas lápides dos outros (MVP family & friends).
     exige login, igual andar pelo jardim hoje já não exige. Testado com
     duas abas reais do navegador (Playwright): o cachorro de uma aba
     aparece e anda na outra, e some quando a aba fecha.
+16. ✅ **Câmera de 3ª pessoa acompanha sozinha no celular** — no toque, um
+    dedo já vai pro joystick (canto inferior esquerdo) e não sobra outro
+    fácil pra arrastar a tela e girar a câmera junto, principalmente numa
+    tela pequena. Agora, só em telas de toque (`js/cachorros.js` →
+    `isTouchDevice`, via `matchMedia('(pointer:coarse)')`), a câmera de 3ª
+    pessoa gira sozinha até ficar atrás do cachorro enquanto ele anda pelo
+    joystick — um pouco mais devagar que o giro do próprio cachorro, pra
+    parecer "chegando por trás" em vez de grudada. Se a pessoa estiver
+    arrastando a tela na hora (pra olhar manualmente), o automático não
+    interfere. No desktop nada mudou — a câmera livre (touchpad/roda do
+    mouse) continua exatamente como antes. Também padronizado nessa leva:
+    o botão de flor/vela ficou redondo, só com o ícone, igual o botão de
+    trocar visão (antes era uma pílula com texto).
 
 ## Ideias soltas (não decidido ainda)
 
