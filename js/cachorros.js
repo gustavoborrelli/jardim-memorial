@@ -443,7 +443,7 @@ export function createDogController(scene, renderer, { isPaused, plaza, bounds }
           let camDiff = (dogYaw + Math.PI) - camAzimuth;
           while(camDiff>Math.PI) camDiff-=Math.PI*2;
           while(camDiff<-Math.PI) camDiff+=Math.PI*2;
-          camAzimuth += camDiff*Math.min(1, dt*3);
+          camAzimuth += camDiff*Math.min(1, dt*2.1); // 30% mais devagar que antes
         }
       }
 
