@@ -126,9 +126,9 @@ function animate(){
   const dt = Math.min(0.05, clock.getDelta());
   const elapsed = clock.elapsedTime;
 
-  if(!pausedState.value){
+  if(!pausedState.value && !mapaUi.isOpen()){
     dogController.updateMovement(dt, elapsed);
-  } else {
+  } else if(pausedState.value){
     dogController.orbitIdle(dt);
   }
   dogController.updateCamera(camera, elapsed);

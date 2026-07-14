@@ -206,6 +206,15 @@ export function createWorld(scene) {
     av.receiveShadow = true;
     scene.add(av);
   });
+  // mesmo layout de cima, só descrito como retângulo (x,z = centro; w,l =
+  // extensão nos eixos x/z já considerando a rotação) pro mapa 2D desenhar
+  // sem duplicar a lógica de rotação da malha 3D
+  const AVENUES = [
+    { x:0, z:-16.5, w:4.2, l:22 },
+    { x:0, z:16.5, w:4.2, l:22 },
+    { x:-16.5, z:0, w:22, l:4.2 },
+    { x:16.5, z:0, w:22, l:4.2 },
+  ];
 
   /* ============ FENCE ============ */
   const fenceMat = new THREE.MeshStandardMaterial({color:0x5b4a3d, roughness:0.9});
@@ -999,6 +1008,7 @@ export function createWorld(scene) {
   return {
     ground,
     PLAZA,
+    AVENUES,
     plantAndSaveFlor,
     plantAndSaveVela,
     scatterFlowers,

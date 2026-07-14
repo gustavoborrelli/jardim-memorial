@@ -56,9 +56,23 @@ export function createMapaUi({ lapides, world, dogController, bounds }){
       x: -bounds, y: -bounds, width: bounds*2, height: bounds*2, rx: 1.5,
     }));
 
+    // avenidas de areia, no mesmo lugar/tamanho das do jardim 3D de
+    // verdade (world.AVENUES), pra o mapa servir de referência real e não
+    // só um esquema abstrato
+    world.AVENUES.forEach(av => {
+      svg.appendChild(svgEl('rect', {
+        class: 'map-avenue',
+        x: av.x - av.w/2, y: av.z - av.l/2, width: av.w, height: av.l,
+      }));
+    });
+
     svg.appendChild(svgEl('circle', {
       class: 'map-plaza',
       cx: world.PLAZA.x, cy: world.PLAZA.z, r: world.PLAZA.r,
+    }));
+    svg.appendChild(svgEl('circle', {
+      class: 'map-fountain',
+      cx: world.PLAZA.x, cy: world.PLAZA.z, r: world.PLAZA.r*0.32,
     }));
 
     // rótulo de cada seção, na média de posição dos plots que pertencem a ela
@@ -91,14 +105,22 @@ export function createMapaUi({ lapides, world, dogController, bounds }){
       return { plot, circle };
     });
 
-    // onde o cachorro está agora, só como referência de orientação — foto do
-    // momento em que o mapa abriu, não acompanha o passeio ao vivo
+    // onde o cachorro está e pra onde está olhando, só como referência de
+    // orientação — foto do momento em que o mapa abriu, não acompanha o
+    // passeio ao vivo. Seta em vez de bolinha: rotation.y do cachorro em
+    // graus dá a direção certa porque, na projeção de cima, x/z do mundo
+    // viram x/y do svg direto (sem inverter eixo nenhum), e a "frente" do
+    // cachorro em yaw=0 (sin=0,cos=1) já aponta pro +z == +y na tela — ou
+    // seja, a seta "de fábrica" só precisa apontar pra baixo.
     const dog = dogController.getDog();
     if(dog){
-      svg.appendChild(svgEl('circle', {
+      const yawDeg = dog.rotation.y * 180/Math.PI;
+      const arrow = svgEl('g', {
         class: 'map-dog-marker',
-        cx: dog.position.x, cy: dog.position.z, r: 0.5,
-      }));
+        transform: `translate(${dog.position.x} ${dog.position.z}) rotate(${yawDeg})`,
+      });
+      arrow.appendChild(svgEl('polygon', { points: '0,0.85 0.6,-0.55 -0.6,-0.55' }));
+      svg.appendChild(arrow);
     }
   }
 
@@ -141,13 +163,17 @@ export function createMapaUi({ lapides, world, dogController, bounds }){
     searchInput.value = '';
     renderResults('');
     modalBack.classList.add('open');
+    dogController.resetKeys(); // já para o cachorro na hora, senão ele some pelo jardim atrás do mapa
   }
   function closeMap(){
     modalBack.classList.remove('open');
+  }
+  function isOpen(){
+    return modalBack.classList.contains('open');
   }
 
   btnClose.addEventListener('click', closeMap);
   modalBack.addEventListener('click', e => { if(e.target === modalBack) closeMap(); });
 
-  return { openMap, closeMap };
+  return { openMap, closeMap, isOpen };
 }

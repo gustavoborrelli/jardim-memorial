@@ -309,24 +309,36 @@ canvas{display:block;outline:none;}
   aspect-ratio:1/1;
   margin:4px 0 12px;
   border-radius:12px;
-  background:rgba(122,139,111,0.14);
+  background:#221c2c;
 }
+/* mesmas cores do chão/avenidas/praça de verdade no jardim 3D (mundo.js),
+   pra o mapa funcionar como referência visual e não só um esquema abstrato */
 .map-ground{
-  fill:rgba(122,139,111,0.22);
-  stroke:rgba(244,239,230,0.25);
-  stroke-width:0.15;
+  fill:#8fb56d;
+  stroke:#5b4a3d;
+  stroke-width:0.2;
+}
+.map-avenue{
+  fill:#e2cfa6;
 }
 .map-plaza{
-  fill:rgba(232,185,120,0.35);
-  stroke:rgba(232,185,120,0.6);
-  stroke-width:0.12;
+  fill:#ddc79e;
+  stroke:#bfa87e;
+  stroke-width:0.35;
+}
+.map-fountain{
+  fill:#5cc2c9;
+  opacity:0.85;
 }
 .map-section-label{
-  fill:rgba(244,239,230,0.75);
+  fill:#f4efe6;
   font-family:'Inter',sans-serif;
   font-size:1.35px;
   font-weight:600;
   letter-spacing:0.02px;
+  paint-order:stroke fill;
+  stroke:rgba(30,22,38,0.55);
+  stroke-width:0.32;
 }
 .map-marker{
   stroke:rgba(30,22,38,0.5);
@@ -335,8 +347,8 @@ canvas{display:block;outline:none;}
   transition:opacity 0.15s ease;
 }
 .map-marker.empty{
-  fill:rgba(244,239,230,0.12);
-  stroke:rgba(244,239,230,0.4);
+  fill:rgba(244,239,230,0.35);
+  stroke:rgba(30,22,38,0.4);
   stroke-dasharray:0.22;
 }
 .map-marker.dim{ opacity:0.2; }
@@ -350,10 +362,11 @@ canvas{display:block;outline:none;}
   70%{ stroke-opacity:0.15; }
   100%{ stroke-opacity:1; }
 }
-.map-dog-marker{
+.map-dog-marker polygon{
   fill:var(--amber);
   stroke:#fff;
   stroke-width:0.14;
+  stroke-linejoin:round;
 }
 .map-legend{
   display:flex; gap:16px;

@@ -229,8 +229,11 @@ flores/velas nas lápides dos outros (MVP family & friends).
     de `lapides.plots` toda vez que o mapa abre. Escolha consciente: se o
     jardim ganhar mais seções/vagas depois, o mapa já desenha tudo sozinho
     na próxima abertura, sem precisar editar `js/mapa.js`. Um marcador
-    extra mostra onde o cachorro está no momento em que o mapa abre (não
-    acompanha o passeio ao vivo, é só uma referência). Busca por nome
+    extra mostra onde o cachorro está e pra onde está olhando no momento
+    em que o mapa abre (não acompanha o passeio ao vivo, é só uma
+    referência) — começou como bolinha, virou seta (`<polygon>` rotacionado
+    pelo `rotation.y` do cachorro) depois que o usuário pediu pra dar pra
+    saber a direção também, não só a posição. Busca por nome
     (acento/caixa não importam) filtra em tempo real: esmaece no mapa quem
     não bate e lista quem bate (nome + seção) abaixo, clicável pra
     realçar o marcador — decisão do usuário foi **não teleportar** o
@@ -240,6 +243,25 @@ flores/velas nas lápides dos outros (MVP family & friends).
     "Fechar"). Testado com Playwright: abrir pelos dois jeitos, buscar
     nome existente e inexistente, fechar pelos três jeitos — sem erros no
     console.
+    Bug pego logo depois pelo usuário: o cachorro continuava andando por
+    trás do modal enquanto o mapa estava aberto (`updateMovement` só era
+    pulado quando `pausedState.value` — o menu de pausa — estava ligado,
+    e abrir o mapa não mexe nisso). Corrigido com um `mapaUi.isOpen()`
+    novo, checado junto com `pausedState.value` no loop principal
+    (`js/main.js`); confirmado com Playwright lendo a posição real do
+    cachorro (`window.__dbgDog`, hack temporário só pra esse teste,
+    removido depois): 0 de deslocamento segurando `W` com o mapa aberto,
+    volta a andar normal assim que fecha.
+    Pedido seguinte do usuário: mapa "mais ilustrado", com as cores de
+    verdade do chão, pra ficar mais fácil de se localizar em vez de um
+    esquema abstrato cinza. Trocado: fundo verde-grama (mesma cor de
+    `groundMat` em `mundo.js`), as quatro avenidas de areia desenhadas na
+    posição/tamanho exatos das avenidas 3D (novo `world.AVENUES`,
+    exportado de `mundo.js` só como metadado de posição — a malha 3D em
+    si nem foi tocada, pra não arriscar mudar o visual do jogo de
+    verdade), praça no tom bege da pedra da praça com um círculo ciano no
+    centro representando a fonte, e um contorno escuro (`paint-order`)
+    nos rótulos de seção pra continuarem legíveis em cima da grama.
 
 ## Ideias soltas (não decidido ainda)
 
