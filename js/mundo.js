@@ -22,11 +22,11 @@ export function createWorld(scene) {
     c.width = 8; c.height = 256;
     const ctx = c.getContext('2d');
     const g = ctx.createLinearGradient(0,0,0,256);
-    // fim de tarde: lavanda no zênite, passando por pêssego até um
-    // horizonte dourado — mais quente e com mais profundidade que um
-    // dia-claro genérico, sem escurecer a cena.
-    g.addColorStop(0, '#7484b8');
-    g.addColorStop(0.38, '#c992a0');
+    // fim de tarde: azul claro no zênite, passando por pêssego até um
+    // horizonte dourado — mais claro e menos "carregado" que o lavanda
+    // escuro de antes, mas mantendo o calor do horizonte.
+    g.addColorStop(0, '#a9d3f7');
+    g.addColorStop(0.38, '#cfe1ee');
     g.addColorStop(0.68, '#f2ae82');
     g.addColorStop(0.86, '#ffd39b');
     g.addColorStop(1, '#fff0cf');

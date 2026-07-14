@@ -1,7 +1,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,500&family=Inter:wght@400;500;600&display=swap');
 
 :root{
-  --sky1:#8b7bab;
+  --sky1:#7fb8e8;
   --sky2:#f0ae82;
   --stone:#c9beb0;
   --stone-dark:#8a7f72;
@@ -17,8 +17,9 @@ canvas{display:block;outline:none;}
 .veil{
   position:absolute;inset:0;
   /* leve vinheta quente nas bordas, pra combinar com a luz de fim de tarde
-     em vez do esverdeado neutro que tinha antes */
-  background:radial-gradient(ellipse at 50% 100%, rgba(0,0,0,0) 0%, rgba(60,30,10,0.16) 100%);
+     em vez do esverdeado neutro que tinha antes; mais fraca que antes pra
+     não abafar o céu (que fica bem no topo, a borda mais escurecida) */
+  background:radial-gradient(ellipse at 50% 100%, rgba(0,0,0,0) 0%, rgba(60,30,10,0.07) 100%);
   pointer-events:none;
 }
 
@@ -530,9 +531,9 @@ canvas{display:block;outline:none;}
   display:flex;
   align-items:center;
   justify-content:center;
-  /* mesmo tom de fim de tarde do céu 3D (lavanda → pêssego → dourado),
+  /* mesmo tom de fim de tarde do céu 3D (azul claro → pêssego → dourado),
      em vez do gradiente de céu claro genérico que tinha antes */
-  background:linear-gradient(180deg, var(--sky1) 0%, #d99a94 42%, var(--sky2) 72%, #ffd9a0 100%);
+  background:linear-gradient(180deg, var(--sky1) 0%, #bcd3e6 42%, var(--sky2) 72%, #ffd9a0 100%);
   backdrop-filter: blur(3px);
   transition:opacity 0.5s ease;
 }

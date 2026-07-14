@@ -191,16 +191,32 @@ flores/velas nas lápides dos outros (MVP family & friends).
     (`buildBoneMarker`/`buildPawMarker` em `js/lapides.js`, removendo
     coração/estaca/cachorro e sua entrada em `FORMATOS`): ossinho é um
     osso vertical com dois pares de nós unidos por uma barra central (a
-    "lápide" propriamente dita), pata é uma almofada com 4 dedos sobre um
-    plinto do mesmo tamanho de texto da clássica. `supabase/012_lapide_pata.sql`
-    atualiza a constraint de `formato` pros 3 valores válidos (`not valid`,
-    não reavalia homenagens de teste já criadas com os formatos antigos —
-    elas voltam a renderizar como clássica, sem quebrar). **Rodar
-    011 e 012 no Supabase antes do deploy.**
+    "lápide" propriamente dita), pata começou como uma almofada com 4
+    dedos sobre um plinto do mesmo tamanho de texto da clássica.
+    `supabase/012_lapide_pata.sql` atualiza a constraint de `formato` pros
+    3 valores válidos (`not valid`, não reavalia homenagens de teste já
+    criadas com os formatos antigos — elas voltam a renderizar como
+    clássica, sem quebrar). **Rodar 011 e 012 no Supabase antes do
+    deploy.**
     Lição: quando o usuário tem (ou pode desenhar) uma referência visual
     concreta, buscar isso primeiro em vez de adivinhar a partir de uma
     descrição em palavras — economiza pelo menos uma rodada inteira de
     retrabalho.
+    Dois ajustes vieram logo depois, já em produção: (1) os nós do
+    ossinho e os dedos/coxim da pata eram esferas lisas com material
+    muito polido — liam como bolinhas de vidro/globo de música em vez de
+    nós de pedra; trocados por icosaedros facetados (mesmo estilo das
+    pedrinhas/folhagens do resto do jogo) com material menos brilhante,
+    e a pata ficou ~30% maior. (2) A pata foi redesenhada de novo, dessa
+    vez a partir de uma foto real de pedra-pata de jardim que o usuário
+    enviou: em vez de "em pé" sobre um plinto retangular, virou uma
+    pedra de caminho baixa e fundida, deitada direto na grama, sem
+    plinto — mas com uma leve inclinação (não 100% flat), porque uma
+    placa totalmente horizontal some quase invisível no ângulo raso
+    (~20–28°) da câmera de 3ª pessoa padrão do jogo; essa inclinação é o
+    equilíbrio entre "parecer deitada" e continuar legível andando por
+    perto (o hover do mouse sempre mostra nome/foto/mensagem no card 2D
+    de qualquer forma, então a leitura nunca depende só do ângulo 3D).
 
 ## Ideias soltas (não decidido ainda)
 
