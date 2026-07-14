@@ -252,6 +252,15 @@ flores/velas nas lápides dos outros (MVP family & friends).
     cachorro (`window.__dbgDog`, hack temporário só pra esse teste,
     removido depois): 0 de deslocamento segurando `W` com o mapa aberto,
     volta a andar normal assim que fecha.
+    Segundo bug pego pelo usuário, na seta de direção: "às vezes estou
+    com o cachorro olhando para um lado e a seta tá pro oposto". Causa:
+    o `rotation.y` do three.js, visto de cima com x-direita/z-baixo (o
+    plano do mapa), gira anti-horário, mas o `rotate()` do SVG gira
+    horário — o ângulo precisava ser negado. O erro é um espelhamento
+    leste↔oeste, invisível olhando pro norte ou pro sul (0° e 180° são
+    simétricos), e o teste original só tinha conferido o spawn (yaw
+    180°) — por isso passou. Corrigido negando o ângulo e testado com o
+    cachorro virado pro oeste: seta pro oeste no mapa.
     Pedido seguinte do usuário: mapa "mais ilustrado", com as cores de
     verdade do chão, pra ficar mais fácil de se localizar em vez de um
     esquema abstrato cinza. Trocado: fundo verde-grama (mesma cor de

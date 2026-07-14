@@ -107,14 +107,15 @@ export function createMapaUi({ lapides, world, dogController, bounds }){
 
     // onde o cachorro está e pra onde está olhando, só como referência de
     // orientação — foto do momento em que o mapa abriu, não acompanha o
-    // passeio ao vivo. Seta em vez de bolinha: rotation.y do cachorro em
-    // graus dá a direção certa porque, na projeção de cima, x/z do mundo
-    // viram x/y do svg direto (sem inverter eixo nenhum), e a "frente" do
-    // cachorro em yaw=0 (sin=0,cos=1) já aponta pro +z == +y na tela — ou
-    // seja, a seta "de fábrica" só precisa apontar pra baixo.
+    // passeio ao vivo. Seta apontando "pra baixo" em yaw=0 (frente do
+    // cachorro = +z = +y da tela), MAS o ângulo precisa ser negado: o
+    // rotation.y do three.js, visto de cima com x-direita/z-baixo, gira
+    // anti-horário, e o rotate() do SVG gira horário. Sem negar, a seta sai
+    // espelhada leste↔oeste (invisível no spawn, onde yaw=180° e
+    // -180°==+180° — foi por isso que o primeiro teste enganou).
     const dog = dogController.getDog();
     if(dog){
-      const yawDeg = dog.rotation.y * 180/Math.PI;
+      const yawDeg = -dog.rotation.y * 180/Math.PI;
       const arrow = svgEl('g', {
         class: 'map-dog-marker',
         transform: `translate(${dog.position.x} ${dog.position.z}) rotate(${yawDeg})`,
