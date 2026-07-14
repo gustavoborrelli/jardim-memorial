@@ -344,58 +344,48 @@ export function createLapides(scene) {
     return g;
   }
 
-  // Pata: almofada oval com quatro dedos sobre um pequeno plinto — a foto e
-  // o texto ficam no plinto (do mesmo tamanho da placa da clássica, pra
-  // caber bem), a pata em cima é só o toque decorativo. Cada dedo ganha uma
-  // "unha" pintada na cor escolhida — de novo, cor como detalhe, não tinta.
+  // Pata: uma pedra de caminho deitada na grama (tipo pisada de jardim),
+  // não uma lápide em pé — referência trazida pelo usuário (foto de uma
+  // pedra-pata real, achatada, com o nome gravado direto na almofada).
+  // Sem base retangular nenhuma: só a pata mesmo, baixa e fundida.
   function buildPawMarker(data, cor){
-    // tudo montado num grupo interno maior (1.3x) e devolvido dentro de um
-    // grupo vazio por fora — assim o ajuste de escala aleatória que
-    // buildStone() aplica no grupo de fora não sobrescreve esse "maior"
     const inner = new THREE.Group();
-    const base = new THREE.Mesh(new THREE.BoxGeometry(1.0,0.16,0.42), marbleMat);
-    base.position.y = 0.08;
-    base.castShadow = true; base.receiveShadow = true;
-    inner.add(base);
 
-    const plinthH = 0.62;
-    const plinthBottomY = 0.16;
-    const plinth = new THREE.Mesh(new THREE.BoxGeometry(0.92,plinthH,0.26), marbleMat);
-    plinth.position.y = plinthBottomY + plinthH/2;
-    plinth.castShadow = true; plinth.receiveShadow = true;
-    inner.add(plinth);
-
-    const plaque = makePlaque(data, new THREE.PlaneGeometry(0.78,0.5));
-    plaque.position.set(0, plinthBottomY+plinthH*0.52, 0.14);
-    inner.add(plaque);
-
-    // almofada oval por cima do plinto, encaixada (sem deixar vão flutuando)
-    // — icosaedro facetado em vez de esfera lisa, senão vira "globo de vidro"
-    const padY = plinthBottomY + plinthH + 0.08;
-    const pad = new THREE.Mesh(new THREE.IcosahedronGeometry(0.36,1), marbleMat);
-    pad.scale.set(1,0.6,0.66);
-    pad.position.set(0, padY, -0.04);
-    pad.castShadow = true;
+    // almofada oval bem achatada, quase encostada no chão
+    const pad = new THREE.Mesh(new THREE.IcosahedronGeometry(0.42,1), marbleMat);
+    pad.scale.set(1,0.32,0.85);
+    pad.position.set(0, 0.12, -0.06);
+    pad.castShadow = true; pad.receiveShadow = true;
     inner.add(pad);
 
-    // quatro dedos em leque: os dois de fora mais baixos/menores, os dois
-    // do meio mais altos/maiores — como uma pegada de cachorro de verdade
+    // quatro dedos em leque, também achatados, fundidos na borda da
+    // frente da almofada — os de fora mais baixos/menores
     const accentMat = new THREE.MeshStandardMaterial({color:cor, roughness:0.5});
     const toes = [
-      { x:-0.33, y:padY+0.13, z:0.2, r:0.14 },
-      { x:-0.13, y:padY+0.27, z:0.26, r:0.17 },
-      { x: 0.13, y:padY+0.27, z:0.26, r:0.17 },
-      { x: 0.33, y:padY+0.13, z:0.2, r:0.14 },
+      { x:-0.36, y:0.1,  z:0.28, r:0.155, sy:0.68 },
+      { x:-0.14, y:0.13, z:0.36, r:0.185, sy:0.72 },
+      { x: 0.14, y:0.13, z:0.36, r:0.185, sy:0.72 },
+      { x: 0.36, y:0.1,  z:0.28, r:0.155, sy:0.68 },
     ];
     toes.forEach(t=>{
       const toe = new THREE.Mesh(new THREE.IcosahedronGeometry(t.r,0), marbleMat);
+      toe.scale.set(1,t.sy,1);
       toe.position.set(t.x, t.y, t.z);
-      toe.castShadow = true;
+      toe.castShadow = true; toe.receiveShadow = true;
       inner.add(toe);
-      const nail = new THREE.Mesh(new THREE.IcosahedronGeometry(t.r*0.3,0), accentMat);
-      nail.position.set(t.x, t.y+t.r*0.55, t.z+t.r*0.85);
+      // unha: detalhe na cor escolhida, na pontinha de cada dedo
+      const nail = new THREE.Mesh(new THREE.IcosahedronGeometry(t.r*0.32,0), accentMat);
+      nail.position.set(t.x, t.y+t.r*t.sy*0.4, t.z+t.r*0.95);
       inner.add(nail);
     });
+
+    // a homenagem gravada direto na almofada, "apoiada" numa inclinação —
+    // não 100% deitada (some na câmera de 3ª pessoa, que olha de cima/atrás),
+    // nem 100% em pé (deixaria de parecer gravada na pedra)
+    const plaque = makePlaque(data, new THREE.PlaneGeometry(0.62,0.44));
+    plaque.rotation.x = -1.0;
+    plaque.position.set(0, 0.27, 0.06);
+    inner.add(plaque);
 
     inner.scale.setScalar(1.3);
     const g = new THREE.Group();
