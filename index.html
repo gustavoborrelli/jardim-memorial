@@ -97,12 +97,14 @@
     <div><b>Clique no gramado</b> — plantar flor ou vela (veja o botão)</div>
     <div><b>Clique numa pedra vazia</b> — deixar homenagem</div>
     <div><b>Clique numa lápide</b> — ler e deixar mensagens</div>
+    <div><b>M</b> — abrir o mapa do jardim</div>
   </div>
 
   <div class="joystick" id="joystick"><div class="joystick-knob" id="joystickKnob"></div></div>
 
   <button class="view-toggle" id="btnViewToggle" title="Alternar visão 1ª/3ª pessoa (V)">🐾</button>
   <button class="plant-toggle" id="btnPlantToggle" title="Alternar entre plantar flor ou vela">🌼</button>
+  <button class="map-toggle" id="btnMapToggle" title="Ver mapa do jardim (M)">🗺️</button>
 
   <div class="hint-empty" id="hintEmpty">clique para deixar uma homenagem aqui</div>
   <div class="epitaph-card" id="epitaphCard">
@@ -200,6 +202,25 @@
         <button class="btn secondary" id="btnMsgCancel">Fechar</button>
         <button class="btn danger" id="btnAdminDeleteStone" style="display:none">🗑 Apagar homenagem</button>
         <button class="btn" id="btnMsgConfirm">Deixar mensagem</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-back" id="mapModalBack">
+    <div class="modal modal-map">
+      <h2>Mapa do jardim</h2>
+      <p class="sub">Veja as seções de cima e procure por um nome.</p>
+      <div class="field">
+        <input id="mapSearchInput" placeholder="Buscar pelo nome do companheiro">
+      </div>
+      <svg id="mapSvg" class="map-svg"></svg>
+      <div class="map-legend">
+        <span><i class="map-legend-dot occupied"></i> com homenagem</span>
+        <span><i class="map-legend-dot empty"></i> vaga livre</span>
+      </div>
+      <div class="map-results" id="mapResults"></div>
+      <div class="modal-actions">
+        <button class="btn secondary" id="btnMapClose">Fechar</button>
       </div>
     </div>
   </div>

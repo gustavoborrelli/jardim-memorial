@@ -12,7 +12,7 @@
   cada frame (updateHints) ou a cada clique (openModalFor, chime).
 */
 
-export function createMenuUi({ camera, lapides, world, dogController, pausedState, auth }) {
+export function createMenuUi({ camera, lapides, world, dogController, pausedState, auth, mapaUi }) {
 
   const menuScreen = document.getElementById('menuScreen');
   const menuHome = document.getElementById('menuHome');
@@ -25,6 +25,7 @@ export function createMenuUi({ camera, lapides, world, dogController, pausedStat
   const epitaphCard = document.getElementById('epitaphCard');
 
   const modalBack = document.getElementById('modalBack');
+  const mapModalBack = document.getElementById('mapModalBack');
   const btnCancel = document.getElementById('btnCancel');
   const btnConfirm = document.getElementById('btnConfirm');
   const inName = document.getElementById('inName');
@@ -621,6 +622,7 @@ export function createMenuUi({ camera, lapides, world, dogController, pausedStat
       if(authModalBack.classList.contains('open')){ closeAuthModal(); return; }
       if(modalBack.classList.contains('open')){ closeModal(); return; }
       if(messagesModalBack.classList.contains('open')){ closeMessagesModal(); return; }
+      if(mapModalBack.classList.contains('open')){ mapaUi.closeMap(); return; }
       if(pausedState.value){
         if(!dogController.getDog()){ showMenuPanel(menuDogs); return; } // can't enter without a companion
         startGame();
@@ -637,6 +639,18 @@ export function createMenuUi({ camera, lapides, world, dogController, pausedStat
       if(pausedState.value || !dogController.getDog()) return;
       toggleView();
     }
+    if(e.key.toLowerCase() === 'm'){
+      const tag = e.target && e.target.tagName;
+      if(tag === 'INPUT' || tag === 'TEXTAREA') return; // não intercepta enquanto digita
+      if(pausedState.value || !dogController.getDog()) return;
+      mapaUi.openMap();
+    }
+  });
+
+  const btnMapToggle = document.getElementById('btnMapToggle');
+  btnMapToggle.addEventListener('click', ()=>{
+    if(pausedState.value || !dogController.getDog()) return;
+    mapaUi.openMap();
   });
 
   const btnViewToggle = document.getElementById('btnViewToggle');

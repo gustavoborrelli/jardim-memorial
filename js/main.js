@@ -18,6 +18,7 @@ import { createDogController } from './cachorros.js';
 import { createMenuUi } from './menuUi.js';
 import { createAuth } from './auth.js';
 import { createPresence } from './presenca.js';
+import { createMapaUi } from './mapa.js';
 
 /* ============ BASIC SETUP ============ */
 const appEl = document.getElementById('app');
@@ -58,7 +59,8 @@ const dogController = createDogController(scene, renderer, {
 });
 
 const auth = createAuth();
-const menuUi = createMenuUi({ camera, lapides, world, dogController, pausedState, auth });
+const mapaUi = createMapaUi({ lapides, world, dogController, bounds: BOUNDS });
+const menuUi = createMenuUi({ camera, lapides, world, dogController, pausedState, auth, mapaUi });
 const presence = createPresence({ scene, dogController, pausedState });
 
 /* ============ RAYCAST INTERACTION ============ */

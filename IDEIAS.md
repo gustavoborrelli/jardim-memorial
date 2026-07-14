@@ -217,6 +217,29 @@ flores/velas nas lápides dos outros (MVP family & friends).
     equilíbrio entre "parecer deitada" e continuar legível andando por
     perto (o hover do mouse sempre mostra nome/foto/mensagem no card 2D
     de qualquer forma, então a leitura nunca depende só do ângulo 3D).
+18. ✅ **Mapa 2D do jardim** — visão de cima pra se orientar e achar uma
+    lápide específica sem precisar andar pelo mapa 3D até topar com ela.
+    Botão novo (`🗺️`, terceiro círculo empilhado sobre os de visão/planta)
+    e atalho `M` abrem um modal (`js/mapa.js`) com um `<svg>` desenhado a
+    partir dos dados reais — nada de posição fica fixa no código do mapa:
+    o retângulo do terreno usa o `bounds` do jogo, a praça usa
+    `world.PLAZA`, os rótulos de seção ficam na média de posição dos
+    `plots` de cada seção, e cada vaga vira um círculo (colorido com a
+    `cor` escolhida na etapa 17 se ocupada, tracejado se livre) — tudo lido
+    de `lapides.plots` toda vez que o mapa abre. Escolha consciente: se o
+    jardim ganhar mais seções/vagas depois, o mapa já desenha tudo sozinho
+    na próxima abertura, sem precisar editar `js/mapa.js`. Um marcador
+    extra mostra onde o cachorro está no momento em que o mapa abre (não
+    acompanha o passeio ao vivo, é só uma referência). Busca por nome
+    (acento/caixa não importam) filtra em tempo real: esmaece no mapa quem
+    não bate e lista quem bate (nome + seção) abaixo, clicável pra
+    realçar o marcador — decisão do usuário foi **não teleportar** o
+    cachorro ao clicar num resultado, só destacar (mapa de verdade, não
+    atalho mágico), o que também poupou mexer em `js/cachorros.js`. Segue
+    a mesma cadeia de fechar dos outros modais (Esc, clique fora, botão
+    "Fechar"). Testado com Playwright: abrir pelos dois jeitos, buscar
+    nome existente e inexistente, fechar pelos três jeitos — sem erros no
+    console.
 
 ## Ideias soltas (não decidido ainda)
 
