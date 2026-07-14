@@ -61,7 +61,7 @@ export function createLapides(scene) {
   // de design pedia. Compartilhado entre as duas peças: a cor escolhida
   // nunca tinge o corpo inteiro, só aparece como detalhe (ver PALETTE).
   const marbleMap = makeGraveTexture({base:'#f6efe1', speck:[205,193,170], moss:false});
-  const marbleMat = new THREE.MeshStandardMaterial({map:marbleMap, color:0xffffff, roughness:0.35});
+  const marbleMat = new THREE.MeshStandardMaterial({map:marbleMap, color:0xffffff, roughness:0.5});
 
   /* ============ PERSONALIZAÇÃO: formato + cor da lápide ============
      Um jardim menos "cemitério" e mais convidativo: em vez de só a pedra
@@ -315,8 +315,11 @@ export function createLapides(scene) {
     bar.castShadow = true; bar.receiveShadow = true;
     g.add(bar);
 
+    // icosaedro facetado em vez de esfera lisa: uma esfera com poucos
+    // segmentos ainda lê como um globo de vidro brilhando; facetada igual
+    // as pedrinhas/folhagens do resto do jogo, lê como nó de pedra de verdade
     const knobR = 0.21;
-    const knobGeo = new THREE.SphereGeometry(knobR,10,8);
+    const knobGeo = new THREE.IcosahedronGeometry(knobR,0);
     [-1,1].forEach(side=>{
       const top = new THREE.Mesh(knobGeo, marbleMat);
       top.position.set(side*0.27, barBottomY+barH-0.06, 0);
@@ -346,30 +349,34 @@ export function createLapides(scene) {
   // caber bem), a pata em cima é só o toque decorativo. Cada dedo ganha uma
   // "unha" pintada na cor escolhida — de novo, cor como detalhe, não tinta.
   function buildPawMarker(data, cor){
-    const g = new THREE.Group();
+    // tudo montado num grupo interno maior (1.3x) e devolvido dentro de um
+    // grupo vazio por fora — assim o ajuste de escala aleatória que
+    // buildStone() aplica no grupo de fora não sobrescreve esse "maior"
+    const inner = new THREE.Group();
     const base = new THREE.Mesh(new THREE.BoxGeometry(1.0,0.16,0.42), marbleMat);
     base.position.y = 0.08;
     base.castShadow = true; base.receiveShadow = true;
-    g.add(base);
+    inner.add(base);
 
     const plinthH = 0.62;
     const plinthBottomY = 0.16;
     const plinth = new THREE.Mesh(new THREE.BoxGeometry(0.92,plinthH,0.26), marbleMat);
     plinth.position.y = plinthBottomY + plinthH/2;
     plinth.castShadow = true; plinth.receiveShadow = true;
-    g.add(plinth);
+    inner.add(plinth);
 
     const plaque = makePlaque(data, new THREE.PlaneGeometry(0.78,0.5));
     plaque.position.set(0, plinthBottomY+plinthH*0.52, 0.14);
-    g.add(plaque);
+    inner.add(plaque);
 
     // almofada oval por cima do plinto, encaixada (sem deixar vão flutuando)
+    // — icosaedro facetado em vez de esfera lisa, senão vira "globo de vidro"
     const padY = plinthBottomY + plinthH + 0.08;
-    const pad = new THREE.Mesh(new THREE.SphereGeometry(0.36,12,8), marbleMat);
+    const pad = new THREE.Mesh(new THREE.IcosahedronGeometry(0.36,1), marbleMat);
     pad.scale.set(1,0.6,0.66);
     pad.position.set(0, padY, -0.04);
     pad.castShadow = true;
-    g.add(pad);
+    inner.add(pad);
 
     // quatro dedos em leque: os dois de fora mais baixos/menores, os dois
     // do meio mais altos/maiores — como uma pegada de cachorro de verdade
@@ -381,14 +388,18 @@ export function createLapides(scene) {
       { x: 0.33, y:padY+0.13, z:0.2, r:0.14 },
     ];
     toes.forEach(t=>{
-      const toe = new THREE.Mesh(new THREE.SphereGeometry(t.r,9,7), marbleMat);
+      const toe = new THREE.Mesh(new THREE.IcosahedronGeometry(t.r,0), marbleMat);
       toe.position.set(t.x, t.y, t.z);
       toe.castShadow = true;
-      g.add(toe);
-      const nail = new THREE.Mesh(new THREE.SphereGeometry(t.r*0.3,6,6), accentMat);
+      inner.add(toe);
+      const nail = new THREE.Mesh(new THREE.IcosahedronGeometry(t.r*0.3,0), accentMat);
       nail.position.set(t.x, t.y+t.r*0.55, t.z+t.r*0.85);
-      g.add(nail);
+      inner.add(nail);
     });
+
+    inner.scale.setScalar(1.3);
+    const g = new THREE.Group();
+    g.add(inner);
     return g;
   }
 
