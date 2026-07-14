@@ -230,6 +230,11 @@ export function createWorld(scene) {
       post.position.set(px, 0.65, pz);
       post.castShadow = true;
       fenceGroup.add(post);
+      // remate torneado no topo, como mourão de cerca de jardim de verdade —
+      // tira o ar de "estaca cortada"
+      const finial = new THREE.Mesh(new THREE.SphereGeometry(0.1,6,5), fenceMat);
+      finial.position.set(px, 1.32, pz);
+      fenceGroup.add(finial);
     }
     const rail = new THREE.Mesh(new THREE.BoxGeometry(
       Math.abs(x2-x1)||0.12, 0.1, Math.abs(z2-z1)||0.12
@@ -255,6 +260,9 @@ export function createWorld(scene) {
     post.position.set(x,1.05,z);
     post.castShadow = true;
     scene.add(post);
+    const finial = new THREE.Mesh(new THREE.SphereGeometry(0.16,6,5), fenceMat);
+    finial.position.set(x, 2.16, z);
+    scene.add(finial);
   });
   const lintel = new THREE.Mesh(new THREE.BoxGeometry(5.2,0.18,0.18), fenceMat);
   lintel.position.set(0, 2.05, B-0.2);
@@ -314,6 +322,10 @@ export function createWorld(scene) {
         g.add(puff);
       });
     } else {
+      // cipreste/tuia de alameda: silhueta alta que afunila, mas feita de
+      // gomos arredondados em vez dos cones de pinheiro de antes — pontas
+      // liam como algo hostil, e árvore de alameda de jardim real (cipreste,
+      // tuia) tem justamente esse corpo cheio de topo redondo
       const trunk = new THREE.Mesh(
         new THREE.CylinderGeometry(0.16*scale, 0.26*scale, 1.4*scale, 5),
         new THREE.MeshStandardMaterial({color:0x6e4a30, roughness:1})
@@ -323,15 +335,16 @@ export function createWorld(scene) {
       g.add(trunk);
       const greens = [0x4e8a4a, 0x5e9e56, 0x74b061];
       const pick = Math.floor(Math.random()*3);
-      [[1.5,1.6,1.15],[1.15,1.35,2.05],[0.8,1.1,2.85]].forEach(([r,h,y],i)=>{
-        const cone = new THREE.Mesh(
-          new THREE.ConeGeometry(r*scale, h*scale, 6),
+      [[1.15,0.75,1.35],[0.9,0.8,2.15],[0.6,1,2.8]].forEach(([r,sy,y],i)=>{
+        const puff = new THREE.Mesh(
+          new THREE.IcosahedronGeometry(r*scale, 0),
           new THREE.MeshStandardMaterial({color:greens[(i+pick)%3], roughness:0.95})
         );
-        cone.position.y = y*scale;
-        cone.rotation.y = Math.random()*Math.PI;
-        cone.castShadow = true;
-        g.add(cone);
+        puff.scale.y = sy;
+        puff.position.y = y*scale;
+        puff.rotation.y = Math.random()*Math.PI;
+        puff.castShadow = true;
+        g.add(puff);
       });
     }
     g.position.set(x,0,z);
@@ -376,13 +389,18 @@ export function createWorld(scene) {
         peb.receiveShadow = true;
         scene.add(peb);
       } else {
+        // moitinha baixa de gomos redondos em vez das lâminas-cone de antes
+        // (espinhos minúsculos espalhados pelo gramado inteiro somavam ao ar
+        // pontiagudo geral) — lê como trevo/touceira cheia, não como espeto
         const tuft = new THREE.Group();
         const mat = tuftMats[Math.floor(Math.random()*tuftMats.length)];
-        for(let b=0;b<3;b++){
-          const blade = new THREE.Mesh(new THREE.ConeGeometry(0.035,0.22+Math.random()*0.1,4), mat);
-          blade.position.set((Math.random()-0.5)*0.1, 0.11, (Math.random()-0.5)*0.1);
-          blade.rotation.z = (Math.random()-0.5)*0.5;
-          tuft.add(blade);
+        const clumps = 2 + Math.floor(Math.random()*2);
+        for(let b=0;b<clumps;b++){
+          const clump = new THREE.Mesh(new THREE.IcosahedronGeometry(0.06+Math.random()*0.03,0), mat);
+          clump.scale.y = 0.7;
+          clump.position.set((Math.random()-0.5)*0.14, 0.05, (Math.random()-0.5)*0.14);
+          clump.rotation.y = Math.random()*Math.PI;
+          tuft.add(clump);
         }
         tuft.position.set(x,0,z);
         tuft.rotation.y = Math.random()*Math.PI;
@@ -596,7 +614,10 @@ export function createWorld(scene) {
   stSnout.scale.set(0.8,0.7,1.3); stSnout.position.set(0,0.22,0.24);
   statue.add(stSnout);
   [[-0.05],[0.05]].forEach(([sx])=>{
-    const ear = new THREE.Mesh(new THREE.ConeGeometry(0.035,0.08,5), statueMat);
+    // orelha arredondada (gota) em vez do cone pontudo — combina com o resto
+    // da estátua, que já é toda de esferas
+    const ear = new THREE.Mesh(new THREE.SphereGeometry(0.045,6,5), statueMat);
+    ear.scale.set(0.7,1.2,0.5);
     ear.position.set(sx,0.33,0.1);
     statue.add(ear);
   });

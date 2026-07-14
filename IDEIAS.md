@@ -262,6 +262,26 @@ flores/velas nas lápides dos outros (MVP family & friends).
     verdade), praça no tom bege da pedra da praça com um círculo ciano no
     centro representando a fonte, e um contorno escuro (`paint-order`)
     nos rótulos de seção pra continuarem legíveis em cima da grama.
+19. ✅ **Mundo sem pontas** — pedido do usuário: "tudo pontiagudo remete a
+    algo do mau", deixar as formas mais amigáveis e, quando possível, mais
+    parecidas com a realidade. Sem referência visual dessa vez (decisão
+    explícita dele: proponho eu e ele ajusta em cima de screenshots).
+    Inventário mostrou que o grosso das pontas era: (1) os ~26 pinheiros de
+    3 cones empilhados (≈78 cones, principalmente ladeando as avenidas);
+    (2) os tufos de grama de lâminas-cone espalhados pelo gramado; (3) as
+    orelhinhas em cone da estátua de cachorro da fonte. Tudo em
+    `js/mundo.js`: pinheiro virou cipreste/tuia de alameda (3 icosaedros
+    achatados empilhados afunilando pra cima, topo redondo — silhueta real
+    de árvore de alameda de jardim, mesmos verdes e mesma chave
+    `type='pine'`, nenhum call site mudou); tufo virou moitinha de 2–3
+    gomos redondos baixos; orelhas da estátua viraram gotas (esferas
+    achatadas). Bônus: mourões da cerca e do portão ganharam remate de
+    bolinha no topo (cerca de jardim de verdade), tirando o ar de "estaca
+    cortada". Ficaram intocados de propósito: orelhas do Pastor Alemão
+    (pontudas é realismo da raça), caixas de marcenaria (bancos/vigas têm
+    canto mesmo) e as lápides (acabadas de refazer com referência na etapa
+    17). Verificado com screenshots Playwright em 3 pontos do jardim, sem
+    erros de console.
 
 ## Ideias soltas (não decidido ainda)
 
