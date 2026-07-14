@@ -32,10 +32,47 @@ export function createMenuUi({ camera, lapides, world, dogController, pausedStat
   const inMsg = document.getElementById('inMsg');
   const inPhoto = document.getElementById('inPhoto');
   const photoPreview = document.getElementById('photoPreview');
+  const formatoPicker = document.getElementById('formatoPicker');
+  const corPicker = document.getElementById('corPicker');
 
   let pendingPlot = null;
   let pendingPhotoImg = null;
   let pendingPhotoUrl = null;
+  let pendingFormato = lapides.FORMATOS[0].id;
+  let pendingCor = lapides.PALETTE[0].hex;
+
+  /* ============ FORMATO + COR (seletores dentro do modal de homenagem) ============ */
+  lapides.FORMATOS.forEach(f=>{
+    const opt = document.createElement('button');
+    opt.type = 'button';
+    opt.className = 'formato-opt';
+    opt.dataset.id = f.id;
+    opt.innerHTML = `<span class="ico">${f.icon}</span><span class="lbl">${f.label}</span>`;
+    opt.addEventListener('click', ()=>{
+      pendingFormato = f.id;
+      formatoPicker.querySelectorAll('.formato-opt').forEach(el=> el.classList.toggle('active', el.dataset.id===f.id));
+    });
+    formatoPicker.appendChild(opt);
+  });
+  lapides.PALETTE.forEach(c=>{
+    const opt = document.createElement('button');
+    opt.type = 'button';
+    opt.className = 'cor-opt';
+    opt.dataset.id = c.id;
+    opt.title = c.label;
+    opt.style.background = c.hex;
+    opt.addEventListener('click', ()=>{
+      pendingCor = c.hex;
+      corPicker.querySelectorAll('.cor-opt').forEach(el=> el.classList.toggle('active', el.dataset.id===c.id));
+    });
+    corPicker.appendChild(opt);
+  });
+  function resetFormatoCorPicker(){
+    pendingFormato = lapides.FORMATOS[0].id;
+    pendingCor = lapides.PALETTE[0].hex;
+    formatoPicker.querySelectorAll('.formato-opt').forEach(el=> el.classList.toggle('active', el.dataset.id===pendingFormato));
+    corPicker.querySelectorAll('.cor-opt').forEach(el=> el.classList.toggle('active', el.dataset.id===lapides.PALETTE[0].id));
+  }
 
   /* ============ MENSAGENS (livro de visitas por lápide) ============ */
   const messagesModalBack = document.getElementById('messagesModalBack');
@@ -331,6 +368,7 @@ export function createMenuUi({ camera, lapides, world, dogController, pausedStat
     pendingPhotoImg = null; pendingPhotoUrl = null;
     photoPreview.classList.remove('show');
     photoPreview.innerHTML = '';
+    resetFormatoCorPicker();
     setTimeout(()=>inName.focus(), 50);
   }
   function closeModal(){
@@ -356,12 +394,13 @@ export function createMenuUi({ camera, lapides, world, dogController, pausedStat
     btnConfirm.disabled = true;
     btnConfirm.textContent = 'Salvando...';
     try {
-      const saved = await lapides.saveMemorial(plot, { name, dates, msg, photoFile });
+      const saved = await lapides.saveMemorial(plot, { name, dates, msg, photoFile, formato: pendingFormato, cor: pendingCor });
 
       const data = {
         name, dates, msg,
         photo: pendingPhotoImg, photoUrl: pendingPhotoUrl,
         id: saved.id, criadoPor: saved.criadoPor,
+        formato: pendingFormato, cor: pendingCor,
       };
       lapides.createTribute(plot, data);
 

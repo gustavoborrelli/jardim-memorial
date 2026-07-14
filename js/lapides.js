@@ -50,8 +50,39 @@ export function createLapides(scene) {
     {base:'#b7bcc2', speck:[120,126,132], moss:true},    // granito frio
     {base:'#c3c2a4', speck:[140,142,110], moss:true},     // pedra musgosa
   ];
-  const stoneMats = STONE_TINTS.map(t => new THREE.MeshStandardMaterial({map:makeGraveTexture(t), color:0xffffff, roughness:0.9}));
+  // só os mapas de textura (o "grão" da pedra); a cor de cada lápide vem da
+  // paleta escolhida por quem cria a homenagem, então o material não pode
+  // mais ser compartilhado — cada lápide clássica ganha o seu, tingido.
+  const stoneMaps = STONE_TINTS.map(t => makeGraveTexture(t));
+  const plinthMat = new THREE.MeshStandardMaterial({map:stoneMaps[0], color:0xffffff, roughness:0.9});
   const charmMat = new THREE.MeshStandardMaterial({color:0xd8b978, roughness:0.6});
+  // mármore/calcário claro dos formatos ossinho/pata — mais liso e polido
+  // (roughness baixo) que a pedra rústica da clássica, igual a referência
+  // de design pedia. Compartilhado entre as duas peças: a cor escolhida
+  // nunca tinge o corpo inteiro, só aparece como detalhe (ver PALETTE).
+  const marbleMap = makeGraveTexture({base:'#f6efe1', speck:[205,193,170], moss:false});
+  const marbleMat = new THREE.MeshStandardMaterial({map:marbleMap, color:0xffffff, roughness:0.35});
+
+  /* ============ PERSONALIZAÇÃO: formato + cor da lápide ============
+     Um jardim menos "cemitério" e mais convidativo: em vez de só a pedra
+     cinza tradicional, quem cria a homenagem escolhe um formato com mais
+     carinho e uma cor alegre. A cor NUNCA tinge a peça inteira (isso
+     deixava tudo "lavado") — ela aparece só como um detalhe pintado: a
+     faixa do ossinho, a unha da pata. Exportado no retorno do módulo pra
+     menuUi.js montar os seletores sem duplicar essas listas. */
+  const PALETTE = [
+    { id:'pedra', hex:'#c9beb0', label:'Pedra' },
+    { id:'ceu',   hex:'#8ecae6', label:'Céu' },
+    { id:'coral', hex:'#ff9a8a', label:'Coral' },
+    { id:'sol',   hex:'#ffd166', label:'Sol' },
+    { id:'lilas', hex:'#c9a8e8', label:'Lilás' },
+    { id:'menta', hex:'#8fd9b6', label:'Menta' },
+  ];
+  const FORMATOS = [
+    { id:'classica', label:'Clássica', icon:'🪨' },
+    { id:'ossinho',  label:'Ossinho',  icon:'🦴' },
+    { id:'pata',     label:'Pata',     icon:'🐾' },
+  ];
 
   /* four named sections, one per quadrant */
   const SECTIONS = [
@@ -199,15 +230,16 @@ export function createLapides(scene) {
     lines.forEach((l,i)=> ctx.fillText(l.trim(), x, startY + i*lineHeight));
   }
 
-  function buildStone(plot, data){
+  function makePlaque(data, geometry){
+    const tex = engraveTexture(data.name, data.dates, data.msg, data.photo || null);
+    const plaqueMat = new THREE.MeshStandardMaterial({map:tex, transparent:true, roughness:0.9});
+    return new THREE.Mesh(geometry, plaqueMat);
+  }
+
+  function buildClassicStone(data, cor, r1, r2){
     const g = new THREE.Group();
-    const r1 = hash01(plot.x, plot.z);
-    const r2 = hash01(plot.z, plot.x);
     const variant = Math.floor(r1*3);       // silhueta: 0 arco, 1 lousa reta, 2 arco+charme
-    const stoneMat = stoneMats[Math.floor(r2*3)];
-    const jitterRot = (r1-0.5)*0.12;
-    const jitterTilt = (r2-0.5)*0.035;
-    const scaleVar = 0.94 + r2*0.14;
+    const stoneMat = new THREE.MeshStandardMaterial({map:stoneMaps[Math.floor(r2*3)], color:cor, roughness:0.9});
 
     const base = new THREE.Mesh(new THREE.BoxGeometry(1.15,0.18,0.5), stoneMat);
     base.position.y = 0.09;
@@ -257,11 +289,122 @@ export function createLapides(scene) {
       }
     }
 
-    const tex = engraveTexture(data.name, data.dates, data.msg, data.photo || null);
-    const plaqueMat = new THREE.MeshStandardMaterial({map:tex, transparent:true, roughness:0.9});
-    const plaque = new THREE.Mesh(new THREE.PlaneGeometry(0.92,1.0), plaqueMat);
+    const plaque = makePlaque(data, new THREE.PlaneGeometry(0.92,1.0));
     plaque.position.set(0, plaqueY, 0.145);
     g.add(plaque);
+    return g;
+  }
+
+  // Ossinho: osso na vertical, dois pares de nós arredondados (topo e base)
+  // unidos por uma barra central — como uma lápide tradicional, só que em
+  // formato de osso. Referência: projeto de design "Lápides Jardim
+  // Memorial" (Ossinho Clássico). O corpo inteiro é mármore claro; a cor
+  // escolhida aparece só como uma faixa fina perto do topo, tipo uma
+  // "coleira" gravada — nunca tingindo a peça toda.
+  function buildBoneMarker(data, cor){
+    const g = new THREE.Group();
+    const base = new THREE.Mesh(new THREE.BoxGeometry(0.7,0.16,0.4), marbleMat);
+    base.position.y = 0.08;
+    base.castShadow = true; base.receiveShadow = true;
+    g.add(base);
+
+    const barW = 0.5, barH = 1.1, barD = 0.24;
+    const barBottomY = 0.16;
+    const bar = new THREE.Mesh(new THREE.BoxGeometry(barW,barH,barD), marbleMat);
+    bar.position.y = barBottomY + barH/2;
+    bar.castShadow = true; bar.receiveShadow = true;
+    g.add(bar);
+
+    const knobR = 0.21;
+    const knobGeo = new THREE.SphereGeometry(knobR,10,8);
+    [-1,1].forEach(side=>{
+      const top = new THREE.Mesh(knobGeo, marbleMat);
+      top.position.set(side*0.27, barBottomY+barH-0.06, 0);
+      top.castShadow = true;
+      g.add(top);
+      const bottom = new THREE.Mesh(knobGeo, marbleMat);
+      bottom.position.set(side*0.27, barBottomY+0.06, 0);
+      bottom.castShadow = true;
+      g.add(bottom);
+    });
+
+    // faixa-detalhe: a única parte que usa a cor escolhida, como um colar
+    // gravado perto do topo da barra
+    const accentMat = new THREE.MeshStandardMaterial({color:cor, roughness:0.5});
+    const band = new THREE.Mesh(new THREE.BoxGeometry(barW+0.04,0.09,barD+0.01), accentMat);
+    band.position.y = barBottomY+barH-0.24;
+    g.add(band);
+
+    const plaque = makePlaque(data, new THREE.PlaneGeometry(0.42,0.46));
+    plaque.position.set(0, barBottomY+barH*0.4, barD/2+0.01);
+    g.add(plaque);
+    return g;
+  }
+
+  // Pata: almofada oval com quatro dedos sobre um pequeno plinto — a foto e
+  // o texto ficam no plinto (do mesmo tamanho da placa da clássica, pra
+  // caber bem), a pata em cima é só o toque decorativo. Cada dedo ganha uma
+  // "unha" pintada na cor escolhida — de novo, cor como detalhe, não tinta.
+  function buildPawMarker(data, cor){
+    const g = new THREE.Group();
+    const base = new THREE.Mesh(new THREE.BoxGeometry(1.0,0.16,0.42), marbleMat);
+    base.position.y = 0.08;
+    base.castShadow = true; base.receiveShadow = true;
+    g.add(base);
+
+    const plinthH = 0.62;
+    const plinthBottomY = 0.16;
+    const plinth = new THREE.Mesh(new THREE.BoxGeometry(0.92,plinthH,0.26), marbleMat);
+    plinth.position.y = plinthBottomY + plinthH/2;
+    plinth.castShadow = true; plinth.receiveShadow = true;
+    g.add(plinth);
+
+    const plaque = makePlaque(data, new THREE.PlaneGeometry(0.78,0.5));
+    plaque.position.set(0, plinthBottomY+plinthH*0.52, 0.14);
+    g.add(plaque);
+
+    // almofada oval por cima do plinto, encaixada (sem deixar vão flutuando)
+    const padY = plinthBottomY + plinthH + 0.08;
+    const pad = new THREE.Mesh(new THREE.SphereGeometry(0.36,12,8), marbleMat);
+    pad.scale.set(1,0.6,0.66);
+    pad.position.set(0, padY, -0.04);
+    pad.castShadow = true;
+    g.add(pad);
+
+    // quatro dedos em leque: os dois de fora mais baixos/menores, os dois
+    // do meio mais altos/maiores — como uma pegada de cachorro de verdade
+    const accentMat = new THREE.MeshStandardMaterial({color:cor, roughness:0.5});
+    const toes = [
+      { x:-0.33, y:padY+0.13, z:0.2, r:0.14 },
+      { x:-0.13, y:padY+0.27, z:0.26, r:0.17 },
+      { x: 0.13, y:padY+0.27, z:0.26, r:0.17 },
+      { x: 0.33, y:padY+0.13, z:0.2, r:0.14 },
+    ];
+    toes.forEach(t=>{
+      const toe = new THREE.Mesh(new THREE.SphereGeometry(t.r,9,7), marbleMat);
+      toe.position.set(t.x, t.y, t.z);
+      toe.castShadow = true;
+      g.add(toe);
+      const nail = new THREE.Mesh(new THREE.SphereGeometry(t.r*0.3,6,6), accentMat);
+      nail.position.set(t.x, t.y+t.r*0.55, t.z+t.r*0.85);
+      g.add(nail);
+    });
+    return g;
+  }
+
+  function buildStone(plot, data){
+    const formato = data.formato || 'classica';
+    const cor = data.cor || PALETTE[0].hex;
+    const r1 = hash01(plot.x, plot.z);
+    const r2 = hash01(plot.z, plot.x);
+    const jitterRot = (r1-0.5)*0.12;
+    const jitterTilt = (r2-0.5)*0.035;
+    const scaleVar = 0.94 + r2*0.14;
+
+    let g;
+    if(formato === 'ossinho') g = buildBoneMarker(data, cor);
+    else if(formato === 'pata') g = buildPawMarker(data, cor);
+    else g = buildClassicStone(data, cor, r1, r2);
 
     g.scale.setScalar(scaleVar);
     g.rotation.z = jitterTilt;
@@ -356,6 +499,8 @@ export function createLapides(scene) {
       msg: row.mensagem,
       photo,
       photoUrl: row.foto_url,
+      formato: row.formato,
+      cor: row.cor,
     }, animate);
   }
 
@@ -394,7 +539,7 @@ export function createLapides(scene) {
     .subscribe();
 
   /* ============ SUPABASE: salvar um novo memorial ============ */
-  async function saveMemorial(plot, { name, dates, msg, photoFile }){
+  async function saveMemorial(plot, { name, dates, msg, photoFile, formato, cor }){
     let fotoUrl = null;
     if(photoFile){
       const ext = (photoFile.name.split('.').pop() || 'jpg').toLowerCase();
@@ -414,6 +559,8 @@ export function createLapides(scene) {
       plot_x: plot.x,
       plot_z: plot.z,
       foto_url: fotoUrl,
+      formato: formato || 'classica',
+      cor: cor || PALETTE[0].hex,
     }).select('id, criado_por').single();
     if(error){
       if(error.code === '23505'){
@@ -490,6 +637,8 @@ export function createLapides(scene) {
   return {
     plots,
     stoneGroup,
+    PALETTE,
+    FORMATOS,
     createTribute,
     saveMemorial,
     deleteMemorial,

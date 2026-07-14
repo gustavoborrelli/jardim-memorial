@@ -201,6 +201,45 @@ canvas{display:block;outline:none;}
 .modal-actions{
   display:flex; justify-content:flex-end; gap:10px; margin-top:6px;
 }
+
+/* seletor de formato da lápide (dentro do modal de homenagem) */
+.formato-picker{
+  display:grid;
+  grid-template-columns:repeat(auto-fit, minmax(72px,1fr));
+  gap:8px;
+}
+.formato-opt{
+  display:flex; flex-direction:column; align-items:center; gap:4px;
+  padding:10px 6px 8px;
+  background:rgba(244,239,230,0.06);
+  border:2px solid transparent;
+  border-radius:12px;
+  cursor:pointer;
+  font-family:'Inter',sans-serif;
+  transition:transform 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+}
+.formato-opt:hover{ transform:translateY(-2px); background:rgba(244,239,230,0.1); }
+.formato-opt.active{ border-color:var(--amber); background:rgba(232,185,120,0.14); }
+.formato-opt .ico{ font-size:20px; }
+.formato-opt .lbl{
+  font-size:10px; font-weight:600; text-align:center; line-height:1.25;
+  color:rgba(244,239,230,0.8);
+}
+
+/* seletor de cor da lápide */
+.cor-picker{
+  display:flex; gap:10px; flex-wrap:wrap;
+}
+.cor-opt{
+  width:30px; height:30px;
+  border-radius:50%;
+  border:2px solid rgba(244,239,230,0.25);
+  cursor:pointer;
+  padding:0;
+  transition:transform 0.15s ease, border-color 0.15s ease;
+}
+.cor-opt:hover{ transform:translateY(-1px); }
+.cor-opt.active{ border-color:var(--cream); box-shadow:0 0 0 2px var(--amber); }
 .btn.danger{
   background:rgba(30,22,38,0.55);
   color:#e88a8a;

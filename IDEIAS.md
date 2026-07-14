@@ -165,6 +165,42 @@ flores/velas nas lápides dos outros (MVP family & friends).
     mouse) continua exatamente como antes. Também padronizado nessa leva:
     o botão de flor/vela ficou redondo, só com o ícone, igual o botão de
     trocar visão (antes era uma pílula com texto).
+17. ✅ **Lápide personalizável** — objetivo explícito: um jardim que dá
+    vontade de entrar, não um cemitério cinza. Quem cria uma homenagem
+    agora escolhe entre 3 formatos (Clássica, Ossinho, Pata) e 6 cores
+    alegres (pedra, céu, coral, sol, lilás, menta) — seletores no modal de
+    homenagem (`index.html` → `#formatoPicker`/`#corPicker`, montados
+    dinamicamente em `js/menuUi.js` a partir de `lapides.FORMATOS`/
+    `lapides.PALETTE`, fonte única da verdade). Novas colunas `formato`/
+    `cor` em `memoriais` (`supabase/011_estilo_lapide.sql`).
+    Primeira versão tinha 5 formatos inventados a partir só de descrição
+    em texto (Clássica, Coração, Estaca, Ossinho, Estátua de cachorro,
+    cada um tingido inteiro na cor escolhida) — teve retrabalho visual na
+    hora (a estátua de cachorro virou "boneco de neve" até ganhar um
+    focinho de cor contrastante) mas, mesmo corrigida, o resultado testado
+    de verdade no jardim não agradou: formas pareciam genéricas (só
+    esfera+cone+caixa) e pequenas demais pra caber foto+texto direito.
+    Foi quando o usuário compartilhou um link de um projeto de design
+    dele (`claude.ai/design`, ferramenta `DesignSync`) com a
+    especificação real de dois formatos — Ossinho e Pata — incluindo
+    medidas de referência, material (mármore/calcário claro, roughness
+    baixo) e a decisão-chave: **a cor nunca tinge a peça inteira**, só
+    aparece como um detalhe pintado (a faixa do ossinho, a unha da pata)
+    — foi isso que fazia as cores parecerem "lavadas" na primeira
+    tentativa. Reconstruído do zero em cima dessa referência
+    (`buildBoneMarker`/`buildPawMarker` em `js/lapides.js`, removendo
+    coração/estaca/cachorro e sua entrada em `FORMATOS`): ossinho é um
+    osso vertical com dois pares de nós unidos por uma barra central (a
+    "lápide" propriamente dita), pata é uma almofada com 4 dedos sobre um
+    plinto do mesmo tamanho de texto da clássica. `supabase/012_lapide_pata.sql`
+    atualiza a constraint de `formato` pros 3 valores válidos (`not valid`,
+    não reavalia homenagens de teste já criadas com os formatos antigos —
+    elas voltam a renderizar como clássica, sem quebrar). **Rodar
+    011 e 012 no Supabase antes do deploy.**
+    Lição: quando o usuário tem (ou pode desenhar) uma referência visual
+    concreta, buscar isso primeiro em vez de adivinhar a partir de uma
+    descrição em palavras — economiza pelo menos uma rodada inteira de
+    retrabalho.
 
 ## Ideias soltas (não decidido ainda)
 
