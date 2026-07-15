@@ -219,6 +219,7 @@ export function createWorld(scene) {
   /* ============ FENCE ============ */
   const fenceMat = new THREE.MeshStandardMaterial({color:0x5b4a3d, roughness:0.9});
   const fenceGroup = new THREE.Group();
+  const birdPerches = []; // topo de alguns mourões — pontos de pouso dos passarinhos
   function addFenceRun(x1,z1,x2,z2){
     const len = Math.hypot(x2-x1, z2-z1);
     const postCount = Math.round(len/3);
@@ -235,6 +236,7 @@ export function createWorld(scene) {
       const finial = new THREE.Mesh(new THREE.SphereGeometry(0.1,6,5), fenceMat);
       finial.position.set(px, 1.32, pz);
       fenceGroup.add(finial);
+      if(i % 3 === 0) birdPerches.push({ x:px, y:1.46, z:pz });
     }
     const rail = new THREE.Mesh(new THREE.BoxGeometry(
       Math.abs(x2-x1)||0.12, 0.1, Math.abs(z2-z1)||0.12
@@ -273,6 +275,9 @@ export function createWorld(scene) {
   // frondosa (copa redonda, mais sombra) e cerejeira (florida, um toque
   // alegre e colorido) — escolhidas por ficarem bonitas e leves, sem pesar
   // o tom contemplativo do lugar.
+  // vida ambiente: toda árvore balança de leve com o vento (rotação sutil
+  // na base do grupo, fase/velocidade próprias pra não parecer coreografia)
+  const swayingTrees = [];
   function makeTree(x,z,scale=1,type){
     const g = new THREE.Group();
     const t = type || 'pine';
@@ -348,14 +353,52 @@ export function createWorld(scene) {
       });
     }
     g.position.set(x,0,z);
+    swayingTrees.push({ g, phase: Math.random()*Math.PI*2, speed: 0.8+Math.random()*0.6, amp: 0.008+Math.random()*0.008 });
     return g;
   }
   // uma cerejeira grande em cada um dos quatro jardins (seções de lápides),
   // como marco colorido e alegre na árvore mais isolada de cada um; as duas
   // árvores extras junto às avenidas continuam pinheiro
-  [[-22,-22,1.5,'blossom'],[22,-22,1.5,'blossom'],[-22,20,1.5,'blossom'],[22,21,1.5,'blossom'],[-24,2,0.8,'pine'],[24,-2,0.85,'pine']].forEach(([x,z,s,type])=>{
-    scene.add(makeTree(x,z,s,type));
-  });
+  const BLOSSOM_SPOTS = [[-22,-22,1.5],[22,-22,1.5],[-22,20,1.5],[22,21,1.5]];
+  BLOSSOM_SPOTS.forEach(([x,z,s])=> scene.add(makeTree(x,z,s,'blossom')));
+  [[-24,2,0.8],[24,-2,0.85]].forEach(([x,z,s])=> scene.add(makeTree(x,z,s,'pine')));
+
+  /* vida ambiente: pétalas caindo devagar das cerejeiras — cada uma nasce
+     num ponto aleatório da copa, cai rodopiando com deriva de vento, deita
+     no chão por alguns segundos desbotando e renasce lá em cima */
+  const petals = [];
+  {
+    const petalGeo = new THREE.PlaneGeometry(0.09, 0.07);
+    const petalPinks = [0xffb7c5, 0xffc4d6, 0xffd9e6];
+    BLOSSOM_SPOTS.forEach(([bx,bz,bs])=>{
+      for(let i=0;i<7;i++){
+        const m = new THREE.Mesh(petalGeo, new THREE.MeshBasicMaterial({
+          color: petalPinks[i%petalPinks.length], transparent:true, opacity:0.9, side:THREE.DoubleSide
+        }));
+        const p = {
+          mesh: m, baseX: bx, baseZ: bz, scale: bs,
+          phase: Math.random()*Math.PI*2,
+          fallSpeed: 0.18+Math.random()*0.1,
+          spin: 1.5+Math.random()*2,
+          state: 'falling', rest: 0,
+        };
+        respawnPetal(p, true);
+        petals.push(p);
+        scene.add(m);
+      }
+    });
+  }
+  function respawnPetal(p, scatterY){
+    const a = Math.random()*Math.PI*2, r = Math.random()*1.1*p.scale;
+    p.mesh.position.set(
+      p.baseX + Math.cos(a)*r,
+      (1.1 + Math.random()*0.8)*p.scale + (scatterY ? -Math.random()*1.5 : 0),
+      p.baseZ + Math.sin(a)*r
+    );
+    p.mesh.rotation.set(Math.random()*Math.PI, Math.random()*Math.PI, 0);
+    p.mesh.material.opacity = 0.9;
+    p.state = 'falling';
+  }
 
   // tree-lined avenues: sempre pinheiros, ladeando a fonte e os caminhos
   [9, 15, 21].forEach(d=>{
@@ -925,6 +968,108 @@ export function createWorld(scene) {
     fireflies.push({mesh:m, wingL, wingR, baseX:bx, baseZ:bz, phase:Math.random()*Math.PI*2, speed:0.4+Math.random()*0.4});
   }
 
+  /* ============ PASSARINHOS ============ */
+  // vida ambiente: dois sabiás que de tempos em tempos voam até o topo de um
+  // mourão da cerca, ficam um pouco (balançando de leve) e vão embora.
+  // Máquina de estados simples: away → flyin → perched → flyout → away.
+  const birdBackMat = new THREE.MeshStandardMaterial({color:0x6b6257, roughness:0.9});
+  const birdBreastMat = new THREE.MeshStandardMaterial({color:0xe08a3c, roughness:0.8});
+  const birdBeakMat = new THREE.MeshStandardMaterial({color:0xd9b13b, roughness:0.6});
+  function buildBird(){
+    const g = new THREE.Group();
+    const body = new THREE.Mesh(new THREE.SphereGeometry(0.055,7,6), birdBackMat);
+    body.scale.set(1,0.85,1.3);
+    body.position.y = 0.05;
+    g.add(body);
+    const breast = new THREE.Mesh(new THREE.SphereGeometry(0.042,7,6), birdBreastMat);
+    breast.scale.set(0.9,0.8,1);
+    breast.position.set(0, 0.032, 0.028);
+    g.add(breast);
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.036,7,6), birdBackMat);
+    head.position.set(0, 0.105, 0.045);
+    g.add(head);
+    const beak = new THREE.Mesh(new THREE.SphereGeometry(0.014,6,5), birdBeakMat);
+    beak.scale.set(0.6,0.5,1.4);
+    beak.position.set(0, 0.1, 0.085);
+    g.add(beak);
+    const tail = new THREE.Mesh(new THREE.SphereGeometry(0.028,6,5), birdBackMat);
+    tail.scale.set(0.7,0.35,1.9);
+    tail.position.set(0, 0.055, -0.08);
+    tail.rotation.x = 0.35;
+    g.add(tail);
+    const wings = [];
+    [-1,1].forEach(side=>{
+      const wing = new THREE.Mesh(new THREE.SphereGeometry(0.04,6,5), birdBackMat);
+      wing.scale.set(1.6,0.25,1);
+      wing.position.set(side*0.05, 0.06, 0);
+      g.add(wing);
+      wings.push(wing);
+    });
+    g.visible = false;
+    scene.add(g);
+    return { g, wings };
+  }
+  const birds = [0,1].map(i=>({
+    ...buildBird(),
+    state: 'away',
+    timer: 4 + i*9 + Math.random()*6, // defasados pra não agirem em dupla
+    from: new THREE.Vector3(), to: new THREE.Vector3(),
+    t: 0, dur: 1, phase: Math.random()*Math.PI*2,
+  }));
+  function updateBirds(dt, elapsed){
+    birds.forEach(b=>{
+      if(b.state === 'away'){
+        b.timer -= dt;
+        if(b.timer <= 0 && birdPerches.length){
+          const perch = birdPerches[Math.floor(Math.random()*birdPerches.length)];
+          b.to.set(perch.x, perch.y, perch.z);
+          // entra voando de fora da cerca, um pouco acima
+          const outward = Math.hypot(perch.x, perch.z) || 1;
+          b.from.set(perch.x/outward*40, perch.y+7, perch.z/outward*40);
+          b.t = 0; b.dur = 2.6;
+          b.state = 'flyin';
+          b.g.visible = true;
+        }
+        return;
+      }
+      if(b.state === 'flyin' || b.state === 'flyout'){
+        b.t = Math.min(1, b.t + dt/b.dur);
+        const e = b.t*b.t*(3-2*b.t); // easing suave nas duas pontas
+        b.g.position.lerpVectors(b.from, b.to, e);
+        b.g.position.y += Math.sin(b.t*Math.PI)*0.8; // arco de voo
+        b.g.rotation.y = Math.atan2(b.to.x-b.from.x, b.to.z-b.from.z);
+        const flap = Math.sin(elapsed*16+b.phase)*0.7;
+        b.wings[0].rotation.z = flap;
+        b.wings[1].rotation.z = -flap;
+        if(b.t >= 1){
+          if(b.state === 'flyin'){
+            b.state = 'perched';
+            b.timer = 6 + Math.random()*9;
+            b.wings[0].rotation.z = 0.15;
+            b.wings[1].rotation.z = -0.15;
+            b.baseY = b.g.position.y;
+          } else {
+            b.state = 'away';
+            b.g.visible = false;
+            b.timer = 10 + Math.random()*18;
+          }
+        }
+        return;
+      }
+      // perched: balanço de corpo + viradinhas de cabeça ocasionais
+      b.timer -= dt;
+      b.g.position.y = b.baseY + Math.abs(Math.sin(elapsed*2.4+b.phase))*0.012;
+      b.g.rotation.y += Math.sin(elapsed*0.7+b.phase)*dt*0.6;
+      if(b.timer <= 0){
+        b.from.copy(b.g.position);
+        const a = Math.random()*Math.PI*2;
+        b.to.set(b.g.position.x+Math.cos(a)*35, b.g.position.y+9, b.g.position.z+Math.sin(a)*35);
+        b.t = 0; b.dur = 2.6;
+        b.state = 'flyout';
+      }
+    });
+  }
+
   /* ============ FIREFLY GATHER EFFECT ============ */
   let gatherTarget = null;
   let gatherUntil = 0;
@@ -1024,6 +1169,43 @@ export function createWorld(scene) {
       r.scale.set(s,s,s);
       r.material.opacity = 0.5*(1-t);
     });
+
+    /* ===== vida ambiente ===== */
+    // vento: rajadas lentas compartilhadas (mesmo "clima" pra todo mundo)
+    // moduladas pela fase própria de cada árvore/flor
+    const gust = 0.6 + 0.4*Math.sin(elapsed*0.23) * Math.sin(elapsed*0.611);
+    swayingTrees.forEach(t=>{
+      const w = Math.sin(elapsed*t.speed + t.phase) * t.amp * gust;
+      t.g.rotation.z = w;
+      t.g.rotation.x = Math.sin(elapsed*t.speed*0.8 + t.phase*1.7) * t.amp * 0.6 * gust;
+    });
+    flowerGroup.children.forEach(f=>{
+      // fase derivada da posição: flores vizinhas ondulam quase juntas,
+      // como uma onda de vento passando pelo gramado
+      f.rotation.z = Math.sin(elapsed*1.7 + f.position.x*0.7 + f.position.z*0.5) * 0.07 * gust;
+    });
+
+    petals.forEach(p=>{
+      if(p.state === 'falling'){
+        p.mesh.position.y -= dt * p.fallSpeed;
+        p.mesh.position.x += Math.sin(elapsed*1.3 + p.phase) * dt * 0.25;
+        p.mesh.position.z += Math.cos(elapsed*1.1 + p.phase) * dt * 0.18;
+        p.mesh.rotation.x += dt * p.spin;
+        p.mesh.rotation.y += dt * p.spin * 0.6;
+        if(p.mesh.position.y <= 0.03){
+          p.mesh.position.y = 0.03;
+          p.mesh.rotation.set(-Math.PI/2, 0, Math.random()*Math.PI);
+          p.state = 'resting';
+          p.rest = 2.5 + Math.random()*3;
+        }
+      } else {
+        p.rest -= dt;
+        p.mesh.material.opacity = Math.max(0, Math.min(0.9, p.rest * 0.6));
+        if(p.rest <= 0) respawnPetal(p, false);
+      }
+    });
+
+    updateBirds(dt, elapsed);
   }
 
   return {

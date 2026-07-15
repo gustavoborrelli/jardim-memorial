@@ -292,6 +292,31 @@ flores/velas nas lápides dos outros (MVP family & friends).
     17). Verificado com screenshots Playwright em 3 pontos do jardim, sem
     erros de console.
 
+20. ✅ **Vida ambiente** — decisão de direção de arte tomada em conversa:
+    em vez de trocar o estilo gráfico (low-poly flat-shaded é um ativo pro
+    produto — leve no celular, sem pipeline de assets, e a estilização dá
+    a distância afetiva certa pra um memorial), investir em *polimento
+    dentro do estilo*, começando pelo item de maior impacto: movimento
+    sutil que faz o mundo parecer vivo. Três sistemas, todos em
+    `js/mundo.js`, pendurados no `update()` que já existia: (1) **vento**
+    — toda árvore balança de leve na base (fase/amplitude próprias) e as
+    flores ondulam com fase derivada da posição, como uma rajada
+    atravessando o gramado; uma "rajada global" lenta modula tudo junto.
+    (2) **Pétalas** — 7 por cerejeira caem rodopiando com deriva, deitam
+    no chão por uns segundos desbotando e renascem na copa. (3)
+    **Passarinhos** — dois sabiás-laranjeira (cores reais da ave) com
+    máquina de estados away→flyin→perched→flyout: voam de fora até o topo
+    de um mourão da cerca (pontos de pouso coletados na própria
+    construção da cerca), ficam balançando/virando a cabeça, vão embora.
+    Custo de desempenho medido: zero (14fps headless antes e depois — o
+    gargalo é a renderização por software do teste, não o update).
+    Armadilha de teste descoberta: com `dt` limitado a 0.05s/frame, o
+    headless a ~14fps roda o tempo do jogo ~30% mais devagar que o
+    relógio — timers de teste precisam de folga. Verificado com câmera
+    livre de debug (hook temporário, removido antes do commit):
+    screenshot do sabiá pousado no mourão e 17/28 pétalas caindo num
+    dado instante.
+
 ## Ideias soltas (não decidido ainda)
 
 - A leva de dinamismo social planejada em conjunto está completa: (1)
