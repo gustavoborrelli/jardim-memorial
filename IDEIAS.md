@@ -317,6 +317,31 @@ flores/velas nas lápides dos outros (MVP family & friends).
     screenshot do sabiá pousado no mourão e 17/28 pétalas caindo num
     dado instante.
 
+21. ✅ **Canteiros e tons na grama** — segundo item do backlog de polimento
+    da direção de arte (etapa 20 foi o primeiro). Duas mudanças, ambas em
+    `js/mundo.js`. (1) **Manchas de tom no gramado**: a textura de grama
+    repete a cada ~8 unidades e não consegue variar em escala de jardim,
+    então o plano do chão ganhou cores por vértice — ruído suave em duas
+    frequências alternando trechos secos/amarelados com trechos de verde
+    mais fundo. Precisou de calibração com screenshots: a primeira
+    amplitude (±11%) ficou invisível (o produto de senos passa tempo
+    demais perto de zero e o ACES tonemapping achata o resto); resolvido
+    amplificando o ruído (×1.5 com clamp) e, no lado "úmido", escurecendo
+    o verde em vez de puxar pro azul (azul a mais lia como cinza-lavado).
+    (2) **Canteiros ladeando as avenidas**: faixa de terra escura rente à
+    borda dos caminhos com flores plantadas em blocos de cor (como
+    canteiro de verdade, não mistura aleatória — cor sorteada dura 3–5
+    flores seguidas, sem repetir a anterior). Vãos calculados pra deixar
+    livres as entradas dos arcos das seções (|z|≈10.3–13.7 nas avenidas
+    norte-sul) e a frente dos bancos. As ~200 flores dos canteiros são
+    `InstancedMesh` (3 draw calls no total: caules, botões com cor por
+    instância, miolos) — importa no celular; por isso também ficam fora
+    do balanço de vento do `flowerGroup` (matriz estática), o que não
+    aparece numa massa densa de cor. Verificado com Playwright (avenida,
+    quadrante aberto, visão de jogo na praça), sem erros de console.
+    Restam do backlog: golden-hour mais forte e sol maior com halo +
+    pássaros distantes.
+
 ## Ideias soltas (não decidido ainda)
 
 - A leva de dinamismo social planejada em conjunto está completa: (1)

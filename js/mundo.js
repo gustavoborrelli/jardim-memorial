@@ -149,6 +149,11 @@ export function createWorld(scene) {
     // sobe depois de d>44, sempre fora da área caminhável do jardim.
     const RISE_START = 44;
     const pos = groundGeo.attributes.position;
+    // manchas de tom em larga escala pintadas por vértice: a textura repete a
+    // cada ~8 unidades e não consegue variar em escala de jardim. Ruído suave
+    // em duas frequências (manchas de ~7 e ~13 unidades) alterna trechos mais
+    // secos/quentes com trechos de verde mais fundo, como gramado de verdade.
+    const tones = new Float32Array(pos.count*3);
     for(let i=0;i<pos.count;i++){
       const gx = pos.getX(i), gy = pos.getY(i);
       const d = Math.hypot(gx, gy);
@@ -156,10 +161,28 @@ export function createWorld(scene) {
         const t = d - RISE_START;
         pos.setZ(i, t*0.22 + Math.sin(gx*0.33)*Math.cos(gy*0.29)*t*0.12 + Math.random()*0.5);
       }
+      let n = 0.55*Math.sin(gx*0.25+2.1)*Math.sin(gy*0.21+0.7)
+            + 0.45*Math.sin(gx*0.43-1.3)*Math.sin(gy*0.38+3.0);
+      // o produto de senos passa tempo demais perto de zero e o tonemapping
+      // achata o resto — amplifica e satura pra mancha existir de verdade
+      n = Math.max(-1, Math.min(1, n*1.5));
+      if(n >= 0){
+        // trecho seco/ensolarado: puxa pro amarelo, tira azul
+        tones[i*3]   = 1 + 0.28*n;
+        tones[i*3+1] = 1 + 0.10*n;
+        tones[i*3+2] = 1 - 0.16*n;
+      } else {
+        // trecho úmido: verde mais fundo — escurece sem azular (azul a mais
+        // deixava a grama com cara de cinza-lavado nos testes)
+        tones[i*3]   = 1 + 0.34*n;
+        tones[i*3+1] = 1 + 0.08*n;
+        tones[i*3+2] = 1 + 0.10*n;
+      }
     }
+    groundGeo.setAttribute('color', new THREE.BufferAttribute(tones, 3));
     groundGeo.computeVertexNormals();
   }
-  const groundMat = new THREE.MeshStandardMaterial({color:0x8fb56d, roughness:1});
+  const groundMat = new THREE.MeshStandardMaterial({color:0x8fb56d, roughness:1, vertexColors:true});
   const ground = new THREE.Mesh(groundGeo, groundMat);
   ground.rotation.x = -Math.PI/2;
   ground.receiveShadow = true;
@@ -215,6 +238,90 @@ export function createWorld(scene) {
     { x:-16.5, z:0, w:22, l:4.2 },
     { x:16.5, z:0, w:22, l:4.2 },
   ];
+
+  /* ============ CANTEIROS DAS AVENIDAS ============ */
+  // canteiros de flores ladeando as avenidas: faixa de terra escura rente à
+  // borda do caminho, com flores plantadas em blocos de cor (canteiro de
+  // jardim de verdade, não mistura aleatória). As flores são InstancedMesh —
+  // ~200 flores custam 3 draw calls, o que importa no celular. Por isso
+  // também ficam fora do balanço de vento do flowerGroup (matriz estática);
+  // numa massa densa de cor a quietude não aparece.
+  {
+    const soilMat = new THREE.MeshStandardMaterial({color:0x6a4c33, roughness:1});
+    const EDGE = 2.55; // distância do centro da avenida à linha do canteiro
+    // trechos [início, fim] medidos a partir da praça. Os vãos deixam livres
+    // as entradas dos arcos das seções (|z|≈12, só existem nas avenidas
+    // norte-sul) e a frente dos bancos (|z|=18 nas N-S; |x|=12 e 18 nas L-O).
+    const RUNS_NS = [[6.6,10.3],[13.7,17.1],[18.9,25.6]];
+    const RUNS_EW = [[6.6,11.1],[12.9,17.1],[18.9,25.6]];
+    const bedSpots = []; // posição de cada flor, na ordem dos trechos
+    function bedStrip(alongZ, sign, edge, a, b){
+      const len = b - a, mid = sign*(a+b)/2;
+      const strip = new THREE.Mesh(
+        new THREE.BoxGeometry(alongZ ? 0.55 : len, 0.07, alongZ ? len : 0.55),
+        soilMat
+      );
+      strip.position.set(alongZ ? edge : mid, 0.035, alongZ ? mid : edge);
+      strip.receiveShadow = true;
+      scene.add(strip);
+      for(let d=a+0.3; d<b-0.25; d+=0.6+Math.random()*0.18){
+        const off = edge + (Math.random()-0.5)*0.24;
+        const along = sign*d;
+        bedSpots.push(alongZ ? {x:off, z:along} : {x:along, z:off});
+      }
+    }
+    [1,-1].forEach(sign=>{
+      [-EDGE, EDGE].forEach(edge=>{
+        RUNS_NS.forEach(([a,b])=> bedStrip(true, sign, edge, a, b));
+        RUNS_EW.forEach(([a,b])=> bedStrip(false, sign, edge, a, b));
+      });
+    });
+
+    const BED_COLORS = [0xe8547a, 0xf5d020, 0xffffff, 0xb14fd8, 0xff8a3d, 0x6fb7ff];
+    const stems = new THREE.InstancedMesh(
+      new THREE.CylinderGeometry(0.02,0.02,0.28,5),
+      new THREE.MeshStandardMaterial({color:0x4f6b3f}),
+      bedSpots.length
+    );
+    const blooms = new THREE.InstancedMesh(
+      new THREE.IcosahedronGeometry(0.085,0),
+      new THREE.MeshStandardMaterial({color:0xffffff, roughness:0.6}),
+      bedSpots.length
+    );
+    const bedCenters = new THREE.InstancedMesh(
+      new THREE.IcosahedronGeometry(0.04,0),
+      new THREE.MeshStandardMaterial({color:0xf5c542}),
+      bedSpots.length
+    );
+    const dummy = new THREE.Object3D();
+    const runColor = new THREE.Color();
+    let runLeft = 0, lastPick = -1;
+    bedSpots.forEach((s,i)=>{
+      if(runLeft-- <= 0){
+        let pick;
+        do { pick = Math.floor(Math.random()*BED_COLORS.length); } while(pick === lastPick);
+        lastPick = pick;
+        runColor.set(BED_COLORS[pick]);
+        runLeft = 3 + Math.floor(Math.random()*3);
+      }
+      const sc = 0.85 + Math.random()*0.3;
+      dummy.scale.setScalar(sc);
+      dummy.rotation.set(0, Math.random()*Math.PI*2, 0);
+      dummy.position.set(s.x, 0.14*sc, s.z);
+      dummy.updateMatrix();
+      stems.setMatrixAt(i, dummy.matrix);
+      dummy.rotation.set(Math.random()*Math.PI, Math.random()*Math.PI, 0);
+      dummy.position.set(s.x, 0.31*sc, s.z);
+      dummy.updateMatrix();
+      blooms.setMatrixAt(i, dummy.matrix);
+      blooms.setColorAt(i, runColor);
+      dummy.rotation.set(0,0,0);
+      dummy.position.set(s.x, 0.40*sc, s.z);
+      dummy.updateMatrix();
+      bedCenters.setMatrixAt(i, dummy.matrix);
+    });
+    scene.add(stems, blooms, bedCenters);
+  }
 
   /* ============ FENCE ============ */
   const fenceMat = new THREE.MeshStandardMaterial({color:0x5b4a3d, roughness:0.9});
