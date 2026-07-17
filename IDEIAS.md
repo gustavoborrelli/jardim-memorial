@@ -348,6 +348,31 @@ flores/velas nas lápides dos outros (MVP family & friends).
     Restam do backlog: golden-hour mais forte e sol maior com halo +
     pássaros distantes.
 
+22. ✅ **Relógio do jardim** — o golden hour deixou de ser permanente e
+    virou um momento de verdade: o jardim segue a hora local de quem
+    visita. Três presets em `js/mundo.js` (bloco "RELÓGIO DO JARDIM"),
+    interpolados suavemente e reavaliados a cada minuto: **dia** (céu
+    azul fresco, sol alto, sombras curtas), **golden hour** (~16h30–19h:
+    sol baixo, grande e com halo — o que já cobre parte do item "sol
+    maior" do backlog —, sombras compridas atravessando as avenidas, tudo
+    âmbar) e **noite** (19h45–5h30). Decisão do usuário na conversa: a
+    opção "relógio de verdade" ganhou do ciclo acelerado (luz mudando o
+    tempo todo atrapalha o ar contemplativo) e do horário fixo; e a noite
+    tinha que ser **acolhedora, não melancólica** — ficou azul-arroxeada
+    com resto de calor no horizonte, lua + estrelas, luar suficiente pra
+    ler as cores, e os pontos quentes finalmente brilhando: cabeças das
+    lâmpadas com emissivo alto + sprite de halo (mesmo truque barato do
+    brilho das velas — nada de point light de verdade, que custaria caro
+    no celular) e halo das velas ~50% maior à noite. Céu virou canvas
+    repintável (mesmas 5 paradas de degradê, só as cores mudam); nuvens
+    tingem junto (branco → rosado → azul-escuro). Calibração via
+    screenshots: a 1ª noite ficou com o chão claro demais ("dia nublado
+    com céu de noite colado") — baixadas hemi/luar/fill até a penumbra
+    certa. `world.setHora(h)` força uma hora (usado nos testes; reservado
+    pro futuro botão "ver ao entardecer", já que quem só visita de manhã
+    nunca veria o golden hour — aceito por enquanto). Resta do backlog:
+    silhuetas de pássaros distantes.
+
 ## Ideias soltas (não decidido ainda)
 
 - A leva de dinamismo social planejada em conjunto está completa: (1)

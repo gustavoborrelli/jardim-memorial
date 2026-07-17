@@ -17,26 +17,22 @@ import { supabase } from './supabaseClient.js';
 export function createWorld(scene) {
 
   /* ============ CÉU ============ */
-  function makeSkyTexture(){
-    const c = document.createElement('canvas');
-    c.width = 8; c.height = 256;
-    const ctx = c.getContext('2d');
-    const g = ctx.createLinearGradient(0,0,0,256);
-    // fim de tarde: azul claro no zênite, passando por pêssego até um
-    // horizonte dourado — mais claro e menos "carregado" que o lavanda
-    // escuro de antes, mas mantendo o calor do horizonte.
-    g.addColorStop(0, '#a9d3f7');
-    g.addColorStop(0.38, '#cfe1ee');
-    g.addColorStop(0.68, '#f2ae82');
-    g.addColorStop(0.86, '#ffd39b');
-    g.addColorStop(1, '#fff0cf');
-    ctx.fillStyle = g;
-    ctx.fillRect(0,0,8,256);
-    const tex = new THREE.CanvasTexture(c);
-    tex.magFilter = THREE.LinearFilter;
-    return tex;
+  // o gradiente do céu agora é repintável: a hora do dia (bloco "RELÓGIO DO
+  // JARDIM", mais abaixo) troca as cores das mesmas 5 paradas do degradê
+  const skyCanvas = document.createElement('canvas');
+  skyCanvas.width = 8; skyCanvas.height = 256;
+  const skyCtx = skyCanvas.getContext('2d');
+  const skyTex = new THREE.CanvasTexture(skyCanvas);
+  skyTex.magFilter = THREE.LinearFilter;
+  scene.background = skyTex;
+  const SKY_OFFSETS = [0, 0.38, 0.68, 0.86, 1];
+  function paintSky(colors){
+    const g = skyCtx.createLinearGradient(0,0,0,256);
+    SKY_OFFSETS.forEach((o,i)=> g.addColorStop(o, '#'+colors[i].getHexString()));
+    skyCtx.fillStyle = g;
+    skyCtx.fillRect(0,0,8,256);
+    skyTex.needsUpdate = true;
   }
-  scene.background = makeSkyTexture();
   scene.fog = new THREE.Fog(0xe8b98f, 36, 122);
 
   /* ============ LIGHTING ============ */
@@ -85,9 +81,11 @@ export function createWorld(scene) {
 
   /* low-poly drifting clouds */
   const clouds = [];
+  const cloudMats = []; // tingidas pela hora do dia (branco → rosado → azulado)
   function makeCloud(x,y,z,sc){
     const g = new THREE.Group();
     const m = new THREE.MeshStandardMaterial({color:0xffffff, roughness:1});
+    cloudMats.push(m);
     [[0,0,0,1],[0.9,0.12,0.25,0.72],[-0.85,0.05,-0.15,0.62],[0.15,0.4,-0.2,0.5]].forEach(([cx,cy,cz,cs])=>{
       const puff = new THREE.Mesh(new THREE.IcosahedronGeometry(0.9,0), m);
       puff.position.set(cx,cy,cz);
@@ -641,6 +639,8 @@ export function createWorld(scene) {
     });
     return g;
   }
+  const lampHeadMats = []; // emissivo controlado pela hora do dia
+  const lampGlowSpots = []; // posição das cabeças, pros sprites de brilho noturno
   function makeLamp(){
     const g = new THREE.Group();
     const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.06,0.08,2.6,8), fenceMat);
@@ -650,6 +650,7 @@ export function createWorld(scene) {
       color:0xffe3b0, emissive:0xffb877, emissiveIntensity:0.6
     }));
     head.position.y = 2.65;
+    lampHeadMats.push(head.material);
     g.add(head);
     return g;
   }
@@ -657,6 +658,7 @@ export function createWorld(scene) {
   [[1,1],[1,-1],[-1,1],[-1,-1]].forEach(([sx,sz])=>{
     const l = makeLamp();
     l.position.set(sx*5.0, 0, sz*5.0);
+    lampGlowSpots.push({x:sx*5.0, y:2.65, z:sz*5.0});
     scene.add(l);
   });
   // bancos em todos os vãos entre dois pinheiros da mesma fileira, exceto
@@ -1001,6 +1003,19 @@ export function createWorld(scene) {
     return new THREE.CanvasTexture(c);
   }
   const glowTexture = makeGlowTexture();
+
+  // halo quente nas cabeças das lâmpadas — invisível de dia, é o que faz a
+  // praça parecer iluminada de verdade no entardecer/noite sem pagar o preço
+  // de 4 point lights de verdade (mesmo truque barato do brilho das velas)
+  const lampGlows = lampGlowSpots.map(spot=>{
+    const s = new THREE.Sprite(new THREE.SpriteMaterial({
+      map:glowTexture, transparent:true, opacity:0, depthWrite:false
+    }));
+    s.scale.set(1.6,1.6,1);
+    s.position.set(spot.x, spot.y, spot.z);
+    scene.add(s);
+    return s;
+  });
   const waxColors = [0xf4ead8, 0xe8caa0, 0xd9b98c];
 
   // lifespan = {apagaEm, expiraEm} em epoch ms; sem isso a vela nunca apaga nem some
@@ -1218,6 +1233,157 @@ export function createWorld(scene) {
     });
   }
 
+  /* ============ RELÓGIO DO JARDIM ============ */
+  // o jardim segue a hora local de quem visita: dia claro, golden hour no
+  // fim da tarde (sol baixo e grande, sombras longas) e noite — pensada pra
+  // ser acolhedora, não melancólica: azuis claros arroxeados com resto de
+  // calor no horizonte, luar forte o bastante pra ler as cores, e os pontos
+  // quentes (lâmpadas, velas) finalmente brilhando de verdade. Três presets
+  // e interpolação suave entre eles; reavaliado a cada minuto.
+
+  // lua + estrelas, invisíveis fora da noite
+  const moonMat = new THREE.MeshBasicMaterial({color:0xf2f4ff, transparent:true, opacity:0, fog:false});
+  const moon = new THREE.Mesh(new THREE.CircleGeometry(1.9, 24), moonMat);
+  moon.position.set(26, 30, -28);
+  moon.lookAt(0,10,0);
+  scene.add(moon);
+  const moonGlowMat = new THREE.MeshBasicMaterial({color:0xcdd8f5, transparent:true, opacity:0, fog:false});
+  const moonGlow = new THREE.Mesh(new THREE.CircleGeometry(3.4, 24), moonGlowMat);
+  moonGlow.position.copy(moon.position);
+  moonGlow.lookAt(0,10,0);
+  scene.add(moonGlow);
+  const starMat = new THREE.PointsMaterial({color:0xffffff, size:0.9, transparent:true, opacity:0, fog:false, depthWrite:false});
+  {
+    const starPos = new Float32Array(170*3);
+    for(let i=0;i<170;i++){
+      const az = Math.random()*Math.PI*2;
+      const el = (8 + Math.random()*72) * Math.PI/180;
+      const r = 88;
+      starPos[i*3]   = Math.cos(az)*Math.cos(el)*r;
+      starPos[i*3+1] = Math.sin(el)*r;
+      starPos[i*3+2] = Math.sin(az)*Math.cos(el)*r;
+    }
+    const starGeo = new THREE.BufferGeometry();
+    starGeo.setAttribute('position', new THREE.BufferAttribute(starPos, 3));
+    scene.add(new THREE.Points(starGeo, starMat));
+  }
+
+  const C = (hex)=> new THREE.Color(hex);
+  const PHASES = {
+    dia: {
+      sky: [C(0x6fbdf2), C(0x9dd4f2), C(0xc8e7f5), C(0xe8f4ee), C(0xfdf8d8)],
+      fog: C(0xd8e8ea),
+      hemiSky: C(0xcfe4ff), hemiGround: C(0xa9c07e), hemiInt: 0.6,
+      sunColor: C(0xfff3d2), sunInt: 1.05, sunPos: [-12, 32, 10],
+      rimInt: 0.1, fillInt: 0.08,
+      discColor: C(0xfffbe4), discScale: 0.85, discPos: [-22, 36, -24],
+      glowColor: C(0xfff3cf), glowOpacity: 0.18,
+      cloudColor: C(0xffffff),
+      lampEmissive: 0.15, lampGlow: 0,
+    },
+    dourado: {
+      sky: [C(0xa9d3f7), C(0xcfe1ee), C(0xf2ae82), C(0xffd39b), C(0xfff0cf)],
+      fog: C(0xe8b98f),
+      hemiSky: C(0xcfc4ff), hemiGround: C(0xd9b471), hemiInt: 0.48,
+      sunColor: C(0xffb163), sunInt: 1.2, sunPos: [-26, 10, 18],
+      rimInt: 0.18, fillInt: 0.22,
+      discColor: C(0xffdf9e), discScale: 1.7, discPos: [-34, 17, -23],
+      glowColor: C(0xffb877), glowOpacity: 0.42,
+      cloudColor: C(0xffdfc8),
+      lampEmissive: 0.8, lampGlow: 0.3,
+    },
+    noite: {
+      sky: [C(0x252e52), C(0x303c66), C(0x424e76), C(0x5a628c), C(0x8a7796)],
+      fog: C(0x4a5378),
+      hemiSky: C(0x5c6a9e), hemiGround: C(0x2e3448), hemiInt: 0.38,
+      sunColor: C(0xaebfe8), sunInt: 0.32, sunPos: [18, 26, -12],
+      rimInt: 0.06, fillInt: 0.3,
+      discColor: C(0xf2f4ff), discScale: 0, discPos: [-22, 36, -24],
+      glowColor: C(0xcdd8f5), glowOpacity: 0,
+      cloudColor: C(0x59628a),
+      lampEmissive: 1.5, lampGlow: 0.6,
+    },
+  };
+
+  const timeWeights = { dia: 1, dourado: 0, noite: 0 };
+  function phaseWeights(h){
+    // noite → dia 5h30–7h; dia → dourado 16h30–17h30; dourado full até 19h;
+    // dourado → noite 19h–19h45
+    const s = (a,b,x)=>{ const t = Math.min(1, Math.max(0, (x-a)/(b-a))); return t*t*(3-2*t); };
+    let dia=0, dourado=0, noite=0;
+    if(h < 5.5) noite = 1;
+    else if(h < 7){ dia = s(5.5,7,h); noite = 1-dia; }
+    else if(h < 16.5) dia = 1;
+    else if(h < 17.5){ dourado = s(16.5,17.5,h); dia = 1-dourado; }
+    else if(h < 19) dourado = 1;
+    else if(h < 19.75){ noite = s(19,19.75,h); dourado = 1-noite; }
+    else noite = 1;
+    return {dia, dourado, noite};
+  }
+  function mixColor(target, key, idx){
+    const get = (p)=> idx == null ? p[key] : p[key][idx];
+    const a = get(PHASES.dia), b = get(PHASES.dourado), c = get(PHASES.noite);
+    target.setRGB(
+      a.r*timeWeights.dia + b.r*timeWeights.dourado + c.r*timeWeights.noite,
+      a.g*timeWeights.dia + b.g*timeWeights.dourado + c.g*timeWeights.noite,
+      a.b*timeWeights.dia + b.b*timeWeights.dourado + c.b*timeWeights.noite
+    );
+  }
+  function mixNum(key){
+    return PHASES.dia[key]*timeWeights.dia
+         + PHASES.dourado[key]*timeWeights.dourado
+         + PHASES.noite[key]*timeWeights.noite;
+  }
+  function mixVec(target, key){
+    const a = PHASES.dia[key], b = PHASES.dourado[key], c = PHASES.noite[key];
+    target.set(
+      a[0]*timeWeights.dia + b[0]*timeWeights.dourado + c[0]*timeWeights.noite,
+      a[1]*timeWeights.dia + b[1]*timeWeights.dourado + c[1]*timeWeights.noite,
+      a[2]*timeWeights.dia + b[2]*timeWeights.dourado + c[2]*timeWeights.noite
+    );
+  }
+
+  let horaForcada = null; // pro futuro botão "ver ao entardecer" e pros testes
+  const skyColors = [0,1,2,3,4].map(()=> new THREE.Color());
+  function applyTimeOfDay(){
+    const agora = new Date();
+    const h = horaForcada != null ? horaForcada : agora.getHours() + agora.getMinutes()/60;
+    const w = phaseWeights(h);
+    timeWeights.dia = w.dia; timeWeights.dourado = w.dourado; timeWeights.noite = w.noite;
+
+    skyColors.forEach((c,i)=> mixColor(c, 'sky', i));
+    paintSky(skyColors);
+    mixColor(scene.fog.color, 'fog');
+    mixColor(hemi.color, 'hemiSky');
+    mixColor(hemi.groundColor, 'hemiGround');
+    hemi.intensity = mixNum('hemiInt');
+    mixColor(sun.color, 'sunColor');
+    sun.intensity = mixNum('sunInt');
+    mixVec(sun.position, 'sunPos');
+    rimLight.intensity = mixNum('rimInt');
+    fillLight.intensity = mixNum('fillInt');
+
+    const ds = Math.max(0.001, mixNum('discScale'));
+    mixColor(sunDisc.material.color, 'discColor');
+    sunDisc.scale.setScalar(ds);
+    mixVec(sunDisc.position, 'discPos');
+    sunDisc.lookAt(0,10,0);
+    mixColor(sunGlow.material.color, 'glowColor');
+    sunGlow.material.opacity = mixNum('glowOpacity');
+    sunGlow.scale.setScalar(ds);
+    sunGlow.position.copy(sunDisc.position);
+    sunGlow.lookAt(0,10,0);
+
+    cloudMats.forEach(m=> mixColor(m.color, 'cloudColor'));
+    lampHeadMats.forEach(m=>{ m.emissiveIntensity = mixNum('lampEmissive'); });
+    lampGlows.forEach(s=>{ s.material.opacity = mixNum('lampGlow'); });
+    moonMat.opacity = w.noite*0.95;
+    moonGlowMat.opacity = w.noite*0.3;
+    starMat.opacity = w.noite*0.85;
+  }
+  applyTimeOfDay();
+  setInterval(applyTimeOfDay, 60000);
+
   /* ============ FIREFLY GATHER EFFECT ============ */
   let gatherTarget = null;
   let gatherUntil = 0;
@@ -1263,7 +1429,8 @@ export function createWorld(scene) {
       if(!g.userData.lit) return;
       const flicker = 0.85 + Math.sin(elapsed*9 + g.userData.flickerPhase)*0.12 + Math.sin(elapsed*23 + g.userData.flickerPhase)*0.05;
       g.userData.flame.scale.set(0.7*flicker, 1.3*flicker, 0.7*flicker);
-      g.userData.glow.material.opacity = 0.55 + flicker*0.2;
+      // à noite o halo da vela cresce — é a hora dela aparecer
+      g.userData.glow.material.opacity = (0.55 + flicker*0.2) * (1 + timeWeights.noite*0.5);
     });
   }
 
@@ -1366,5 +1533,8 @@ export function createWorld(scene) {
     isFreeSpot,
     gatherFireflies,
     update,
+    // força uma hora específica (0–24) ou volta ao relógio real com null —
+    // usado nos testes visuais e reservado pro futuro botão "ver ao entardecer"
+    setHora(h){ horaForcada = h; applyTimeOfDay(); },
   };
 }
