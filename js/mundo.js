@@ -239,43 +239,84 @@ export function createWorld(scene) {
     { x:16.5, z:0, w:22, l:4.2 },
   ];
 
-  /* ============ CANTEIROS DAS AVENIDAS ============ */
-  // canteiros de flores ladeando as avenidas: faixa de terra escura rente à
-  // borda do caminho, com flores plantadas em blocos de cor (canteiro de
-  // jardim de verdade, não mistura aleatória). As flores são InstancedMesh —
-  // ~200 flores custam 3 draw calls, o que importa no celular. Por isso
-  // também ficam fora do balanço de vento do flowerGroup (matriz estática);
-  // numa massa densa de cor a quietude não aparece.
+  /* ============ JARDINEIRAS DAS AVENIDAS ============ */
+  // canteiros elevados ladeando as avenidas: jardineiras de terracota (mesmo
+  // barro dos vasos da praça), em fileira com pequenos vãos entre uma e
+  // outra, com terra dentro e as flores plantadas em cima. A 1ª versão era
+  // uma faixa rasa de terra direto no chão e lia como tábua de madeira.
+  // Caixas e flores são InstancedMesh — tudo custa 6 draw calls, o que
+  // importa no celular. Por isso as flores também ficam fora do balanço de
+  // vento do flowerGroup (matriz estática); numa massa densa de cor a
+  // quietude não aparece.
+  const BED_H = 0.27; // altura da terra: as flores nascem daqui pra cima
   {
-    const soilMat = new THREE.MeshStandardMaterial({color:0x6a4c33, roughness:1});
-    const EDGE = 2.55; // distância do centro da avenida à linha do canteiro
-    // trechos [início, fim] medidos a partir da praça. Os vãos deixam livres
-    // as entradas dos arcos das seções (|z|≈12, só existem nas avenidas
-    // norte-sul) e a frente dos bancos (|z|=18 nas N-S; |x|=12 e 18 nas L-O).
+    const EDGE = 2.55; // distância do centro da avenida à linha das jardineiras
+    // trechos [início, fim] medidos a partir da praça. Os vãos maiores deixam
+    // livres as entradas dos arcos das seções (|z|≈12, só existem nas
+    // avenidas norte-sul) e a frente dos bancos (|z|=18 nas N-S; |x|=12 e 18
+    // nas L-O).
     const RUNS_NS = [[6.6,10.3],[13.7,17.1],[18.9,25.6]];
     const RUNS_EW = [[6.6,11.1],[12.9,17.1],[18.9,25.6]];
-    const bedSpots = []; // posição de cada flor, na ordem dos trechos
-    function bedStrip(alongZ, sign, edge, a, b){
-      const len = b - a, mid = sign*(a+b)/2;
-      const strip = new THREE.Mesh(
-        new THREE.BoxGeometry(alongZ ? 0.55 : len, 0.07, alongZ ? len : 0.55),
-        soilMat
-      );
-      strip.position.set(alongZ ? edge : mid, 0.035, alongZ ? mid : edge);
-      strip.receiveShadow = true;
-      scene.add(strip);
-      for(let d=a+0.3; d<b-0.25; d+=0.6+Math.random()*0.18){
-        const off = edge + (Math.random()-0.5)*0.24;
-        const along = sign*d;
-        bedSpots.push(alongZ ? {x:off, z:along} : {x:along, z:off});
+    const boxes = [];    // {x, z, len, alongZ} de cada jardineira
+    const bedSpots = []; // posição de cada flor, na ordem das jardineiras
+    function addRun(alongZ, sign, edge, a, b){
+      const len = b - a;
+      const n = Math.max(1, Math.round(len/2.6)); // jardineiras de ~2.6
+      const boxLen = (len - (n-1)*0.35)/n;
+      for(let i=0;i<n;i++){
+        const start = a + i*(boxLen+0.35);
+        const mid = sign*(start + boxLen/2);
+        boxes.push(alongZ ? {x:edge, z:mid, len:boxLen, alongZ} : {x:mid, z:edge, len:boxLen, alongZ});
+        for(let d=start+0.24; d<start+boxLen-0.2; d+=0.4+Math.random()*0.12){
+          const off = edge + (Math.random()-0.5)*0.3;
+          const along = sign*d;
+          bedSpots.push(alongZ ? {x:off, z:along} : {x:along, z:off});
+        }
       }
     }
     [1,-1].forEach(sign=>{
       [-EDGE, EDGE].forEach(edge=>{
-        RUNS_NS.forEach(([a,b])=> bedStrip(true, sign, edge, a, b));
-        RUNS_EW.forEach(([a,b])=> bedStrip(false, sign, edge, a, b));
+        RUNS_NS.forEach(([a,b])=> addRun(true, sign, edge, a, b));
+        RUNS_EW.forEach(([a,b])=> addRun(false, sign, edge, a, b));
       });
     });
+
+    // corpo de terracota + borda saliente + terra escura dentro; a caixa
+    // unitária estica no eixo do comprimento via escala por instância
+    const bodies = new THREE.InstancedMesh(
+      new THREE.BoxGeometry(0.6,0.24,1),
+      new THREE.MeshStandardMaterial({color:0xb06a48, roughness:0.9}),
+      boxes.length
+    );
+    bodies.castShadow = true;
+    const lips = new THREE.InstancedMesh(
+      new THREE.BoxGeometry(0.68,0.05,1),
+      new THREE.MeshStandardMaterial({color:0x9c5c3e, roughness:0.9}),
+      boxes.length
+    );
+    const soils = new THREE.InstancedMesh(
+      new THREE.BoxGeometry(0.52,0.03,1),
+      new THREE.MeshStandardMaterial({color:0x5f452f, roughness:1}),
+      boxes.length
+    );
+    const boxDummy = new THREE.Object3D();
+    boxes.forEach((bx,i)=>{
+      boxDummy.position.set(bx.x, 0, bx.z);
+      boxDummy.rotation.set(0, bx.alongZ ? 0 : Math.PI/2, 0);
+      boxDummy.position.y = 0.12;
+      boxDummy.scale.set(1, 1, bx.len);
+      boxDummy.updateMatrix();
+      bodies.setMatrixAt(i, boxDummy.matrix);
+      boxDummy.position.y = 0.245;
+      boxDummy.scale.set(1, 1, bx.len + 0.06);
+      boxDummy.updateMatrix();
+      lips.setMatrixAt(i, boxDummy.matrix);
+      boxDummy.position.y = BED_H;
+      boxDummy.scale.set(1, 1, bx.len - 0.1);
+      boxDummy.updateMatrix();
+      soils.setMatrixAt(i, boxDummy.matrix);
+    });
+    scene.add(bodies, lips, soils);
 
     const BED_COLORS = [0xe8547a, 0xf5d020, 0xffffff, 0xb14fd8, 0xff8a3d, 0x6fb7ff];
     const stems = new THREE.InstancedMesh(
@@ -307,16 +348,16 @@ export function createWorld(scene) {
       const sc = 0.85 + Math.random()*0.3;
       dummy.scale.setScalar(sc);
       dummy.rotation.set(0, Math.random()*Math.PI*2, 0);
-      dummy.position.set(s.x, 0.14*sc, s.z);
+      dummy.position.set(s.x, BED_H + 0.14*sc, s.z);
       dummy.updateMatrix();
       stems.setMatrixAt(i, dummy.matrix);
       dummy.rotation.set(Math.random()*Math.PI, Math.random()*Math.PI, 0);
-      dummy.position.set(s.x, 0.31*sc, s.z);
+      dummy.position.set(s.x, BED_H + 0.31*sc, s.z);
       dummy.updateMatrix();
       blooms.setMatrixAt(i, dummy.matrix);
       blooms.setColorAt(i, runColor);
       dummy.rotation.set(0,0,0);
-      dummy.position.set(s.x, 0.40*sc, s.z);
+      dummy.position.set(s.x, BED_H + 0.40*sc, s.z);
       dummy.updateMatrix();
       bedCenters.setMatrixAt(i, dummy.matrix);
     });

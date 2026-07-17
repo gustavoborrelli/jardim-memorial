@@ -339,6 +339,12 @@ flores/velas nas lápides dos outros (MVP family & friends).
     do balanço de vento do `flowerGroup` (matriz estática), o que não
     aparece numa massa densa de cor. Verificado com Playwright (avenida,
     quadrante aberto, visão de jogo na praça), sem erros de console.
+    Retrabalho logo após o deploy: o usuário achou que a faixa rasa de
+    terra "parecia tábua de madeira" e pediu algo mais de vaso — virou
+    fileira de jardineiras de terracota (mesmo barro dos vasos da praça),
+    caixas elevadas com borda saliente e terra escura dentro, vãos curtos
+    entre uma e outra, flores plantadas por cima e mais densas (as caixas
+    também são `InstancedMesh`; total 6 draw calls).
     Restam do backlog: golden-hour mais forte e sol maior com halo +
     pássaros distantes.
 
