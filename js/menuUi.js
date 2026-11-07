@@ -11,6 +11,7 @@
   (lapides, mundo, cachorros) e devolve o que main.js precisa chamar a
   cada frame (updateHints) ou a cada clique (openModalFor, chime).
 */
+import * as THREE from 'three';
 
 export function createMenuUi({ camera, lapides, world, dogController, pausedState, auth, mapaUi }) {
 
@@ -596,6 +597,7 @@ export function createMenuUi({ camera, lapides, world, dogController, pausedStat
     panel.classList.add('active');
   }
   function startGame(){
+    dogController.alinharCamera();
     menuScreen.classList.add('hidden');
     pausedState.value = false;
     startAmbient();

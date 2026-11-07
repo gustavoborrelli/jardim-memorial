@@ -11,7 +11,20 @@
   as funções que main.js e menuUi.js precisam para criar novas homenagens.
 */
 
+import * as THREE from 'three';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { supabase } from './supabaseClient.js';
+import { matPedra, matMadeira, torneado } from './gfx/materiais.js';
+import { malhaSDF, esculpir, caixa, elipsoide } from './gfx/sdf.js';
+import { normalDeAltura, sorteador } from './gfx/ruido.js';
+import { escolherPerfil } from './gfx/qualidade.js';
+
+// as vagas: quatro por jardim. Exportado porque o chão precisa saber onde elas
+// ficam pra abrir uma clareira na grama em volta de cada uma.
+export const POSICOES_VAGA = [];
+[[1,-1],[-1,-1],[1,1],[-1,1]].forEach(([sx, sz])=>{
+  [9,15].forEach(ax=> [9,15].forEach(az=> POSICOES_VAGA.push({ x: sx*ax, z: sz*az })));
+});
 
 export function createLapides(scene) {
 
@@ -25,43 +38,17 @@ export function createLapides(scene) {
     const h = Math.sin(x*127.1 + z*311.7) * 43758.5453;
     return h - Math.floor(h);
   }
-  function makeGraveTexture(tint){
-    const c = document.createElement('canvas');
-    c.width = c.height = 128;
-    const ctx = c.getContext('2d');
-    ctx.fillStyle = tint.base;
-    ctx.fillRect(0,0,128,128);
-    for(let i=0;i<260;i++){
-      const shade = Math.random()*40-20;
-      ctx.fillStyle = `rgba(${tint.speck[0]+shade},${tint.speck[1]+shade},${tint.speck[2]+shade},0.28)`;
-      ctx.fillRect(Math.random()*128, Math.random()*128, 2.2,2.2);
-    }
-    if(tint.moss){
-      ctx.fillStyle = 'rgba(94,124,72,0.16)';
-      for(let i=0;i<7;i++){
-        const x = Math.random()*128, y = 90+Math.random()*38, r = 8+Math.random()*14;
-        ctx.beginPath(); ctx.ellipse(x,y,r,r*0.6,0,0,Math.PI*2); ctx.fill();
-      }
-    }
-    return new THREE.CanvasTexture(c);
-  }
+  const perfil = escolherPerfil();
   const STONE_TINTS = [
-    {base:'#cbc0b0', speck:[150,140,120], moss:false},   // arenito quente
-    {base:'#b7bcc2', speck:[120,126,132], moss:true},    // granito frio
-    {base:'#c3c2a4', speck:[140,142,110], moss:true},     // pedra musgosa
+    { musgo: 0, manchas: 0.32, escala: 1.5 },   // arenito quente
+    { musgo: 0.55, manchas: 0.26, escala: 1.9 }, // granito frio
+    { musgo: 0.85, manchas: 0.36, escala: 1.6 }, // pedra musgosa
   ];
-  // só os mapas de textura (o "grão" da pedra); a cor de cada lápide vem da
-  // paleta escolhida por quem cria a homenagem, então o material não pode
-  // mais ser compartilhado — cada lápide clássica ganha o seu, tingido.
-  const stoneMaps = STONE_TINTS.map(t => makeGraveTexture(t));
-  const plinthMat = new THREE.MeshStandardMaterial({map:stoneMaps[0], color:0xffffff, roughness:0.9});
-  const charmMat = new THREE.MeshStandardMaterial({color:0xd8b978, roughness:0.6});
-  // mármore/calcário claro dos formatos ossinho/pata — mais liso e polido
-  // (roughness baixo) que a pedra rústica da clássica, igual a referência
-  // de design pedia. Compartilhado entre as duas peças: a cor escolhida
-  // nunca tinge o corpo inteiro, só aparece como detalhe (ver PALETTE).
-  const marbleMap = makeGraveTexture({base:'#f6efe1', speck:[205,193,170], moss:false});
-  const marbleMat = new THREE.MeshStandardMaterial({map:marbleMap, color:0xffffff, roughness:0.5});
+  const charmMat = new THREE.MeshStandardMaterial({ color: 0xd8b978, roughness: 0.42, metalness: 0.55 });
+  // mármore claro dos formatos ossinho/pata. Fosco de propósito: polido demais a
+  // forma redonda vira bola de vidro. A cor escolhida nunca tinge o corpo inteiro,
+  // só aparece como detalhe (ver PALETTE).
+  const marbleMat = matPedra({ cor: 0xe9e1d0, rugosidade: 0.64, escala: 1.1, relevo: 0.002, manchas: 0.16, veios: 0.05, pontos: 0.035, envMapIntensity: 1.1 });
 
   /* ============ PERSONALIZAÇÃO: formato + cor da lápide ============
      Um jardim menos "cemitério" e mais convidativo: em vez de só a pedra
@@ -104,55 +91,70 @@ export function createLapides(scene) {
   /* entrance archway with a name plank for each section */
   function makeSectionSign(text){
     const c = document.createElement('canvas');
-    c.width = 512; c.height = 110;
+    c.width = 1024; c.height = 214;
     const ctx = c.getContext('2d');
-    ctx.fillStyle = '#8a6a48';
-    ctx.fillRect(0,0,512,110);
-    // wood grain
-    ctx.strokeStyle = 'rgba(70,50,32,0.35)';
-    for(let i=0;i<9;i++){
-      ctx.beginPath();
-      ctx.moveTo(0, 8+i*12+Math.random()*4);
-      ctx.bezierCurveTo(170, 4+i*12, 340, 14+i*12, 512, 8+i*12);
-      ctx.stroke();
-    }
-    ctx.strokeStyle = '#5c4630';
-    ctx.lineWidth = 8;
-    ctx.strokeRect(4,4,504,102);
-    ctx.fillStyle = '#f4ead8';
+    ctx.clearRect(0,0,1024,214);
     ctx.textAlign = 'center';
-    const maxWidth = 460; // deixa margem dentro da moldura de 504px
-    let fontSize = 46;
+    ctx.textBaseline = 'middle';
+    let fontSize = 104;
     do {
       ctx.font = `italic ${fontSize}px Georgia, serif`;
       fontSize -= 2;
-    } while (ctx.measureText(text).width > maxWidth && fontSize > 20);
-    ctx.fillText(text, 256, 70);
-    return new THREE.CanvasTexture(c);
+    } while (ctx.measureText(text).width > 900 && fontSize > 40);
+    // entalhe: sombra por cima, luz por baixo, miolo claro de tinta gasta
+    ctx.fillStyle = 'rgba(30,18,8,0.75)';
+    ctx.fillText(text, 512, 104);
+    ctx.fillStyle = 'rgba(255,240,210,0.3)';
+    ctx.fillText(text, 512, 110);
+    ctx.fillStyle = '#f2e6cf';
+    ctx.fillText(text, 512, 107);
+    const t = new THREE.CanvasTexture(c);
+    t.colorSpace = THREE.SRGBColorSpace;
+    t.anisotropy = 8;
+    return t;
   }
-  const archWood = new THREE.MeshStandardMaterial({color:0x6b5236, roughness:0.9});
+  const archWood = matMadeira(0x7a5e40);
+  const geoPosteArco = torneado([
+    [0, 0], [0.13, 0], [0.135, 0.06], [0.1, 0.14], [0.09, 2.2], [0.105, 2.24], [0.112, 2.3], [0.1, 2.36], [0.05, 2.4], [0, 2.41],
+  ], 12);
+  const geoVigaArco = new RoundedBoxGeometry(3.3, 0.12, 0.14, 2, 0.03);
+  const geoTabua = new RoundedBoxGeometry(2.96, 0.66, 0.05, 2, 0.02);
+  const geoFace = new THREE.PlaneGeometry(2.88, 0.6);
   SECTIONS.forEach(sec=>{
     const g = new THREE.Group();
     [-1.4, 1.4].forEach(off=>{
-      const post = new THREE.Mesh(new THREE.CylinderGeometry(0.09,0.11,2.3,7), archWood);
-      post.position.set(off, 1.15, 0);
+      const post = new THREE.Mesh(geoPosteArco, archWood);
+      post.position.set(off, 0, 0);
       post.castShadow = true;
+      post.receiveShadow = true;
       g.add(post);
     });
-    const beam = new THREE.Mesh(new THREE.BoxGeometry(3.3,0.14,0.14), archWood);
+    const beam = new THREE.Mesh(geoVigaArco, archWood);
     beam.position.y = 2.3;
+    beam.castShadow = true;
     g.add(beam);
-    const plank = new THREE.Mesh(
-      new THREE.PlaneGeometry(2.9, 0.62),
-      new THREE.MeshStandardMaterial({map:makeSectionSign(sec.name), roughness:0.85, side:THREE.DoubleSide})
-    );
-    plank.position.y = 1.95;
+    const plank = new THREE.Mesh(geoTabua, archWood);
+    plank.position.y = 1.86;
+    plank.castShadow = true;
+    plank.receiveShadow = true;
     g.add(plank);
+    // correntinhas que seguram a tábua
+    [-1.1, 1.1].forEach(x => {
+      const c = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.13, 6), archWood);
+      c.position.set(x, 2.22, 0);
+      g.add(c);
+    });
+    // uma face de cada lado: o nome se lê de quem vem de qualquer direção
+    const tex = makeSectionSign(sec.name);
+    const matFace = new THREE.MeshStandardMaterial({ map: tex, roughness: 0.8, transparent: true });
+    [0, Math.PI].forEach(rot => {
+      const face = new THREE.Mesh(geoFace, matFace);
+      face.rotation.y = rot;
+      face.position.set(0, 1.86, rot === 0 ? 0.027 : -0.027);
+      g.add(face);
+    });
     // stand at the edge of the N-S avenue, marking the walk-in entrance to the quadrant
     g.position.set(sec.sx*4.7, 0, sec.sz*12);
-    // face the readable (non-mirrored) side of the double-sided plank toward
-    // whoever is walking in from the avenue, which is the opposite side from
-    // the quadrant itself
     g.rotation.y = -sec.sx * Math.PI/2;
     scene.add(g);
   });
@@ -168,15 +170,31 @@ export function createLapides(scene) {
     });
   }
 
+  /* Gravação na pedra: desenha em duas telas, a cor e a altura. A altura vira
+     mapa de normais, e assim a letra fica de fato afundada, pegando luz na borda. */
   function engraveTexture(name, dates, msg, photoImg){
-    const c = document.createElement('canvas');
-    c.width = 300; c.height = 300;
-    const ctx = c.getContext('2d');
-    ctx.clearRect(0,0,300,300);
-    ctx.textAlign = 'center';
+    const RES = 1024, K = RES/300;
+    const c = document.createElement('canvas'); c.width = c.height = RES;
+    const a = document.createElement('canvas'); a.width = a.height = RES;
+    const ctx = c.getContext('2d'), alt = a.getContext('2d');
+    alt.fillStyle = '#ffffff'; alt.fillRect(0,0,RES,RES);
+    ctx.scale(K,K); alt.scale(K,K);
+    [ctx, alt].forEach(x => { x.textAlign = 'center'; });
+
+    const INK = 'rgba(52,44,38,0.94)';
+    const gravar = (txt, x, y, font, alpha = 1) => {
+      ctx.font = font; alt.font = font;
+      // borda de luz logo abaixo da letra: é o que lê como entalhe
+      ctx.fillStyle = `rgba(255,252,240,${0.5*alpha})`;
+      ctx.fillText(txt, x+0.25, y+0.55);
+      ctx.fillStyle = INK.replace('0.94', (0.94*alpha).toFixed(2));
+      ctx.fillText(txt, x, y);
+      alt.fillStyle = '#000000';
+      alt.fillText(txt, x, y);
+    };
 
     if(photoImg){
-      // circular photo in a carved frame at the top
+      // foto redonda em moldura gravada, no alto
       const cx = 150, cy = 82, r = 56;
       ctx.save();
       ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2); ctx.clip();
@@ -186,35 +204,29 @@ export function createLapides(scene) {
       ctx.drawImage(photoImg, cx-dw/2, cy-dh/2, dw, dh);
       ctx.restore();
       ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2);
-      ctx.lineWidth = 6;
+      ctx.lineWidth = 5;
       ctx.strokeStyle = 'rgba(90,78,64,0.9)';
       ctx.stroke();
+      alt.beginPath(); alt.arc(cx, cy, r, 0, Math.PI*2);
+      alt.lineWidth = 6; alt.strokeStyle = '#000'; alt.stroke();
 
-      ctx.fillStyle = 'rgba(70,60,52,0.92)';
-      ctx.font = 'italic 27px Georgia, serif';
-      ctx.fillText(name, 150, 176);
-      ctx.font = '14px Georgia, serif';
-      ctx.fillStyle = 'rgba(70,60,52,0.65)';
-      ctx.fillText(dates || '', 150, 198);
-      ctx.font = '13px Georgia, serif';
-      ctx.fillStyle = 'rgba(70,60,52,0.8)';
-      wrapText(ctx, msg || '', 150, 232, 240, 17);
+      gravar(name, 150, 176, 'italic 27px Georgia, serif');
+      gravar(dates || '', 150, 198, '14px Georgia, serif', 0.72);
+      ctx.font = alt.font = '13px Georgia, serif';
+      wrapText(ctx, msg || '', 150, 232, 240, 17, (l, x, y) => gravar(l, x, y, '13px Georgia, serif', 0.85));
     } else {
-      ctx.fillStyle = 'rgba(70,60,52,0.92)';
-      ctx.font = 'italic 36px Georgia, serif';
-      ctx.fillText(name, 150, 112);
-      ctx.font = '17px Georgia, serif';
-      ctx.fillStyle = 'rgba(70,60,52,0.65)';
-      ctx.fillText(dates || '', 150, 144);
-      ctx.font = '16px Georgia, serif';
-      ctx.fillStyle = 'rgba(70,60,52,0.8)';
-      wrapText(ctx, msg || '', 150, 190, 240, 21);
+      gravar(name, 150, 112, 'italic 36px Georgia, serif');
+      gravar(dates || '', 150, 144, '17px Georgia, serif', 0.72);
+      ctx.font = alt.font = '16px Georgia, serif';
+      wrapText(ctx, msg || '', 150, 190, 240, 21, (l, x, y) => gravar(l, x, y, '16px Georgia, serif', 0.85));
     }
-    const tex = new THREE.CanvasTexture(c);
-    tex.needsUpdate = true;
-    return tex;
+    const map = new THREE.CanvasTexture(c);
+    map.colorSpace = THREE.SRGBColorSpace;
+    map.anisotropy = 8;
+    const normal = normalDeAltura(a, 1.6);
+    return { map, normal };
   }
-  function wrapText(ctx, text, x, y, maxWidth, lineHeight){
+  function wrapText(ctx, text, x, y, maxWidth, lineHeight, desenhar){
     const words = text.split(' ');
     let line = '';
     let lines = [];
@@ -227,170 +239,207 @@ export function createLapides(scene) {
     lines.push(line);
     lines = lines.slice(0,3);
     const startY = y - (lines.length-1)*lineHeight/2;
-    lines.forEach((l,i)=> ctx.fillText(l.trim(), x, startY + i*lineHeight));
+    lines.forEach((l,i)=> desenhar(l.trim(), x, startY + i*lineHeight));
   }
 
   function makePlaque(data, geometry){
-    const tex = engraveTexture(data.name, data.dates, data.msg, data.photo || null);
-    const plaqueMat = new THREE.MeshStandardMaterial({map:tex, transparent:true, roughness:0.9});
-    return new THREE.Mesh(geometry, plaqueMat);
+    const { map, normal } = engraveTexture(data.name, data.dates, data.msg, data.photo || null);
+    const plaqueMat = new THREE.MeshStandardMaterial({
+      map, normalMap: normal, normalScale: new THREE.Vector2(0.9, 0.9),
+      transparent: true, roughness: 0.82, depthWrite: false,
+      polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2,
+    });
+    const m = new THREE.Mesh(geometry, plaqueMat);
+    m.userData.semAO = true;
+    return m;
   }
+
+  /* geometrias de pedra: uma de cada, compartilhadas por todas as lápides */
+  const geoCache = {};
+  const celula = 0.012*perfil.celulaSDF;
+
+  // perfil de lápide com topo em arco e chanfro de verdade nas arestas
+  function geoLousa(variante){
+    if(geoCache['lousa'+variante]) return geoCache['lousa'+variante];
+    const s = new THREE.Shape();
+    const L = variante === 1 ? 0.54 : 0.5, H = variante === 1 ? 0.88 : 1.12;
+    s.moveTo(-L, 0);
+    s.lineTo(L, 0);
+    if(variante === 1){
+      // lousa reta, com os cantos de cima bem arredondados
+      s.lineTo(L, H-0.1);
+      s.quadraticCurveTo(L, H, L-0.1, H);
+      s.lineTo(-L+0.1, H);
+      s.quadraticCurveTo(-L, H, -L, H-0.1);
+    } else {
+      s.lineTo(L, H-0.3);
+      s.absellipse(0, H-0.3, L, 0.42, 0, Math.PI, false);
+    }
+    s.closePath();
+    const g = new THREE.ExtrudeGeometry(s, {
+      depth: 0.2, bevelEnabled: true, bevelThickness: 0.035, bevelSize: 0.03, bevelSegments: 3, curveSegments: 22,
+    });
+    g.translate(0, 0, -0.1);
+    geoCache['lousa'+variante] = g;
+    return g;
+  }
+  function geoBase(l, a, p){
+    const k = `base${l}${a}${p}`;
+    if(!geoCache[k]) geoCache[k] = new RoundedBoxGeometry(l, a, p, 3, 0.03);
+    return geoCache[k];
+  }
+
+  // Ossinho: osso na vertical, sobre uma base — referência "Ossinho Clássico".
+  // Esculpido inteiro de uma vez, com as duas pontas iguais e um entalhe fundo em
+  // cada uma: é esse "V" que faz a forma ler como osso de desenho, sem dúvida.
+  const OSSO = { baixo: 0.2, alto: 1.32, meia: 0.245 };
+  function geoOsso(){
+    if(geoCache.osso) return geoCache.osso;
+    const { baixo, alto, meia } = OSSO;
+    // lóbulos largos e achatados saindo pouco da haste: biscoito de cachorro, e não
+    // duas bolas presas num cabo
+    const nos = [[0.24, alto-0.1], [-0.24, alto-0.1], [0.24, baixo+0.1], [-0.24, baixo+0.1]];
+    const lista = [[caixa(0, (baixo+alto)/2, 0, meia, (alto-baixo)/2-0.1, 0.115, 0.05), 0]];
+    nos.forEach(([x, y]) => lista.push([elipsoide(x, y, 0, 0.168, 0.158, 0.13), 0.075]));
+    const f = esculpir(lista);
+    geoCache.osso = malhaSDF(f, [[-0.5, baixo-0.14, -0.18], [0.5, alto+0.14, 0.18]], celula*0.85);
+    return geoCache.osso;
+  }
+
+  // Pata: pedra de caminho deitada na grama, almofada e dedos numa peça só, com o
+  // topo plano (é onde o nome está gravado) e levemente inclinada para quem chega —
+  // sem isso ela some no ângulo raso da câmera. Referência: foto de pedra-pata real.
+  const INCLINA = 0.36;
+  const senI = Math.sin(INCLINA), cosI = Math.cos(INCLINA);
+  const PATA_Y = 0.2, PATA_Z = -0.05, PATA_TOPO = 0.1;
+  const paraMundo = (ly, lz) => [PATA_Y + ly*cosI - lz*senI, PATA_Z + ly*senI + lz*cosI];
+  const TOES = [
+    { x:-0.37, z:0.33, r:0.14 },
+    { x:-0.135, z:0.43, r:0.158 },
+    { x: 0.135, z:0.43, r:0.158 },
+    { x: 0.37, z:0.33, r:0.14 },
+  ];
+  function geoPata(){
+    if(geoCache.pata) return geoCache.pata;
+    const lista = [[elipsoide(0, -0.1, -0.02, 0.46, 0.34, 0.37), 0]];
+    TOES.forEach(t => lista.push([elipsoide(t.x, -0.04, t.z, t.r, 0.17, t.r*1.05), 0.03]));
+    const corpo = esculpir(lista);
+    // topo plano com a quina arredondada; embaixo, corta o que afundaria no chão
+    const emPe = (x, y, z) => {
+      const py = y-PATA_Y, pz = z-PATA_Z;
+      const ly = py*cosI + pz*senI, lz = -py*senI + pz*cosI;
+      const d = corpo(x, ly, lz);
+      const k = 0.035, tampa = ly-PATA_TOPO;
+      const h = Math.max(k-Math.abs(d-tampa), 0)/k;
+      return Math.max(d, tampa) + h*h*k*0.25;
+    };
+    const corte = (x, y, z) => Math.max(emPe(x, y, z), -(y+0.02));
+    geoCache.pata = malhaSDF(corte, [[-0.62, -0.06, -0.62], [0.62, 0.5, 0.72]], celula*0.9);
+    return geoCache.pata;
+  }
+
+  // só o que importa para o clique: uma caixa simples, invisível. Raycast em milhares
+  // de triângulos a cada movimento do mouse pesaria à toa.
+  function comAlvoDeClique(g, l, a, p, y = a/2, z = 0){
+    g.traverse(o => { if(o.isMesh) o.raycast = () => {}; });
+    const alvo = new THREE.Mesh(new THREE.BoxGeometry(l, a, p), new THREE.MeshBasicMaterial());
+    alvo.position.set(0, y, z);
+    alvo.visible = false;
+    g.add(alvo);
+    return g;
+  }
+
+  function sombra(m){ m.castShadow = true; m.receiveShadow = true; return m; }
 
   function buildClassicStone(data, cor, r1, r2){
     const g = new THREE.Group();
     const variant = Math.floor(r1*3);       // silhueta: 0 arco, 1 lousa reta, 2 arco+charme
-    const stoneMat = new THREE.MeshStandardMaterial({map:stoneMaps[Math.floor(r2*3)], color:cor, roughness:0.9});
+    const tom = STONE_TINTS[Math.floor(r2*3)];
+    const stoneMat = matPedra({ cor, rugosidade: 0.86, escala: tom.escala, relevo: 0.0045, musgo: tom.musgo, alturaMusgo: 0.5, manchas: tom.manchas });
 
-    const base = new THREE.Mesh(new THREE.BoxGeometry(1.15,0.18,0.5), stoneMat);
-    base.position.y = 0.09;
-    base.castShadow = true; base.receiveShadow = true;
+    const base = sombra(new THREE.Mesh(geoBase(1.3, 0.2, 0.56), stoneMat));
+    base.position.y = 0.1;
     g.add(base);
 
-    let bodyH = 1.1, plaqueY;
+    const body = sombra(new THREE.Mesh(geoLousa(variant === 1 ? 1 : 0), stoneMat));
+    body.position.y = 0.2;
+    g.add(body);
+
+    let plaqueY = 0.2 + 0.56;
     if(variant === 1){
-      // lousa reta e um pouco mais larga, sem topo arredondado
-      bodyH = 0.86;
-      const body = new THREE.Mesh(new THREE.BoxGeometry(1.08, bodyH, 0.28), stoneMat);
-      body.position.y = 0.18 + bodyH/2;
-      body.castShadow = true; body.receiveShadow = true;
-      g.add(body);
-      const ridge = new THREE.Mesh(new THREE.BoxGeometry(1.14,0.06,0.32), stoneMat);
-      ridge.position.y = 0.18 + bodyH + 0.02;
-      ridge.castShadow = true;
-      g.add(ridge);
-      plaqueY = 0.18 + bodyH*0.56;
-    } else {
-      const body = new THREE.Mesh(new THREE.BoxGeometry(1.0, bodyH, 0.28), stoneMat);
-      body.position.y = 0.18 + 0.55;
-      body.castShadow = true; body.receiveShadow = true;
-      g.add(body);
-
-      const cap = new THREE.Mesh(new THREE.SphereGeometry(0.5,8,4,0,Math.PI*2,0,Math.PI/2), stoneMat);
-      cap.scale.set(1,0.42,0.56);
-      cap.position.y = 0.18 + 1.1;
-      cap.castShadow = true;
-      g.add(cap);
-      plaqueY = 0.18+0.58;
-
-      if(variant === 2){
-        // pequeno charme de pata no topo — um carinho a mais pra homenagem
-        const charm = new THREE.Group();
-        const pad = new THREE.Mesh(new THREE.SphereGeometry(0.075,7,6), charmMat);
-        pad.scale.set(1,0.62,0.9);
-        charm.add(pad);
-        [[-0.055,0.048],[0.055,0.048],[-0.032,0.09],[0.032,0.09]].forEach(([x,z])=>{
-          const toe = new THREE.Mesh(new THREE.SphereGeometry(0.028,6,5), charmMat);
-          toe.position.set(x,0.01,z);
-          charm.add(toe);
-        });
-        charm.position.y = 0.18 + 1.29;
-        charm.rotation.x = -0.15;
-        g.add(charm);
-      }
+      plaqueY = 0.2 + 0.46;
+    }
+    if(variant === 2){
+      // pequeno charme de pata no topo — um carinho a mais pra homenagem
+      const charm = new THREE.Group();
+      const pad = new THREE.Mesh(new THREE.SphereGeometry(0.07, 14, 10), charmMat);
+      pad.scale.set(1, 0.62, 0.9);
+      charm.add(pad);
+      [[-0.055,0.048],[0.055,0.048],[-0.024,0.09],[0.024,0.09]].forEach(([x,z])=>{
+        const toe = new THREE.Mesh(new THREE.SphereGeometry(0.026, 10, 8), charmMat);
+        toe.position.set(x,0.01,z);
+        charm.add(toe);
+      });
+      charm.position.y = 0.2 + 1.27;
+      charm.rotation.x = -0.15;
+      charm.traverse(o => { if(o.isMesh) o.castShadow = true; });
+      g.add(charm);
     }
 
-    const plaque = makePlaque(data, new THREE.PlaneGeometry(0.92,1.0));
-    plaque.position.set(0, plaqueY, 0.145);
+    const plaque = makePlaque(data, new THREE.PlaneGeometry(0.92, 0.92));
+    plaque.position.set(0, plaqueY, 0.137);
     g.add(plaque);
-    return g;
+    return comAlvoDeClique(g, 1.2, 1.5, 0.5, 0.75);
   }
 
-  // Ossinho: osso na vertical, dois pares de nós arredondados (topo e base)
-  // unidos por uma barra central — como uma lápide tradicional, só que em
-  // formato de osso. Referência: projeto de design "Lápides Jardim
-  // Memorial" (Ossinho Clássico). O corpo inteiro é mármore claro; a cor
-  // escolhida aparece só como uma faixa fina perto do topo, tipo uma
-  // "coleira" gravada — nunca tingindo a peça toda.
+  // A cor escolhida aparece só na faixa fina perto do topo, uma "coleira" gravada.
   function buildBoneMarker(data, cor){
     const g = new THREE.Group();
-    const base = new THREE.Mesh(new THREE.BoxGeometry(0.7,0.16,0.4), marbleMat);
-    base.position.y = 0.08;
-    base.castShadow = true; base.receiveShadow = true;
+    const base = sombra(new THREE.Mesh(geoBase(1.0, 0.2, 0.5), marbleMat));
+    base.position.y = 0.1;
     g.add(base);
+    g.add(sombra(new THREE.Mesh(geoOsso(), marbleMat)));
 
-    const barW = 0.5, barH = 1.1, barD = 0.24;
-    const barBottomY = 0.16;
-    const bar = new THREE.Mesh(new THREE.BoxGeometry(barW,barH,barD), marbleMat);
-    bar.position.y = barBottomY + barH/2;
-    bar.castShadow = true; bar.receiveShadow = true;
-    g.add(bar);
-
-    // icosaedro facetado em vez de esfera lisa: uma esfera com poucos
-    // segmentos ainda lê como um globo de vidro brilhando; facetada igual
-    // as pedrinhas/folhagens do resto do jogo, lê como nó de pedra de verdade
-    const knobR = 0.21;
-    const knobGeo = new THREE.IcosahedronGeometry(knobR,0);
-    [-1,1].forEach(side=>{
-      const top = new THREE.Mesh(knobGeo, marbleMat);
-      top.position.set(side*0.27, barBottomY+barH-0.06, 0);
-      top.castShadow = true;
-      g.add(top);
-      const bottom = new THREE.Mesh(knobGeo, marbleMat);
-      bottom.position.set(side*0.27, barBottomY+0.06, 0);
-      bottom.castShadow = true;
-      g.add(bottom);
-    });
-
-    // faixa-detalhe: a única parte que usa a cor escolhida, como um colar
-    // gravado perto do topo da barra
-    const accentMat = new THREE.MeshStandardMaterial({color:cor, roughness:0.5});
-    const band = new THREE.Mesh(new THREE.BoxGeometry(barW+0.04,0.09,barD+0.01), accentMat);
-    band.position.y = barBottomY+barH-0.24;
+    const { baixo, alto, meia } = OSSO;
+    const accentMat = new THREE.MeshStandardMaterial({ color: cor, roughness: 0.48 });
+    const band = sombra(new THREE.Mesh(geoBase(meia*2+0.02, 0.074, 0.25), accentMat));
+    band.position.y = alto-0.3;
     g.add(band);
 
-    const plaque = makePlaque(data, new THREE.PlaneGeometry(0.42,0.46));
-    plaque.position.set(0, barBottomY+barH*0.4, barD/2+0.01);
+    const plaque = makePlaque(data, new THREE.PlaneGeometry(0.48, 0.52));
+    plaque.position.set(0, (baixo+alto)/2 - 0.06, 0.1165);
     g.add(plaque);
-    return g;
+    return comAlvoDeClique(g, 0.9, 1.6, 0.5, 0.8);
   }
 
-  // Pata: uma pedra de caminho deitada na grama (tipo pisada de jardim),
-  // não uma lápide em pé — referência trazida pelo usuário (foto de uma
-  // pedra-pata real, achatada, com o nome gravado direto na almofada).
-  // Sem base retangular nenhuma: só a pata mesmo, baixa e fundida.
   function buildPawMarker(data, cor){
     const inner = new THREE.Group();
+    inner.add(sombra(new THREE.Mesh(geoPata(), marbleMat)));
 
-    // almofada oval bem achatada, quase encostada no chão
-    const pad = new THREE.Mesh(new THREE.IcosahedronGeometry(0.42,1), marbleMat);
-    pad.scale.set(1,0.32,0.85);
-    pad.position.set(0, 0.12, -0.06);
-    pad.castShadow = true; pad.receiveShadow = true;
-    inner.add(pad);
-
-    // quatro dedos em leque, também achatados, fundidos na borda da
-    // frente da almofada — os de fora mais baixos/menores
-    const accentMat = new THREE.MeshStandardMaterial({color:cor, roughness:0.5});
-    const toes = [
-      { x:-0.36, y:0.1,  z:0.28, r:0.155, sy:0.68 },
-      { x:-0.14, y:0.13, z:0.36, r:0.185, sy:0.72 },
-      { x: 0.14, y:0.13, z:0.36, r:0.185, sy:0.72 },
-      { x: 0.36, y:0.1,  z:0.28, r:0.155, sy:0.68 },
-    ];
-    toes.forEach(t=>{
-      const toe = new THREE.Mesh(new THREE.IcosahedronGeometry(t.r,0), marbleMat);
-      toe.scale.set(1,t.sy,1);
-      toe.position.set(t.x, t.y, t.z);
-      toe.castShadow = true; toe.receiveShadow = true;
-      inner.add(toe);
-      // unha: detalhe na cor escolhida, na pontinha de cada dedo
-      const nail = new THREE.Mesh(new THREE.IcosahedronGeometry(t.r*0.32,0), accentMat);
-      nail.position.set(t.x, t.y+t.r*t.sy*0.4, t.z+t.r*0.95);
+    // unha: detalhe na cor escolhida, na pontinha de cada dedo
+    const accentMat = new THREE.MeshStandardMaterial({ color: cor, roughness: 0.48 });
+    const geoUnha = geoCache.unha || (geoCache.unha = new THREE.SphereGeometry(1, 14, 10));
+    TOES.forEach(t => {
+      const [y, z] = paraMundo(PATA_TOPO - 0.012, t.z + t.r*0.62);
+      const nail = new THREE.Mesh(geoUnha, accentMat);
+      nail.scale.set(t.r*0.36, t.r*0.15, t.r*0.3);
+      nail.position.set(t.x, y, z);
+      nail.rotation.x = INCLINA;
+      nail.castShadow = true;
       inner.add(nail);
     });
 
-    // a homenagem gravada direto na almofada, "apoiada" numa inclinação —
-    // não 100% deitada (some na câmera de 3ª pessoa, que olha de cima/atrás),
-    // nem 100% em pé (deixaria de parecer gravada na pedra)
-    const plaque = makePlaque(data, new THREE.PlaneGeometry(0.62,0.44));
-    plaque.rotation.x = -1.0;
-    plaque.position.set(0, 0.27, 0.06);
+    // a homenagem gravada no topo plano da almofada
+    const plaque = makePlaque(data, new THREE.PlaneGeometry(0.58, 0.58));
+    const [py, pz] = paraMundo(PATA_TOPO + 0.002, -0.04);
+    plaque.rotation.x = -Math.PI/2 + INCLINA;
+    plaque.position.set(0, py, pz);
     inner.add(plaque);
 
     inner.scale.setScalar(1.3);
     const g = new THREE.Group();
     g.add(inner);
-    return g;
+    return comAlvoDeClique(g, 1.5, 0.7, 1.5, 0.3, 0.1);
   }
 
   function buildStone(plot, data){
@@ -415,41 +464,68 @@ export function createLapides(scene) {
     return g;
   }
 
+  // vaga vazia: círculo de seixos com uma estaca de madeira e uma patinha.
+  // Objeto de jardim de verdade, em vez de um anel desenhado no chão.
+  const geoSeixo = new THREE.IcosahedronGeometry(1, 2);
+  {
+    const r = sorteador(44);
+    const p = geoSeixo.attributes.position;
+    for(let i=0;i<p.count;i++){
+      const k = 0.9 + r()*0.1;
+      p.setXYZ(i, p.getX(i)*k, p.getY(i)*k*0.68, p.getZ(i)*k);
+    }
+    geoSeixo.computeVertexNormals();
+  }
+  const matSeixo = matPedra({ cor: 0xe4dac6, escala: 3, relevo: 0.012, manchas: 0.28, rugosidade: 0.75 });
+  const matEstaca = matMadeira(0x8a6a48);
+  const geoEstaca = torneado([[0, 0], [0.032, 0], [0.028, 0.28], [0.038, 0.31], [0.03, 0.34], [0, 0.35]], 8);
+
   function markEmptyPlot(plot){
-    // disco fino e quase invisível cobrindo toda a vaga — é o alvo real do
-    // clique (a área precisa ficar igual à de antes, só o visual mudou)
-    const hitDisc = new THREE.Mesh(
-      new THREE.CircleGeometry(0.58,16),
-      new THREE.MeshStandardMaterial({color:0xe8caa0, roughness:1, transparent:true, opacity:0.16})
-    );
+    // alvo real do clique: fino e invisível, do mesmo tamanho de sempre
+    const hitDisc = new THREE.Mesh(new THREE.CircleGeometry(0.72, 16), new THREE.MeshBasicMaterial());
     hitDisc.rotation.x = -Math.PI/2;
     hitDisc.position.set(plot.x, 0.02, plot.z);
+    hitDisc.visible = false;
     hitDisc.userData = { isEmptyPlot:true, plotRef:plot };
     stoneGroup.add(hitDisc);
     plot.marker = hitDisc;
 
-    // ringue decorativo por cima, com um leve brilho quente — convida a
-    // clicar sem parecer uma mancha sólida na grama
-    const ring = new THREE.Mesh(
-      new THREE.RingGeometry(0.42,0.58,20),
-      new THREE.MeshStandardMaterial({color:0xe8caa0, roughness:1, transparent:true, opacity:0.5, side:THREE.DoubleSide, emissive:0xffdca0, emissiveIntensity:0.15})
-    );
-    ring.rotation.x = -Math.PI/2;
-    ring.position.set(plot.x, 0.023, plot.z);
-    ring.userData = { plotRef:plot };
-    stoneGroup.add(ring);
+    const visual = new THREE.Group();
+    visual.position.set(plot.x, 0, plot.z);
+    visual.userData = { plotRef:plot };
+    const r = sorteador(Math.abs(Math.round(plot.x*31 + plot.z*17)) + 3);
+    const N = 15;
+    const seixos = new THREE.InstancedMesh(geoSeixo, matSeixo, N);
+    const d = new THREE.Object3D();
+    for(let i=0;i<N;i++){
+      const a = i/N*Math.PI*2 + (r()-0.5)*0.12;
+      const rd = 0.62 + (r()-0.5)*0.05;
+      const e = 0.058 + r()*0.04;
+      d.position.set(Math.cos(a)*rd, e*0.4, Math.sin(a)*rd);
+      d.rotation.y = r()*6.28;
+      d.scale.setScalar(e);
+      d.updateMatrix();
+      seixos.setMatrixAt(i, d.matrix);
+    }
+    seixos.castShadow = true;
+    seixos.receiveShadow = true;
+    seixos.computeBoundingSphere();
+    visual.add(seixos);
 
-    // pequena estaca com um charme de patinha, no lugar do cone simples
-    const stakeMat = new THREE.MeshStandardMaterial({color:0x8a6a48, roughness:0.9});
-    const stake = new THREE.Mesh(new THREE.CylinderGeometry(0.025,0.03,0.3,6), stakeMat);
-    stake.position.set(plot.x, 0.15, plot.z);
-    stake.userData = { plotRef:plot };
-    stoneGroup.add(stake);
-    const pad = new THREE.Mesh(new THREE.SphereGeometry(0.045,7,6), charmMat);
-    pad.scale.set(1,0.6,0.85);
-    pad.position.set(plot.x, 0.31, plot.z);
-    pad.userData = { plotRef:plot };
-    stoneGroup.add(pad);
+    const estaca = new THREE.Mesh(geoEstaca, matEstaca);
+    estaca.castShadow = true;
+    visual.add(estaca);
+    const pad = new THREE.Mesh(new THREE.SphereGeometry(0.048, 12, 8), charmMat);
+    pad.scale.set(1, 0.6, 0.85);
+    pad.position.y = 0.36;
+    visual.add(pad);
+    [[-0.04,0.04],[0.04,0.04],[-0.016,0.066],[0.016,0.066]].forEach(([x,z]) => {
+      const t = new THREE.Mesh(new THREE.SphereGeometry(0.016, 8, 6), charmMat);
+      t.position.set(x, 0.372, z);
+      visual.add(t);
+    });
+    visual.traverse(o => { o.raycast = () => {}; });
+    stoneGroup.add(visual);
   }
 
   // todas as vagas começam vazias; quem preenche é loadMemoriais(), logo abaixo

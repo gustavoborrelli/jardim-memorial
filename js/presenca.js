@@ -15,6 +15,7 @@
 
 import { supabase } from './supabaseClient.js';
 import { buildDog } from './cachorros.js';
+import { animarCao } from './gfx/caes.js';
 
 export function createPresence({ scene, dogController, pausedState }) {
   const myId = Math.random().toString(36).slice(2);
@@ -116,17 +117,7 @@ export function createPresence({ scene, dogController, pausedState }) {
       p.group.rotation.y += diff * ease;
 
       const moving = now - p.lastSeen < MOVING_MS;
-      if(moving){
-        p.parts.legs.forEach((leg, i)=>{
-          const phase = i%2===0 ? elapsed*9 : elapsed*9+Math.PI;
-          leg.rotation.x = Math.sin(phase)*0.5;
-        });
-        p.parts.tail.rotation.z = Math.sin(elapsed*10)*0.25;
-      } else {
-        p.parts.legs.forEach(leg=> leg.rotation.x *= 0.8);
-        p.parts.tail.rotation.z = Math.sin(elapsed*3)*0.18;
-      }
-      p.parts.body.position.y = p.parts.bodyBaseY + Math.sin(elapsed*(moving?9:2))*(moving?0.015:0.008);
+      animarCao(p.parts, dt, elapsed, moving);
     }
   }
 

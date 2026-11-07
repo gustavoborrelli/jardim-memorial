@@ -669,16 +669,24 @@ canvas{display:block;outline:none;}
   display:flex;
   align-items:center;
   justify-content:center;
-  /* mesmo tom de fim de tarde do céu 3D (azul claro → pêssego → dourado),
-     em vez do gradiente de céu claro genérico que tinha antes */
-  background:linear-gradient(180deg, var(--sky1) 0%, #bcd3e6 42%, var(--sky2) 72%, #ffd9a0 100%);
-  backdrop-filter: blur(3px);
+  /* o jardim de verdade aparece atrás do menu, com a luz da hora de quem visita:
+     é a primeira coisa que a pessoa vê. Só uma vinheta pra destacar o cartão. */
+  background:radial-gradient(ellipse at 50% 46%, rgba(38,24,16,0.05) 0%, rgba(38,24,16,0.4) 100%);
   transition:opacity 0.5s ease;
 }
 .menu-screen.hidden{ opacity:0; pointer-events:none; }
+/* com o jardim aparecendo atrás do menu, a interface do jogo precisa sair de cena */
+.menu-screen:not(.hidden) ~ .hud,
+.menu-screen:not(.hidden) ~ .pause-chip,
+.menu-screen:not(.hidden) ~ .view-toggle,
+.menu-screen:not(.hidden) ~ .plant-toggle,
+.menu-screen:not(.hidden) ~ .map-toggle,
+.menu-screen:not(.hidden) ~ .joystick{ opacity:0; pointer-events:none; }
 .menu-card{
   text-align:center;
-  background:rgba(253,247,238,0.92);
+  background:rgba(253,247,238,0.84);
+  -webkit-backdrop-filter:blur(16px) saturate(1.15);
+  backdrop-filter:blur(16px) saturate(1.15);
   border-radius:22px;
   padding:44px 52px 38px;
   box-shadow:0 24px 70px rgba(90,50,40,0.32);

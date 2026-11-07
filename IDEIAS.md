@@ -373,6 +373,58 @@ flores/velas nas lápides dos outros (MVP family & friends).
     nunca veria o golden hour — aceito por enquanto). Resta do backlog:
     silhuetas de pássaros distantes.
 
+23. 🔜 **Gráficos novos** (branch `graficos-novos`, aguardando aprovação) — o
+    usuário quis ver até onde o 3D podia chegar, reclamando que antes "parecia
+    geometria e pouca realidade". Isso **revê a decisão da etapa 20** (manter o
+    low-poly facetado): saiu o facetado, mas ficaram as razões daquela decisão —
+    continua estilizado (nada de fotorrealismo, a distância afetiva segue certa pra
+    um memorial), continua sem nenhum arquivo de modelo ou textura (tudo gerado em
+    código), e o celular tem perfil próprio. Todo o desenho do jardim, as posições,
+    o banco e a jogabilidade continuam iguais; só mudou como as coisas são feitas.
+    Motor: three r128 (CDN) → r187 (npm). Código em `js/gfx/`:
+    - `pos.js`: cena em HDR com MSAA → sombra de contato (GTAO em meia resolução) →
+      brilho → acabamento. Só objetos sólidos entram na sombra de contato: passar
+      grama e folhagem por ela vira mancha.
+    - `ceu.js`: domo de verdade com nuvens em shader, e o sol visível agora é o
+      mesmo que projeta sombra (antes ficavam em direções diferentes). O próprio céu
+      vira a luz ambiente da cena.
+    - `chao.js`: "máscara" assada que diz onde é caminho, onde nasce grama e onde há
+      sombra de contato; chão e grama leem a mesma. Grama em dois anéis em volta da
+      câmera (perto, detalhada; longe, simples), custo fixo, dobra com o vento e
+      abre caminho pro cachorro.
+    - `caes.js` + `sdf.js`: cachorros esculpidos por campo de distância (superfície
+      contínua) com pelo em cascas. Piscam, olham em volta, respiram, abanam o rabo,
+      põem a língua pra fora. Olho e boca são projetados na superfície da cabeça.
+    - `arvores.js`: copas de centenas de tufos sempre virados pra câmera, com a normal
+      vinda do volume: a copa se ilumina como forma redonda e fofa. Mata fora da
+      cerca pra dar profundidade.
+    - `flores.js`, `mobilia.js`, `fonte.js`, `vida.js`, `materiais.js`: pétalas de
+      ponta redonda, bancos de ferro e ripas, água em shader, vaga-lumes à noite,
+      pedra com grão e musgo sem precisar de UV.
+    - `qualidade.js`: perfis alto/médio/baixo (`?qualidade=`) e um governador que
+      mede os quadros e vai desligando efeitos se o aparelho não dá conta
+      (`?governador=0` desliga, pra medir). Teto de pixels em vez de DPR fixo.
+    Também: o menu agora mostra o jardim de verdade atrás do cartão, com a luz da
+    hora; a câmera entra atrás do cachorro olhando pra fonte (antes entrava de frente
+    pro portão); os letreiros dos jardins se leem dos dois lados; a entrada `js/main.js`
+    ficou mínima pra pintar o "preparando o jardim…" antes de montar tudo (`js/jogo.js`).
+    Formas redesenhadas respeitando as decisões antigas: nada pontiagudo (grama,
+    pétalas e pelo têm ponta redonda), cor só como detalhe no ossinho e na pata, noite
+    acolhedora. O ossinho virou formato de biscoito, com entalhe nas duas pontas: a
+    1ª versão, com lóbulos redondos num cabo fino, tinha leitura infeliz.
+    Medido (M5): 50–58 fps no alto em tela Retina, 60 no médio; 23 mil → 2 milhões de
+    triângulos no alto, 590 mil no baixo. JS: 268 KB gzip já com o three dentro. Em
+    renderização por software (pior caso, nenhum aparelho real é tão lento) caiu de 10
+    pra 3 fps, com o governador até o último degrau.
+    **Falta testar em celular de verdade** — só deu pra emular a tela e o perfil.
+    Regressão com interação real (41 verificações) passou; o roteiro não está no repo.
+    Armadilhas da medição: (1) o governador liga sozinho e melhora o FPS no meio do
+    teste — a primeira análise culpou o pelo por causa disso, e era falso; (2) FPS com
+    vsync desligado não mede a GPU: usar render + `readPixels`; (3) `npm install` apaga
+    o Playwright, que fica em node_modules sem estar no package.json.
+    Colorimetria: o r128 não convertia as cores de sRGB; isso provavelmente explica boa
+    parte do ar "lavado" que aparecia nas reclamações das etapas 17 e 21.
+
 ## Ideias soltas (não decidido ainda)
 
 - A leva de dinamismo social planejada em conjunto está completa: (1)
@@ -390,9 +442,8 @@ flores/velas nas lápides dos outros (MVP family & friends).
 
 ## Notas técnicas para lembrar na fase 2
 
-- O Three.js hoje é carregado via `<script>` de CDN (não é um pacote npm).
-  Isso foi decisão da etapa 1 para não arriscar mudar o comportamento do jogo.
-  Podemos revisitar isso quando formos mexer em build/deploy de verdade.
+- O Three.js vinha por `<script>` de CDN até a etapa 22; na etapa 23 virou pacote
+  npm (`three@0.187`). Addons vêm de `three/addons/...`.
 - `js/lapides.js` é o módulo que sabe tudo sobre os "plots" (lugares de
   lápide). É provavelmente onde a integração com Supabase vai começar: trocar
   o array `plots` em memória por dados vindos do banco.
