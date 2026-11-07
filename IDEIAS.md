@@ -373,7 +373,7 @@ flores/velas nas lápides dos outros (MVP family & friends).
     nunca veria o golden hour — aceito por enquanto). Resta do backlog:
     silhuetas de pássaros distantes.
 
-23. 🔜 **Gráficos novos** (branch `graficos-novos`, aguardando aprovação) — o
+23. ✅ **Gráficos novos** — o
     usuário quis ver até onde o 3D podia chegar, reclamando que antes "parecia
     geometria e pouca realidade". Isso **revê a decisão da etapa 20** (manter o
     low-poly facetado): saiu o facetado, mas ficaram as razões daquela decisão —
@@ -416,8 +416,9 @@ flores/velas nas lápides dos outros (MVP family & friends).
     triângulos no alto, 590 mil no baixo. JS: 268 KB gzip já com o three dentro. Em
     renderização por software (pior caso, nenhum aparelho real é tão lento) caiu de 10
     pra 3 fps, com o governador até o último degrau.
-    **Falta testar em celular de verdade** — só deu pra emular a tela e o perfil.
-    Regressão com interação real (41 verificações) passou; o roteiro não está no repo.
+    Testado pelo usuário no celular de verdade antes de ir pro ar (preview da Vercel,
+    que exige login): aprovado. Regressão com interação real (41 verificações)
+    passou; o roteiro não está no repo.
     Armadilhas da medição: (1) o governador liga sozinho e melhora o FPS no meio do
     teste — a primeira análise culpou o pelo por causa disso, e era falso; (2) FPS com
     vsync desligado não mede a GPU: usar render + `readPixels`; (3) `npm install` apaga
