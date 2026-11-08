@@ -94,7 +94,7 @@ function materialPelo({ comprimento, densidade, cascas, rim = 0.32 }){
 }
 
 /* ============ as três raças ============ */
-function receita(raca){
+export function receita(raca){
   if(raca === 'golden'){
     const OURO = lin(0xe2b066), MEL = lin(0xc48a3e), CREME = lin(0xf6e6c4), NARIZ_COR = lin(0x8d6236);
     const olhos = { x: 0.082, y: 0.868, z: 0.655, r: 0.041 };
@@ -322,7 +322,7 @@ function receita(raca){
 
 /* Leva um ponto até a superfície do campo (com um afastamento): olho e boca passam
    a nascer da cabeça de verdade, não de um número chutado que boia ou afunda. */
-function naSuperficie(f, p, afastar = 0){
+export function naSuperficie(f, p, afastar = 0){
   let [x, y, z] = p;
   const e = 0.002;
   for(let i=0;i<10;i++){

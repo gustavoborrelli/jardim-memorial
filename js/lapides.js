@@ -18,6 +18,7 @@ import { matPedra, matMadeira, torneado } from './gfx/materiais.js';
 import { malhaSDF, esculpir, caixa, elipsoide } from './gfx/sdf.js';
 import { normalDeAltura, sorteador } from './gfx/ruido.js';
 import { escolherPerfil } from './gfx/qualidade.js';
+import { geoEstatua, poseDaRaca } from './gfx/estatuas.js';
 
 // as vagas: quatro por jardim. Exportado porque o chão precisa saber onde elas
 // ficam pra abrir uma clareira na grama em volta de cada uma.
@@ -49,6 +50,9 @@ export function createLapides(scene) {
   // forma redonda vira bola de vidro. A cor escolhida nunca tinge o corpo inteiro,
   // só aparece como detalhe (ver PALETTE).
   const marbleMat = matPedra({ cor: 0xe9e1d0, rugosidade: 0.64, escala: 1.1, relevo: 0.002, manchas: 0.16, veios: 0.05, pontos: 0.035, envMapIntensity: 1.1 });
+  // a estátua de raça: o mesmo mármore um tom abaixo. Branco cheio, a forma do
+  // cachorro estoura no sol e some o rosto.
+  const estatuaMat = matPedra({ cor: 0xd6ccba, rugosidade: 0.68, escala: 1.6, relevo: 0.0014, manchas: 0.18, veios: 0.04, pontos: 0.018, envMapIntensity: 0.9 });
 
   /* ============ PERSONALIZAÇÃO: formato + cor da lápide ============
      Um jardim menos "cemitério" e mais convidativo: em vez de só a pedra
@@ -65,10 +69,16 @@ export function createLapides(scene) {
     { id:'lilas', hex:'#c9a8e8', label:'Lilás' },
     { id:'menta', hex:'#8fd9b6', label:'Menta' },
   ];
+  // as estátuas são o cachorro do passeio em mármore (gfx/estatuas.js); `raca` é a
+  // chave da escultura em gfx/caes.js, e a pose vem dela (golden e pastor sentados,
+  // dachshund deitado)
   const FORMATOS = [
     { id:'classica', label:'Clássica', icon:'🪨' },
     { id:'ossinho',  label:'Ossinho',  icon:'🦴' },
     { id:'pata',     label:'Pata',     icon:'🐾' },
+    { id:'estatua-golden',    label:'Golden',    icon:'🐕', raca:'golden' },
+    { id:'estatua-pastor',    label:'Pastor',    icon:'🐕', raca:'shepherd' },
+    { id:'estatua-dachshund', label:'Dachshund', icon:'🐕', raca:'dachshund' },
   ];
 
   /* four named sections, one per quadrant */
@@ -172,12 +182,20 @@ export function createLapides(scene) {
 
   /* Gravação na pedra: desenha em duas telas, a cor e a altura. A altura vira
      mapa de normais, e assim a letra fica de fato afundada, pegando luz na borda. */
-  function engraveTexture(name, dates, msg, photoImg){
-    const RES = 1024, K = RES/300;
-    const c = document.createElement('canvas'); c.width = c.height = RES;
-    const a = document.createElement('canvas'); a.width = a.height = RES;
+  /* `aspecto` = largura/altura da placa. Acima de 1.5 (a frente dos pedestais das
+     estátuas) a foto vai para a esquerda e o texto para a direita: empilhada, numa
+     placa baixa, a foto e a letra ficavam miúdas. */
+  function engraveTexture(name, dates, msg, photoImg, aspecto = 1){
+    const larga = aspecto > 1.5;
+    const H = 300, W = aspecto > 1.2 ? Math.round(300*aspecto) : 300;
+    const RESY = W > 300 ? 640 : 1024, K = RESY/H;
+    const meio = W/2, quebra = W - 60;
+    // na placa mais larga que alta sobra lado: a letra cresce um quarto
+    const fs = (n) => `${Math.round(n*(W > 300 ? 1.25 : 1))}px Georgia, serif`;
+    const c = document.createElement('canvas'); c.width = Math.round(W*K); c.height = RESY;
+    const a = document.createElement('canvas'); a.width = c.width; a.height = RESY;
     const ctx = c.getContext('2d'), alt = a.getContext('2d');
-    alt.fillStyle = '#ffffff'; alt.fillRect(0,0,RES,RES);
+    alt.fillStyle = '#ffffff'; alt.fillRect(0,0,a.width,a.height);
     ctx.scale(K,K); alt.scale(K,K);
     [ctx, alt].forEach(x => { x.textAlign = 'center'; });
 
@@ -193,9 +211,8 @@ export function createLapides(scene) {
       alt.fillText(txt, x, y);
     };
 
-    if(photoImg){
-      // foto redonda em moldura gravada, no alto
-      const cx = 150, cy = 82, r = 56;
+    // foto redonda em moldura gravada
+    const gravarFoto = (cx, cy, r) => {
       ctx.save();
       ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2); ctx.clip();
       const ar = photoImg.width / photoImg.height;
@@ -209,16 +226,42 @@ export function createLapides(scene) {
       ctx.stroke();
       alt.beginPath(); alt.arc(cx, cy, r, 0, Math.PI*2);
       alt.lineWidth = 6; alt.strokeStyle = '#000'; alt.stroke();
+    };
 
-      gravar(name, 150, 176, 'italic 27px Georgia, serif');
-      gravar(dates || '', 150, 198, '14px Georgia, serif', 0.72);
-      ctx.font = alt.font = '13px Georgia, serif';
-      wrapText(ctx, msg || '', 150, 232, 240, 17, (l, x, y) => gravar(l, x, y, '13px Georgia, serif', 0.85));
+    if(larga){
+      // nome grande, encolhendo até caber na largura que sobra ao lado da foto
+      const x0 = photoImg ? 268 : 44, x1 = W - 34;
+      const tx = (x0 + x1)/2, maxW = x1 - x0;
+      if(photoImg) gravarFoto(138, 150, 104);
+      let tam = 72;
+      do { ctx.font = `italic ${tam}px Georgia, serif`; tam -= 2; } while(ctx.measureText(name).width > maxW && tam > 36);
+      gravar(name, tx, 112, ctx.font);
+      gravar(dates || '', tx, 160, '34px Georgia, serif', 0.72);
+      // a mensagem encolhe até caber inteira nas 3 linhas (ao lado da foto sobra pouco)
+      const linhas = (txt) => {
+        let n = 1, linha = '';
+        txt.split(' ').forEach((w, i) => {
+          const teste = linha + w + ' ';
+          if(ctx.measureText(teste).width > maxW && i > 0){ n++; linha = w + ' '; } else linha = teste;
+        });
+        return n;
+      };
+      let tm = 30;
+      for(; tm > 18; tm -= 2){ ctx.font = `${tm}px Georgia, serif`; if(linhas(msg || '') <= 3) break; }
+      const fm = `${tm}px Georgia, serif`;
+      ctx.font = alt.font = fm;
+      wrapText(ctx, msg || '', tx, 228 + (30 - tm)*0.6, maxW, tm*1.22, (l, x, y) => gravar(l, x, y, fm, 0.85));
+    } else if(photoImg){
+      gravarFoto(meio, 82, 56);
+      gravar(name, meio, 176, 'italic ' + fs(27));
+      gravar(dates || '', meio, 200, fs(14), 0.72);
+      ctx.font = alt.font = fs(13);
+      wrapText(ctx, msg || '', meio, 236, quebra, W > 300 ? 21 : 17, (l, x, y) => gravar(l, x, y, fs(13), 0.85));
     } else {
-      gravar(name, 150, 112, 'italic 36px Georgia, serif');
-      gravar(dates || '', 150, 144, '17px Georgia, serif', 0.72);
-      ctx.font = alt.font = '16px Georgia, serif';
-      wrapText(ctx, msg || '', 150, 190, 240, 21, (l, x, y) => gravar(l, x, y, '16px Georgia, serif', 0.85));
+      gravar(name, meio, 112, 'italic ' + fs(36));
+      gravar(dates || '', meio, 148, fs(17), 0.72);
+      ctx.font = alt.font = fs(16);
+      wrapText(ctx, msg || '', meio, 196, quebra, W > 300 ? 26 : 21, (l, x, y) => gravar(l, x, y, fs(16), 0.85));
     }
     const map = new THREE.CanvasTexture(c);
     map.colorSpace = THREE.SRGBColorSpace;
@@ -242,8 +285,8 @@ export function createLapides(scene) {
     lines.forEach((l,i)=> desenhar(l.trim(), x, startY + i*lineHeight));
   }
 
-  function makePlaque(data, geometry){
-    const { map, normal } = engraveTexture(data.name, data.dates, data.msg, data.photo || null);
+  function makePlaque(data, geometry, aspecto = 1){
+    const { map, normal } = engraveTexture(data.name, data.dates, data.msg, data.photo || null, aspecto);
     const plaqueMat = new THREE.MeshStandardMaterial({
       map, normalMap: normal, normalScale: new THREE.Vector2(0.9, 0.9),
       transparent: true, roughness: 0.82, depthWrite: false,
@@ -442,6 +485,50 @@ export function createLapides(scene) {
     return comAlvoDeClique(g, 1.5, 0.7, 1.5, 0.3, 0.1);
   }
 
+  /* Estátua de raça: o cachorro em mármore com a cabeça virada para quem chega,
+     sobre um pedestal de granito com a homenagem gravada na frente. Deitado, de
+     perfil num pedestal comprido; sentado, de três quartos num pedestal quase
+     quadrado. A cor escolhida é a coleira (com medalha dourada), a mesma regra do
+     ossinho e da pata: cor só como detalhe. Metade das vagas tem o cachorro virado
+     para um lado, metade para o outro. */
+  const PEDESTAIS = {
+    deitado: { base: [1.5, 0.08, 0.78], dado: [1.34, 0.42, 0.64], topo: [1.42, 0.07, 0.72], alturaMax: 0.75 },
+    sentado: { base: [1.0, 0.08, 0.88], dado: [0.86, 0.5, 0.74], topo: [0.94, 0.07, 0.82], alturaMax: 0.95 },
+  };
+  function buildStatueMarker(data, cor, raca, pose, r1, r2){
+    const g = new THREE.Group();
+    const tom = STONE_TINTS[Math.floor(r2*3)];
+    const granito = matPedra({ cor: 0xb5ac9f, rugosidade: 0.84, escala: tom.escala, relevo: 0.0045, musgo: tom.musgo*0.6, alturaMusgo: 0.3, manchas: tom.manchas });
+    const { base, dado, topo, alturaMax } = PEDESTAIS[pose];
+    let y = 0;
+    [base, dado, topo].forEach(([l, a, p]) => {
+      const m = sombra(new THREE.Mesh(geoBase(l, a, p), granito));
+      m.position.y = y + a/2;
+      y += a;
+      g.add(m);
+    });
+
+    // a estátua entra a ~80% do tamanho: a célula um pouco maior dá a mesma
+    // resolução das outras pedras no mundo, por metade do custo
+    const E = geoEstatua(raca, celula*1.25, pose);
+    const caber = Math.min((topo[0]-0.14)/E.largura, (topo[2]-0.1)/E.profundidade, alturaMax/E.altura);
+    const est = new THREE.Group();
+    est.add(sombra(new THREE.Mesh(E.corpo, estatuaMat)));
+    est.add(sombra(new THREE.Mesh(E.coleira, new THREE.MeshStandardMaterial({ color: cor, roughness: 0.5 }))));
+    const medalha = new THREE.Mesh(E.medalha, charmMat);
+    medalha.castShadow = true;
+    est.add(medalha);
+    est.scale.set(caber*(r1 < 0.5 ? -1 : 1), caber, caber);
+    est.position.y = y;
+    g.add(est);
+
+    const pl = dado[0] - 0.14, pa = dado[1] - 0.08;
+    const plaque = makePlaque(data, new THREE.PlaneGeometry(pl, pa), pl/pa);
+    plaque.position.set(0, base[1] + dado[1]/2, dado[2]/2 + 0.002);
+    g.add(plaque);
+    return comAlvoDeClique(g, topo[0], y + E.altura*caber, topo[2], (y + E.altura*caber)/2);
+  }
+
   function buildStone(plot, data){
     const formato = data.formato || 'classica';
     const cor = data.cor || PALETTE[0].hex;
@@ -452,8 +539,10 @@ export function createLapides(scene) {
     const scaleVar = 0.94 + r2*0.14;
 
     let g;
+    const estatua = FORMATOS.find(f => f.raca && f.id === formato);
     if(formato === 'ossinho') g = buildBoneMarker(data, cor);
     else if(formato === 'pata') g = buildPawMarker(data, cor);
+    else if(estatua) g = buildStatueMarker(data, cor, estatua.raca, poseDaRaca(estatua.raca), r1, r2);
     else g = buildClassicStone(data, cor, r1, r2);
 
     g.scale.setScalar(scaleVar);

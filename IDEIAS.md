@@ -426,6 +426,35 @@ flores/velas nas lápides dos outros (MVP family & friends).
     Colorimetria: o r128 não convertia as cores de sRGB; isso provavelmente explica boa
     parte do ar "lavado" que aparecia nas reclamações das etapas 17 e 21.
 
+25. 🔜 **Estátuas de raça** (branch `lapide-raca`; a 24 é o app de iPhone, na
+    `app-ios`) — pergunta do usuário: com os gráficos novos, dá pra ter lápide em
+    forma de raça? Três formatos novos, um por raça do menu: Golden, Pastor e
+    Dachshund. Cada um é o próprio cachorro do passeio talhado em mármore sobre um
+    pedestal de granito com a homenagem gravada na frente (`js/gfx/estatuas.js`).
+    Tronco, cabeça e orelhas são os campos da escultura de `caes.js`, que passou a
+    exportar `receita`; só patas e rabo são refeitos para a pose. Golden e pastor
+    sentados, de três quartos, num pedestal quase quadrado; dachshund deitado, de
+    perfil, num pedestal comprido — escolha do usuário depois de ver as duas poses
+    (sentado, o dachshund precisaria de pernas da frente esticadas como palitos).
+    Cabeça sempre virada para quem chega. A cor escolhida vira a coleira, com
+    medalha dourada (a regra da etapa 17: cor só como detalhe).
+    O que custou rodadas: (1) mármore branco cheio estourava no sol e sumia o
+    rosto — um tom abaixo do do ossinho; (2) de perfil, o pastor branco parecia
+    estátua de Anúbis, resolvido virando a cabeça; (3) o golden virou ursinho:
+    passar o mapa de pelo inteiro para a pedra inchava o crânio e o vazio de pelo
+    em volta dos olhos virava óculos, e a raiz da orelha caída, no alto do crânio,
+    virava orelha de urso. Ficou: pelo como volume só no corpo, orelha mais baixa,
+    cabeça 10% maior, focinho 18% mais longo e mechas talhadas no peito e na barriga
+    (onda regular parecia sanfona; no rabo, pinha); (4) a coleira do dachshund se
+    enrolava nas orelhas — o anel procura o pescoço só no tronco e na cabeça.
+    Placa: acima de 1,5 de largura por altura, a foto vai à esquerda e o texto à
+    direita, e a mensagem encolhe até caber inteira em 3 linhas.
+    Custo: 0,2 a 0,6 s por raça no M5 (perfil alto), uma vez por sessão e só quando
+    existe homenagem dela — uma grade grossa pula o espaço vazio.
+    Testado só por fotos no Playwright com homenagens falsas (`page.route`) e câmera
+    livre injetada na resposta do `jogo.js`. **Rodar `supabase/014_lapide_estatua.sql`
+    no Supabase antes do deploy** e testar no celular.
+
 ## Ideias soltas (não decidido ainda)
 
 - A leva de dinamismo social planejada em conjunto está completa: (1)
