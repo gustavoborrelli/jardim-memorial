@@ -12,6 +12,8 @@
   cada frame (updateHints) ou a cada clique (openModalFor, chime).
 */
 import * as THREE from 'three';
+import { homenagemDoLink, slugPedido, htmlCartao, linkDaHomenagem } from './chegada.js';
+import { gerarCartao } from './cartao.js';
 
 export function createMenuUi({ camera, lapides, world, dogController, pausedState, auth, mapaUi }) {
 
@@ -86,6 +88,7 @@ export function createMenuUi({ camera, lapides, world, dogController, pausedStat
   const btnMsgCancel = document.getElementById('btnMsgCancel');
   const btnMsgConfirm = document.getElementById('btnMsgConfirm');
   const btnAdminDeleteStone = document.getElementById('btnAdminDeleteStone');
+  const btnShareStone = document.getElementById('btnShareStone');
 
   let pendingStone = null;
 
@@ -396,12 +399,13 @@ export function createMenuUi({ camera, lapides, world, dogController, pausedStat
     btnConfirm.disabled = true;
     btnConfirm.textContent = 'Salvando...';
     try {
-      const saved = await lapides.saveMemorial(plot, { name, dates, msg, photoFile, formato: pendingFormato, cor: pendingCor });
+      const cartao = await gerarCartao({ nome: name, datas: dates, foto: pendingPhotoImg });
+      const saved = await lapides.saveMemorial(plot, { name, dates, msg, photoFile, formato: pendingFormato, cor: pendingCor, cartao });
 
       const data = {
         name, dates, msg,
         photo: pendingPhotoImg, photoUrl: pendingPhotoUrl,
-        id: saved.id, criadoPor: saved.criadoPor,
+        id: saved.id, criadoPor: saved.criadoPor, slug: saved.slug,
         formato: pendingFormato, cor: pendingCor,
       };
       lapides.createTribute(plot, data);
@@ -411,6 +415,8 @@ export function createMenuUi({ camera, lapides, world, dogController, pausedStat
       chime(660, 0.14);
       showToast(`"${name}" agora descansa no ${plot.section}.`);
       closeModal();
+      // o link é o que leva a homenagem para a família: oferece na hora
+      if(saved.slug) abrirCompartilhar({ nome: name, slug: saved.slug, titulo: 'Homenagem gravada' });
     } catch(err){
       console.error('Erro ao salvar memorial:', err);
       if(err.code === 'VAGA_OCUPADA'){
@@ -538,6 +544,7 @@ export function createMenuUi({ camera, lapides, world, dogController, pausedStat
     inMsgAuthor.value = '';
     inMsgText.value = '';
     btnAdminDeleteStone.style.display = isAdmin() ? '' : 'none';
+    btnShareStone.style.display = d.slug ? '' : 'none';
     messagesList.innerHTML = '<p class="message-empty">Carregando…</p>';
     messagesModalBack.classList.add('open');
     dogController.resetKeys();
@@ -549,6 +556,52 @@ export function createMenuUi({ camera, lapides, world, dogController, pausedStat
     pendingStone = null;
   }
   btnMsgCancel.addEventListener('click', closeMessagesModal);
+  btnShareStone.addEventListener('click', ()=>{
+    if(!pendingStone) return;
+    const d = pendingStone.userData.data;
+    abrirCompartilhar({ nome: d.name, slug: d.slug });
+  });
+
+  /* ============ COMPARTILHAR (o link de cada homenagem) ============
+     No celular, "Enviar pelo WhatsApp" abre o app direto na escolha do contato;
+     no computador, o WhatsApp Web. O link vai no fim da mensagem: é dele que o
+     WhatsApp monta a prévia (api/homenagem.js). */
+  const shareModalBack = document.getElementById('shareModalBack');
+  const shareTitle = document.getElementById('shareTitle');
+  const shareSub = document.getElementById('shareSub');
+  const shareLinkInput = document.getElementById('shareLinkInput');
+  const btnShareWhats = document.getElementById('btnShareWhats');
+  const btnShareMore = document.getElementById('btnShareMore');
+  const btnShareCopy = document.getElementById('btnShareCopy');
+  let compartilhando = null;
+  function abrirCompartilhar({ nome, slug, titulo }){
+    const url = linkDaHomenagem(slug);
+    compartilhando = { nome, url };
+    shareTitle.textContent = titulo || 'Compartilhar a homenagem';
+    shareSub.textContent = `Mande este link para a família e os amigos: quem abrir chega direto na pedra de ${nome}.`;
+    shareLinkInput.value = url;
+    btnShareWhats.href = `https://wa.me/?text=${encodeURIComponent(`Uma homenagem para ${nome} no Jardim Memorial 🐾 ${url}`)}`;
+    btnShareMore.style.display = navigator.share ? '' : 'none';
+    dogController.resetKeys();
+    shareModalBack.classList.add('open');
+  }
+  function fecharCompartilhar(){ shareModalBack.classList.remove('open'); compartilhando = null; }
+  document.getElementById('btnShareClose').addEventListener('click', fecharCompartilhar);
+  shareModalBack.addEventListener('click', e=>{ if(e.target===shareModalBack) fecharCompartilhar(); });
+  btnShareCopy.addEventListener('click', async ()=>{
+    try{
+      await navigator.clipboard.writeText(shareLinkInput.value);
+      showToast('Link copiado.');
+    } catch(err){
+      shareLinkInput.select();
+      showToast('Selecione o link e copie.');
+    }
+  });
+  btnShareMore.addEventListener('click', ()=>{
+    if(!compartilhando || !navigator.share) return;
+    const { nome, url } = compartilhando;
+    navigator.share({ title: `${nome} · Jardim Memorial`, text: `Uma homenagem para ${nome} no Jardim Memorial`, url }).catch(()=>{});
+  });
   messagesModalBack.addEventListener('click', e=>{ if(e.target===messagesModalBack) closeMessagesModal(); });
 
   btnMsgConfirm.addEventListener('click', ()=>{
@@ -592,8 +645,9 @@ export function createMenuUi({ camera, lapides, world, dogController, pausedStat
   });
 
   /* ============ MAIN MENU / PAUSE ============ */
+  const menuChegada = document.getElementById('menuChegada');
   function showMenuPanel(panel){
-    [menuHome, menuHow, menuAbout, menuDogs].forEach(p=> p.classList.remove('active'));
+    [menuHome, menuHow, menuAbout, menuDogs, menuChegada].forEach(p=> p.classList.remove('active'));
     panel.classList.add('active');
   }
   function startGame(){
@@ -611,17 +665,92 @@ export function createMenuUi({ camera, lapides, world, dogController, pausedStat
   document.getElementById('btnAbout').addEventListener('click', ()=> showMenuPanel(menuAbout));
   document.querySelectorAll('[data-back]').forEach(b=> b.addEventListener('click', ()=> showMenuPanel(menuHome)));
 
+  // a raça escolhida fica guardada: quem volta pelo link de uma homenagem
+  // passeia com o mesmo companheiro
+  const RACA_GUARDADA = 'jardimRaca';
+  const racaGuardada = () => { try { return localStorage.getItem(RACA_GUARDADA); } catch(e){ return null; } };
   document.querySelectorAll('.dog-card').forEach(card=>{
     card.addEventListener('click', ()=>{
       dogController.selectDog(card.dataset.breed);
+      try { localStorage.setItem(RACA_GUARDADA, card.dataset.breed); } catch(e){}
       startGame();
     });
   });
+
+  /* ============ CHEGADA PELO LINK DE UMA HOMENAGEM ============
+     Em vez do menu de sempre, o cartão da homenagem e "Visitar". O cachorro
+     começa na beira da praça, do lado do jardim dela, e caminha sozinho pela
+     avenida, passa pelo arco e para de frente para a pedra; aí abre o livro de
+     mensagens. Nada de teletransporte (etapa 18): o caminho é o de verdade. */
+  homenagemDoLink.then(h=>{
+    if(!slugPedido) return;
+    if(!h){
+      history.replaceState(null, '', '/');
+      showToast('Não encontramos essa homenagem. O jardim está aberto para um passeio.');
+      return;
+    }
+    document.getElementById('chegadaCartao').innerHTML = htmlCartao(h);
+    const btnVisitar = document.getElementById('btnVisitar');
+    btnVisitar.dataset.pronto = '1';
+    btnVisitar.disabled = false;
+    btnVisitar.textContent = `Visitar ${h.nome_pet}`;
+    btnVisitar.onclick = ()=> visitar(h);
+    if(pausedState.value) showMenuPanel(menuChegada);
+  });
+  document.getElementById('btnVerJardim').addEventListener('click', ()=> showMenuPanel(menuHome));
+
+  /* Na frente da pedra o cachorro olha para ela, e a câmera ficaria atrás dele. Na
+     fileira de fora, "atrás" é a cerca e as árvores grandes de sombra: a câmera
+     parava dentro de uma copa; na de dentro, um cipreste da avenida tapava a vista.
+     Testa atrás e alguns ângulos de lado, olhando o ponto da câmera e a linha até
+     o cachorro, e fica com o de mais folga, preferindo o mais perto de "atrás". */
+  function cameraDaChegada(x, z, yawFinal){
+    const base = yawFinal + Math.PI;
+    const distancia = dogController.distanciaChegada()*Math.cos(0.42);
+    let melhor = base, nota = -Infinity;
+    for(const desvio of [0, 0.4, -0.4, 0.8, -0.8, 1.15, -1.15]){
+      const az = base + desvio;
+      const cx = x + Math.sin(az)*distancia, cz = z + Math.cos(az)*distancia;
+      let folga = 26 - Math.max(Math.abs(cx), Math.abs(cz)); // cerca e arbustos
+      for(const t of [1, 0.75, 0.5, 0.3]){
+        const px = x + (cx - x)*t, pz = z + (cz - z)*t;
+        for(const c of world.copas) folga = Math.min(folga, Math.hypot(px - c.x, pz - c.z) - c.r);
+      }
+      const n = Math.min(folga, 1.2) - Math.abs(desvio)*0.25;
+      if(n > nota){ nota = n; melhor = az; }
+    }
+    return melhor;
+  }
+
+  function visitar(h){
+    // estátua de raça: a visita é com um cachorro da mesma raça
+    const estatua = lapides.FORMATOS.find(f => f.id === h.formato && f.raca);
+    const raca = (estatua && estatua.raca) || racaGuardada() || dogController.getBreed() || 'golden';
+    if(dogController.getBreed() !== raca) dogController.selectDog(raca);
+    const alvo = { x: Number(h.plot_x), z: Number(h.plot_z) };
+    const sx = Math.sign(alvo.x) || 1, sz = Math.sign(alvo.z) || 1;
+    dogController.posicionar(0, sz*3.4, sz > 0 ? 0 : Math.PI);
+    startGame();
+    // as pedras olham para +z: para na frente dela. O corredor do meio do jardim
+    // (|x| = 12, entre as duas colunas de vagas) leva até lá sem passar por cima de outra.
+    const frente = alvo.z + 2.3;
+    dogController.caminharPor([[sx*1.2, sz*12], [sx*12, sz*12], [sx*12, frente], [alvo.x, frente]], {
+      olharPara: alvo,
+      // a câmera mira o meio entre o cachorro e a pedra
+      camera: cameraDaChegada(alvo.x, (frente + alvo.z)/2, Math.PI),
+      aoChegar: async ()=>{
+        await lapides.carregadas;
+        const pedra = lapides.acharLapide(h.id);
+        if(pedra && !pausedState.value) openMessagesFor(pedra);
+      },
+    });
+  }
 
   window.addEventListener('keydown', e=>{
     if(e.key === 'Escape'){
       // if a modal is open, ESC closes it instead of opening the pause menu
       if(authModalBack.classList.contains('open')){ closeAuthModal(); return; }
+      if(shareModalBack.classList.contains('open')){ fecharCompartilhar(); return; }
       if(modalBack.classList.contains('open')){ closeModal(); return; }
       if(messagesModalBack.classList.contains('open')){ closeMessagesModal(); return; }
       if(mapModalBack.classList.contains('open')){ mapaUi.closeMap(); return; }

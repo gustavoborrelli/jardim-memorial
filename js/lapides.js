@@ -667,6 +667,7 @@ export function createLapides(scene) {
       photoUrl: row.foto_url,
       formato: row.formato,
       cor: row.cor,
+      slug: row.slug,
     }, animate);
   }
 
@@ -691,7 +692,12 @@ export function createLapides(scene) {
     }
     for(const row of rows) await installFromRow(row, false);
   }
-  loadMemoriais();
+  // quem chega por um link espera as pedras existirem para caminhar até a certa
+  const carregadas = loadMemoriais();
+
+  function acharLapide(id){
+    return stoneGroup.children.find(c => c.userData && c.userData.isStone && c.userData.data && c.userData.data.id === id) || null;
+  }
 
   /* ============ SUPABASE: lápides novas em tempo real ============ */
   // se outra pessoa criar uma homenagem enquanto o jardim está aberto aqui,
@@ -705,7 +711,9 @@ export function createLapides(scene) {
     .subscribe();
 
   /* ============ SUPABASE: salvar um novo memorial ============ */
-  async function saveMemorial(plot, { name, dates, msg, photoFile, formato, cor }){
+  /* `cartao` é a imagem da prévia no WhatsApp (js/cartao.js). Se ela falhar, a
+     homenagem sai mesmo assim: a prévia usa a imagem padrão do jardim. */
+  async function saveMemorial(plot, { name, dates, msg, photoFile, formato, cor, cartao }){
     let fotoUrl = null;
     if(photoFile){
       const ext = (photoFile.name.split('.').pop() || 'jpg').toLowerCase();
@@ -717,7 +725,16 @@ export function createLapides(scene) {
       const { data: pub } = supabase.storage.from('fotos-memoriais').getPublicUrl(path);
       fotoUrl = pub.publicUrl;
     }
-    const { data: inserted, error } = await supabase.from('memoriais').insert({
+    let cartaoUrl = null;
+    if(cartao){
+      const path = `cartoes/${plot.x}_${plot.z}_${Date.now()}.jpg`;
+      const { error: erroCartao } = await supabase.storage
+        .from('fotos-memoriais')
+        .upload(path, cartao, { contentType: 'image/jpeg' });
+      if(erroCartao) console.warn('Cartão da prévia não subiu:', erroCartao.message);
+      else cartaoUrl = supabase.storage.from('fotos-memoriais').getPublicUrl(path).data.publicUrl;
+    }
+    const linha = {
       nome_pet: name,
       datas: dates,
       mensagem: msg,
@@ -725,9 +742,17 @@ export function createLapides(scene) {
       plot_x: plot.x,
       plot_z: plot.z,
       foto_url: fotoUrl,
+      cartao_url: cartaoUrl,
       formato: formato || 'classica',
       cor: cor || PALETTE[0].hex,
-    }).select('id, criado_por').single();
+    };
+    const inserir = () => supabase.from('memoriais').insert(linha).select('id, criado_por, slug').single();
+    let { data: inserted, error } = await inserir();
+    // o link (slug) é escolhido pelo banco; dois "Thor" no mesmo instante disputam
+    // o mesmo, e o segundo é recusado. Na segunda tentativa ele já pega o "thor-2".
+    if(error && error.code === '23505' && /slug/.test(`${error.message} ${error.details}`)){
+      ({ data: inserted, error } = await inserir());
+    }
     if(error){
       if(error.code === '23505'){
         // alguém reservou essa vaga entre o momento em que o modal abriu e agora;
@@ -745,7 +770,7 @@ export function createLapides(scene) {
       }
       throw error;
     }
-    return { id: inserted.id, criadoPor: inserted.criado_por, fotoUrl };
+    return { id: inserted.id, criadoPor: inserted.criado_por, slug: inserted.slug, fotoUrl };
   }
 
   // só o autor consegue apagar (RLS de 003_auth_rls.sql); remove local na
@@ -803,6 +828,8 @@ export function createLapides(scene) {
   return {
     plots,
     stoneGroup,
+    carregadas,
+    acharLapide,
     PALETTE,
     FORMATOS,
     createTribute,

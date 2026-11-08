@@ -136,6 +136,37 @@ export function createDogController(scene, renderer, { isPaused, plaza, bounds }
     scene.add(dog);
   }
 
+  /* ============ CAMINHADA SOZINHO (quem chega pelo link de uma homenagem) ============
+     O cachorro segue uma lista de pontos [x, z] com o mesmo movimento do controle
+     (fonte, cerca, giro), e no fim vira para `olharPara`. Qualquer tecla ou toque
+     no joystick devolve o controle a quem está jogando. */
+  let rota = null;
+  let virarPara = null;
+  let camAlvo = null;
+  // na chegada a câmera mira o meio entre o cachorro e a pedra (`foco`) e se afasta
+  // um pouco: mirando só o cachorro, a pedra saía cortada na tela de celular em pé
+  const CAM_DIST = 5.2;
+  let foco = null, focoPeso = 0, camDistAlvo = CAM_DIST;
+  const distanciaChegada = () => (window.innerHeight > window.innerWidth ? 7.2 : 6.0);
+  // `camera`: azimute em que a câmera termina (padrão: atrás do cachorro). Quem chama
+  // escolhe um ângulo que não caia dentro de uma copa de árvore.
+  function caminharPor(pontos, { olharPara = null, aoChegar = null, camera = null } = {}){
+    rota = { pontos, i: 0, olharPara, aoChegar, camera, melhor: Infinity, parado: 0 };
+    virarPara = null; camAlvo = null;
+  }
+  function cancelarCaminhada(){ rota = null; virarPara = null; camAlvo = null; }
+  function caminhando(){ return !!rota; }
+
+  // coloca o cachorro num ponto, já virado (sem andar até lá)
+  function posicionar(x, z, yaw){
+    if(!dog) return;
+    dog.position.set(x, 0, z);
+    dogYaw = yaw;
+    dog.rotation.y = yaw;
+  }
+
+  const angulo = (a) => { while(a > Math.PI) a -= Math.PI*2; while(a < -Math.PI) a += Math.PI*2; return a; };
+
   function updateMovement(dt, elapsed){
     if(!dog || !dogParts) return;
     let moveX=0, moveZ=0;
@@ -145,14 +176,66 @@ export function createDogController(scene, renderer, { isPaused, plaza, bounds }
     if(keys['d']||keys['arrowright']) moveX += 1;
     if(Math.abs(joyX) > 0.08 || Math.abs(joyZ) > 0.08){ moveX = joyX; moveZ = joyZ; }
 
-    const moving = (moveX!==0 || moveZ!==0);
+    const manual = (moveX!==0 || moveZ!==0);
+    if(manual && (rota || virarPara !== null || camAlvo !== null)) cancelarCaminhada();
+
+    // piloto: o rumo é o próximo ponto da rota
+    let rumoX = 0, rumoZ = 0;
+    if(!manual && rota){
+      const [px, pz] = rota.pontos[rota.i];
+      const dx = px - dog.position.x, dz = pz - dog.position.z;
+      const d = Math.hypot(dx, dz);
+      // preso (empurrado pela fonte, por exemplo): pula para o ponto seguinte
+      if(d < rota.melhor - 0.02){ rota.melhor = d; rota.parado = 0; } else rota.parado += dt;
+      if(d < 0.3 || rota.parado > 2.5){
+        rota.i++;
+        rota.melhor = Infinity; rota.parado = 0;
+        if(rota.i >= rota.pontos.length){
+          const { olharPara, aoChegar, camera } = rota;
+          rota = null;
+          if(olharPara) virarPara = Math.atan2(olharPara.x - dog.position.x, olharPara.z - dog.position.z);
+          camAlvo = camera !== null ? camera : (virarPara !== null ? virarPara + Math.PI : null);
+          camElevation = 0.42;
+          if(olharPara){
+            foco = { x: (dog.position.x + olharPara.x)/2, z: (dog.position.z + olharPara.z)/2 };
+            camDistAlvo = distanciaChegada();
+          }
+          if(aoChegar) setTimeout(aoChegar, olharPara ? 650 : 0);
+        }
+      } else {
+        rumoX = dx/d; rumoZ = dz/d;
+      }
+    }
+    const piloto = rumoX !== 0 || rumoZ !== 0;
+
+    // chegou: termina de virar para a pedra, e a câmera vai para o ângulo final
+    if(!manual && !piloto && virarPara !== null){
+      const diff = angulo(virarPara - dogYaw);
+      dogYaw += diff*Math.min(1, dt*5);
+      dog.rotation.y = dogYaw;
+      if(Math.abs(diff) < 0.01) virarPara = null;
+    }
+    if(!manual && !piloto && camAlvo !== null){
+      const diff = angulo(camAlvo - camAzimuth);
+      camAzimuth += diff*Math.min(1, dt*2.4);
+      if(Math.abs(diff) < 0.01) camAlvo = null;
+    }
+    // andou por conta própria: a câmera volta a seguir só o cachorro, na distância de sempre
+    if(manual){ camDistAlvo = CAM_DIST; }
+    focoPeso += ((foco && !manual ? 1 : 0) - focoPeso)*Math.min(1, dt*1.8);
+    if(manual && focoPeso < 0.01) foco = null;
+    camDist += (camDistAlvo - camDist)*Math.min(1, dt*1.5);
+
+    const moving = manual || piloto;
     isMoving = moving;
     if(moving){
       const len = Math.hypot(moveX,moveZ) || 1;
       moveX/=len; moveZ/=len;
 
       let worldX, worldZ;
-      if(firstPerson){
+      if(piloto){
+        worldX = rumoX; worldZ = rumoZ;
+      } else if(firstPerson){
         // 1ª pessoa: W/S/A/D são sempre relativos a pra onde o cachorro está
         // de fato olhando (dogYaw), que só muda quando você "olha" (touchpad/
         // roda/arrasto). Assim W é sempre pra frente e S é sempre pra trás
@@ -169,7 +252,7 @@ export function createDogController(scene, renderer, { isPaused, plaza, bounds }
         worldZ = -moveX*Math.sin(camAzimuth) + moveZ*Math.cos(camAzimuth);
       }
 
-      const speed = 3.2;
+      const speed = piloto ? 2.9 : 3.2;
       dog.position.x += worldX*speed*dt;
       dog.position.z += worldZ*speed*dt;
       dog.position.x = Math.max(-bounds, Math.min(bounds, dog.position.x));
@@ -184,7 +267,7 @@ export function createDogController(scene, renderer, { isPaused, plaza, bounds }
         dog.position.z = plaza.z + (fdz/fdist)*FOUNTAIN_R;
       }
 
-      if(!firstPerson){
+      if(!firstPerson || piloto){
         const targetYaw = Math.atan2(worldX, worldZ);
         let diff = targetYaw - dogYaw;
         while(diff>Math.PI) diff-=Math.PI*2;
@@ -195,7 +278,8 @@ export function createDogController(scene, renderer, { isPaused, plaza, bounds }
         // toque: câmera acompanha sozinha, um pouco mais devagar que o
         // giro do cachorro (fica "chegando por trás" em vez de grudar),
         // exceto se a pessoa estiver arrastando a tela pra olhar na mão
-        if(isTouchDevice && !touchDragging){
+        // no piloto, em qualquer aparelho: quem chegou pelo link só assiste
+        if((isTouchDevice || piloto) && !touchDragging){
           let camDiff = (dogYaw + Math.PI) - camAzimuth;
           while(camDiff>Math.PI) camDiff-=Math.PI*2;
           while(camDiff<-Math.PI) camDiff+=Math.PI*2;
@@ -237,6 +321,10 @@ export function createDogController(scene, renderer, { isPaused, plaza, bounds }
     }
 
     const target = new THREE.Vector3(tx, 0.9, tz);
+    if(foco && dog){
+      target.x += (foco.x - tx)*focoPeso;
+      target.z += (foco.z - tz)*focoPeso;
+    }
     // sem cachorro ainda (menu inicial): passeio lento e aberto em volta da praça
     // (alto o bastante pra passar por cima de todas as árvores)
     const dist = dog ? camDist : 17;
@@ -282,6 +370,11 @@ export function createDogController(scene, renderer, { isPaused, plaza, bounds }
   return {
     selectDog,
     alinharCamera,
+    caminharPor,
+    cancelarCaminhada,
+    distanciaChegada,
+    caminhando,
+    posicionar,
     getDog: () => dog,
     getBreed: () => dogParts && dogParts.breed,
     updateMovement,

@@ -1,0 +1,20 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "rewrites": [
+    {
+      "source": "/:slug([a-zA-Z0-9-]{1,60})",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": ".*(WhatsApp|facebookexternalhit|Facebot|Twitterbot|TelegramBot|Slackbot|Discordbot|LinkedInBot|SkypeUriPreview|Pinterest|redditbot|Applebot|Googlebot|bingbot|Embedly|Iframely|vkShare).*"
+        }
+      ],
+      "destination": "/api/homenagem?slug=:slug"
+    },
+    {
+      "source": "/:slug([a-zA-Z0-9-]{1,60})",
+      "destination": "/index.html"
+    }
+  ]
+}

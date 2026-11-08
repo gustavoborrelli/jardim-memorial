@@ -4,6 +4,16 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Jardim Memorial — Um lugar para lembrar</title>
+<meta name="description" content="Um jardim para passear, plantar flores e guardar a memória dos nossos cachorros.">
+<!-- prévia do link do jardim; o link de cada homenagem tem a sua (api/homenagem.js) -->
+<meta property="og:site_name" content="Jardim Memorial">
+<meta property="og:title" content="Jardim Memorial">
+<meta property="og:description" content="Um jardim para passear, plantar flores e guardar a memória dos nossos cachorros.">
+<meta property="og:image" content="https://jardim-memorial.vercel.app/og-jardim.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary_large_image">
 <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
@@ -26,6 +36,15 @@
         </div>
         <button class="ambient-toggle" id="btnAmbientToggle" aria-pressed="true">🔊 Som ambiente</button>
         <div class="credits">feito com Three.js · aperte ESC no jogo para voltar aqui</div>
+      </div>
+
+      <!-- quem chega pelo link de uma homenagem (js/chegada.js) -->
+      <div class="menu-panel menu-chegada" id="menuChegada">
+        <div class="chegada-cartao claro" id="chegadaCartao"></div>
+        <div class="menu-btns">
+          <button class="menu-btn primary" id="btnVisitar">Visitar</button>
+          <button class="menu-btn ghost" id="btnVerJardim">Ver o jardim todo</button>
+        </div>
       </div>
 
       <div class="menu-panel" id="menuDogs">
@@ -201,7 +220,23 @@
       <div class="modal-actions">
         <button class="btn secondary" id="btnMsgCancel">Fechar</button>
         <button class="btn danger" id="btnAdminDeleteStone" style="display:none">🗑 Apagar homenagem</button>
+        <button class="btn secondary" id="btnShareStone" style="display:none">Compartilhar</button>
         <button class="btn" id="btnMsgConfirm">Deixar mensagem</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- link da homenagem: depois de gravar e pelo botão Compartilhar da pedra -->
+  <div class="modal-back" id="shareModalBack">
+    <div class="modal modal-share">
+      <h2 id="shareTitle">Compartilhar a homenagem</h2>
+      <p class="sub" id="shareSub"></p>
+      <input id="shareLinkInput" class="share-link" readonly aria-label="Link da homenagem">
+      <a class="btn whatsapp" id="btnShareWhats" target="_blank" rel="noopener">Enviar pelo WhatsApp</a>
+      <div class="modal-actions">
+        <button class="btn secondary" id="btnShareClose">Fechar</button>
+        <button class="btn secondary" id="btnShareMore" style="display:none">Outros apps</button>
+        <button class="btn secondary" id="btnShareCopy">Copiar link</button>
       </div>
     </div>
   </div>

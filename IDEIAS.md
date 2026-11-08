@@ -455,6 +455,49 @@ flores/velas nas lápides dos outros (MVP family & friends).
     livre injetada na resposta do `jogo.js`. **Rodar `supabase/014_lapide_estatua.sql`
     no Supabase antes do deploy** e testar no celular.
 
+26. 🔜 **Link de cada homenagem** (branch `link-homenagem`) — no Brasil o WhatsApp é
+    o canal de distribuição inteiro, e não havia como mandar uma homenagem para
+    alguém. Agora cada uma tem endereço próprio, `jardim-memorial.vercel.app/thor`.
+    - **Endereço**: o banco escolhe na criação, a partir do nome, sem acento
+      ("Pé de Pano" → `pe-de-pano`); o segundo Thor vira `thor-2`; palavras que são
+      caminhos do site ficam de fora; depois de preenchido, um gatilho impede a troca
+      (link que já circulou não quebra). `supabase/015_link_homenagem.sql`, que
+      também preenche as homenagens antigas, na ordem de criação.
+    - **Prévia no WhatsApp**: o robô dele não roda JavaScript, então `vercel.json`
+      separa pelo user-agent — robôs de prévia (WhatsApp, iMessage/Facebook,
+      Telegram…) vão para `api/homenagem.js`, que devolve só as etiquetas og:*;
+      gente recebe o jogo. A imagem é um cartão 1200×630 (foto redonda, nome,
+      datas, jardim desfocado ao fundo) gerado no navegador de quem cria
+      (`js/cartao.js`) e enviado junto com a homenagem: 40–60 KB, longe do limite
+      de 600 KB da Meta. Tudo centralizado porque às vezes o WhatsApp mostra só um
+      quadrado do meio. Sem cartão (homenagens antigas), vai `public/og-jardim.jpg`.
+    - **Chegada**: `js/chegada.js` busca a homenagem no primeiro instante (fetch
+      simples, antes do pedaço pesado do jogo) e o menu já abre com o cartão dela
+      e o botão em "preparando o jardim…". Descoberta no caminho: o menu sempre
+      cobriu a tela de carregamento (z-index), então o "preparando o jardim…" com a
+      patinha nunca aparecia. Em "Visitar", o cachorro começa na beira da praça,
+      do lado do jardim da homenagem, e anda sozinho (`caminharPor` em
+      `cachorros.js`): avenida, arco, corredor do meio do jardim (|x| = 12, entre
+      as colunas de vagas) e para de frente para a pedra; aí abre o livro de
+      mensagens. Qualquer tecla ou toque no joystick devolve o controle. Estátua de
+      raça → a visita é com um cachorro da mesma raça; senão, a última raça
+      escolhida (guardada no navegador).
+    - **Câmera na chegada**: atrás do cachorro, na fileira de fora, ficava dentro
+      das árvores grandes de sombra; na de dentro, um cipreste tapava. O mundo
+      passou a expor as copas (`world.copas`) e a chegada testa alguns ângulos,
+      olhando o ponto da câmera e a linha até o cachorro. Conferido nas 16 vagas.
+    - **Compartilhar**: botão no livro de mensagens da pedra e janela automática
+      logo depois de gravar uma homenagem: "Enviar pelo WhatsApp" (wa.me, com o
+      link no fim da mensagem, que é de onde sai a prévia), "Copiar link" e, no
+      celular, "Outros apps" (folha de compartilhar do sistema).
+    Testado com Playwright e homenagens falsas (computador e iPhone 14): cartão no
+    menu em 0,6 s, caminhada, chegada, compartilhar e os dois cartões. A função foi
+    testada sozinha e no `vercel dev`, que **ignora a condição por user-agent**
+    ("has") — a separação robô/pessoa só se confirma no ar. Preview de branch
+    exige login na Vercel, e o robô do WhatsApp para nele. **Rodar
+    `supabase/015_link_homenagem.sql` antes do deploy**: sem a coluna `slug`, gravar
+    homenagem falha.
+
 ## Ideias soltas (não decidido ainda)
 
 - A leva de dinamismo social planejada em conjunto está completa: (1)

@@ -623,10 +623,16 @@ export function createWorld(scene, { renderer, perfil, pos }) {
     });
   }
 
+  // onde a câmera não deve parar (dentro de uma copa): a chegada pelo link de uma
+  // homenagem escolhe o ângulo final com isto. Raio aproximado de cada copa.
+  const RAIO_COPA = { frondosa: 3.2, cerejeira: 3.4, cipreste: 1.5, moita: 1.0 };
+  const copas = ARVORES.filter(a => RAIO_COPA[a.tipo]).map(a => ({ x: a.x, z: a.z, r: RAIO_COPA[a.tipo]*a.escala }));
+
   return {
     ground,
     PLAZA,
     AVENUES,
+    copas,
     plantAndSaveFlor,
     plantAndSaveVela,
     scatterFlowers,
