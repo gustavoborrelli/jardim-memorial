@@ -434,6 +434,37 @@ canvas{display:block;outline:none;}
 }
 .map-toggle:hover{ transform:translateY(-1px); background:rgba(30,22,38,0.75); }
 .map-toggle:active{ transform:translateY(0) scale(0.96); }
+/* dicas da primeira entrada pelo toque: uma etiqueta ao lado de cada botão
+   redondo (que, no celular, é só um ícone) e outra em cima do círculo de andar.
+   Não pegam toque: o dedo passa direto para o jogo. Só existem em pointer:coarse,
+   e as posições acompanham as dos botões lá (fundo 22/78/134/190, 48 de altura) */
+.dicas-toque{ display:none; position:absolute; inset:0; pointer-events:none; z-index:9; opacity:0; transition:opacity 0.45s ease; }
+.dicas-toque.visivel{ opacity:1; }
+.menu-screen:not(.hidden) ~ .dicas-toque{ opacity:0; }
+.dica{
+  position:absolute;
+  padding:6px 11px;
+  border-radius:999px;
+  background:rgba(253,247,238,0.94);
+  color:#4a3a35;
+  font:600 12.5px/1.2 'Inter', sans-serif;
+  box-shadow:0 4px 14px rgba(20,12,8,0.28);
+  white-space:nowrap;
+}
+.dica-botao{ right:calc(18px + 48px + 12px + env(safe-area-inset-right, 0px)); transform:translateY(50%); }
+.dica-botao::after{
+  content:''; position:absolute; right:-4px; top:50%;
+  width:9px; height:9px; background:inherit;
+  transform:translateY(-50%) rotate(45deg);
+}
+.dica-menu{ bottom:calc(190px + 24px + env(safe-area-inset-bottom, 0px)); }
+.dica-mapa{ bottom:calc(134px + 24px + env(safe-area-inset-bottom, 0px)); }
+.dica-planta{ bottom:calc(78px + 24px + env(safe-area-inset-bottom, 0px)); }
+.dica-visao{ bottom:calc(22px + 24px + env(safe-area-inset-bottom, 0px)); }
+.dica-andar{ left:calc(26px + 56px); bottom:calc(26px + 112px + 12px + env(safe-area-inset-bottom, 0px)); transform:translateX(-50%); }
+.dica-olhar{ left:50%; top:38%; transform:translateX(-50%); }
+@media (prefers-reduced-motion: reduce){ .dicas-toque{ transition:none; } }
+
 /* o botão ☰ usa o estilo do mapa, mas só aparece no toque (ver pointer:coarse) */
 .map-toggle.menu-toggle{ display:none; }
 .menu-panel .rule.so-toque{ display:none; }
@@ -571,6 +602,7 @@ canvas{display:block;outline:none;}
   .plant-toggle{ bottom:calc(78px + env(safe-area-inset-bottom, 0px)); right:18px; width:48px; height:48px; font-size:18px; }
   .map-toggle{ bottom:calc(134px + env(safe-area-inset-bottom, 0px)); right:18px; width:48px; height:48px; font-size:18px; }
   .map-toggle.menu-toggle{ display:flex; bottom:calc(190px + env(safe-area-inset-bottom, 0px)); }
+  .dicas-toque{ display:block; }
 
   /* "Como jogar": as regras de toque no lugar das de teclado. O seletor repete
      .menu-panel .rule para vencer o display:flex dele */

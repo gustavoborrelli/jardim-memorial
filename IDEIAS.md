@@ -524,7 +524,7 @@ flores/velas nas lápides dos outros (MVP family & friends).
     Quem estiver com o jardim aberto na versão antiga vê um caramelo de outra
     pessoa como dachshund (a receita cai na última raça) até recarregar.
 
-28. 🔜 **Menu e ajuda no celular** (branch `menu-toque`) — primeiro item da lista de
+28. ✅ **Menu e ajuda no celular** — primeiro item da lista de
     melhorias de experiência: no celular, depois de entrar no jardim, não havia como
     voltar ao menu (o caminho era o ESC), e o "Como jogar" falava de WASD, touchpad,
     mouse e ESC. Veio da branch `app-ios`, sem o código de moderação e de conta, que
@@ -546,6 +546,24 @@ flores/velas nas lápides dos outros (MVP family & friends).
     Testado com Playwright no computador e no iPhone 14: regras visíveis em cada um
     (7 de teclado, 7 de toque), ☰ ausente no computador, ☰ → menu → "Entrar no
     jardim" de volta ao passeio.
+
+29. 🔜 **Dicas na primeira entrada e "Fazer login"** (branch `dicas-toque`) — itens 6 e
+    7 da lista de melhorias de experiência.
+    - **Dicas**: no celular os botões redondos são só ícones (☰ 🗺️ 🌼 🐾). Na primeira
+      vez que a pessoa entra no jardim por toque, cada um ganha uma etiqueta ao lado
+      ("Menu", "Mapa do jardim", "Flor ou vela", "Visão do cachorro"), o círculo de
+      andar ganha "Arraste para andar" e o meio da tela "Arraste a tela para olhar em
+      volta". Somem no primeiro toque depois de 1,5 s (o toque que acabou de entrar
+      não pode apagá-las antes de dar tempo de ler) ou sozinhas em 9 s, e não voltam
+      neste aparelho (`jardimDicasToque` no localStorage). Não pegam toque: o dedo
+      passa direto para o jogo. No computador não aparecem, porque lá a faixa de
+      teclas no canto já explica tudo. As posições seguem as dos botões no
+      `pointer:coarse` (fundo 22/78/134/190): mudar um sem o outro desalinha.
+    - **"Fazer login"**: o botão do login se chamava "Entrar", como o "Entrar no
+      jardim" do menu. Virou "Fazer login", e o título da janela também; o botão de
+      confirmar continua "Entrar".
+    Testado com Playwright no iPhone 14: dicas na entrada, somem com um toque, não
+    voltam depois de recarregar; no computador, nenhuma dica.
 
 ## Ideias soltas (não decidido ainda)
 

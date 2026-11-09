@@ -118,7 +118,7 @@
       <span id="authEmail"></span>
       <button class="link-btn" id="btnLogout">Sair</button>
     </div>
-    <button class="btn secondary" id="btnLoginOpen">Entrar</button>
+    <button class="btn secondary" id="btnLoginOpen">Fazer login</button>
   </div>
 
   <div class="toast" id="toast"></div>
@@ -140,6 +140,16 @@
   <button class="map-toggle" id="btnMapToggle" title="Ver mapa do jardim (M)">🗺️</button>
   <!-- só no toque: no celular não existe ESC para voltar ao menu -->
   <button class="map-toggle menu-toggle" id="btnMenuToggle" title="Menu" aria-label="Abrir o menu">☰</button>
+  <!-- primeira entrada pelo toque (js/menuUi.js): o nome de cada botão redondo e
+       do círculo de andar, por alguns segundos e uma vez só -->
+  <div class="dicas-toque" id="dicasToque" aria-hidden="true">
+    <span class="dica dica-botao dica-menu">Menu</span>
+    <span class="dica dica-botao dica-mapa">Mapa do jardim</span>
+    <span class="dica dica-botao dica-planta">Flor ou vela</span>
+    <span class="dica dica-botao dica-visao">Visão do cachorro</span>
+    <span class="dica dica-andar">Arraste para andar</span>
+    <span class="dica dica-olhar">Arraste a tela para olhar em volta</span>
+  </div>
 
   <div class="hint-empty" id="hintEmpty">clique para deixar uma homenagem aqui</div>
   <div class="epitaph-card" id="epitaphCard">
@@ -152,7 +162,7 @@
 
   <div class="modal-back" id="authModalBack">
     <div class="modal">
-      <h2 id="authTitle">Entrar</h2>
+      <h2 id="authTitle">Fazer login</h2>
       <p class="sub" id="authSub">Entre para deixar uma homenagem no jardim.</p>
       <button class="btn google" id="btnGoogleLogin" type="button">
         <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">

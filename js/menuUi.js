@@ -145,9 +145,10 @@ export function createMenuUi({ camera, lapides, world, dogController, pausedStat
       authSub.textContent = 'Crie sua conta para deixar homenagens no jardim.';
       btnAuthConfirm.textContent = 'Criar conta';
       authToggleText.textContent = 'Já tem conta?';
-      btnAuthToggleMode.textContent = 'Entrar';
+      btnAuthToggleMode.textContent = 'Fazer login';
     } else {
-      authTitle.textContent = 'Entrar';
+      // "Fazer login", e não "Entrar": o menu já tem o "Entrar no jardim"
+      authTitle.textContent = 'Fazer login';
       authSub.textContent = 'Entre para deixar uma homenagem no jardim.';
       btnAuthConfirm.textContent = 'Entrar';
       authToggleText.textContent = 'Ainda não tem conta?';
@@ -655,6 +656,33 @@ export function createMenuUi({ camera, lapides, world, dogController, pausedStat
     menuScreen.classList.add('hidden');
     pausedState.value = false;
     startAmbient();
+    mostrarDicasToque();
+  }
+
+  /* ============ DICAS DA PRIMEIRA ENTRADA PELO TOQUE ============
+     No celular os botões redondos são só ícones (☰ 🗺️ 🌼 🐾). Na primeira vez que
+     a pessoa entra no jardim por toque, cada um ganha um nome por alguns segundos.
+     As dicas somem no primeiro toque depois de um instante (o toque segue valendo
+     para o jogo) ou sozinhas, e não voltam mais neste aparelho. */
+  const DICAS_VISTAS = 'jardimDicasToque';
+  const dicasToque = document.getElementById('dicasToque');
+  let dicasNaTela = false;
+  function mostrarDicasToque(){
+    if(dicasNaTela || !window.matchMedia('(pointer:coarse)').matches) return;
+    try { if(localStorage.getItem(DICAS_VISTAS)) return; } catch(e){}
+    dicasNaTela = true;
+    dicasToque.classList.add('visivel');
+    let sozinhas = null;
+    const esconder = ()=>{
+      clearTimeout(sozinhas);
+      window.removeEventListener('pointerdown', esconder, true);
+      dicasToque.classList.remove('visivel');
+      try { localStorage.setItem(DICAS_VISTAS, '1'); } catch(e){}
+    };
+    sozinhas = setTimeout(esconder, 9000);
+    // o toque que acabou de entrar no jardim (ou um logo depois) não apaga as
+    // dicas antes de dar tempo de ler
+    setTimeout(()=>{ if(dicasToque.classList.contains('visivel')) window.addEventListener('pointerdown', esconder, true); }, 1500);
   }
   document.getElementById('btnPlay').addEventListener('click', ()=>{
     if(!dogController.getDog()){ showMenuPanel(menuDogs); return; } // must pick a companion first
