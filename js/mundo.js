@@ -388,16 +388,44 @@ export function createWorld(scene, { renderer, perfil, pos }) {
     };
   }
 
-  function plantAndSaveVela(x, z){
+  function plantAndSaveVela(x, z, memorialId = null){
     const lifespan = randomVelaLifespan();
-    plantCandle(x, z, false, lifespan);
-    supabase.from('velas').insert({
+    const g = plantCandle(x, z, false, lifespan);
+    g.userData.memorialId = memorialId;
+    const linha = {
       x, z,
       apaga_em: new Date(lifespan.apagaEm).toISOString(),
       expira_em: new Date(lifespan.expiraEm).toISOString(),
-    }).then(({ error })=>{
-      if(error) console.error('Não foi possível salvar a vela:', error.message);
+    };
+    if(memorialId) linha.memorial_id = memorialId;
+    return supabase.from('velas').insert(linha).then(({ error })=>{
+      if(error){
+        console.error('Não foi possível salvar a vela:', error.message);
+        // vela de homenagem que não foi salva sai do jardim: senão a contagem mentiria
+        if(memorialId) candleGroup.remove(g);
+      }
+      return !error;
     });
+  }
+
+  /* ============ VELAS DE UMA HOMENAGEM ============
+     Acesa pela ficha do mapa ou pelo livro de mensagens: nasce na frente da pedra
+     (as pedras olham para +z), entre ela e quem visita, numa fileira que vai
+     preenchendo do meio para os lados. Não passa pelo isFreeSpot: ela pertence à
+     pedra, é para ficar junto dela. */
+  const velasDe = (memorialId) => candleGroup.children.filter(g => g.userData.memorialId === memorialId);
+  function velasAcesas(memorialId){
+    const agora = Date.now();
+    return velasDe(memorialId).filter(g => agora < g.userData.apagaEm).length;
+  }
+  function acenderVelaNaHomenagem(memorialId, plot){
+    const ocupados = velasDe(memorialId).map(g => g.position);
+    const vagas = [];
+    for(const fileira of [1.0, 1.3, 1.6]) for(const lado of [0, -0.32, 0.32, -0.64, 0.64]) vagas.push([plot.x + lado, plot.z + fileira]);
+    const livre = vagas.find(([x, z]) => !ocupados.some(p => Math.hypot(p.x - x, p.z - z) < 0.2))
+      || [plot.x + (Math.random() - 0.5)*1.4, plot.z + 1 + Math.random()*0.7];
+    const jitter = () => (Math.random() - 0.5)*0.06;
+    return plantAndSaveVela(livre[0] + jitter(), livre[1] + jitter(), memorialId);
   }
 
   async function loadVelas(){
@@ -411,10 +439,11 @@ export function createWorld(scene, { renderer, perfil, pos }) {
         apagaEm: new Date(row.apaga_em).getTime(),
         expiraEm: new Date(row.expira_em).getTime(),
       });
+      g.userData.memorialId = row.memorial_id || null;
       if(Date.now() >= g.userData.apagaEm) extinguishCandle(g);
     });
   }
-  loadVelas();
+  const velasCarregadas = loadVelas();
 
   /* ============ VIDA AMBIENTE ============ */
   const borboletas = criarBorboletas(scene, { perfil });
@@ -635,6 +664,9 @@ export function createWorld(scene, { renderer, perfil, pos }) {
     copas,
     plantAndSaveFlor,
     plantAndSaveVela,
+    acenderVelaNaHomenagem,
+    velasAcesas,
+    velasCarregadas,
     scatterFlowers,
     isFreeSpot,
     gatherFireflies: (x, z) => borboletas.juntar(x, z),

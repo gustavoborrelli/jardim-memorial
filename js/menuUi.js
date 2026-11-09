@@ -122,7 +122,7 @@ export function createMenuUi({ camera, lapides, world, dogController, pausedStat
 
   // Se já está logado, roda a ação na hora; senão guarda pra depois e abre o login.
   // Usado tanto por "deixar homenagem" quanto por "plantar flor".
-  // a vaga que pediu login (homenagem): guardada antes de ir para o Google
+  // o que pediu login, para retomar na volta do Google: { tipo: 'homenagem' | 'vela', plot }
   let vagaParaLogin = null;
   function requireAuth(action){
     if(auth.getUser()){ action(); return; }
@@ -395,7 +395,7 @@ export function createMenuUi({ camera, lapides, world, dogController, pausedStat
     pendingPlot = null;
   }
   function openModalFor(plot){
-    if(!auth.getUser()) vagaParaLogin = plot;
+    if(!auth.getUser()) vagaParaLogin = { tipo: 'homenagem', plot };
     requireAuth(()=>{
       pendingPlot = plot;
       openModal();
@@ -550,8 +550,22 @@ export function createMenuUi({ camera, lapides, world, dogController, pausedStat
     });
   }
 
-  async function openMessagesFor(stone){
+  let livroVoltaAoMapa = false;
+  function atualizarVelasDoLivro(){
+    const linha = document.getElementById('msgVelasTexto');
+    if(!pendingStone || !linha) return;
+    const n = world.velasAcesas(pendingStone.userData.data.id);
+    linha.textContent = n === 0 ? 'Nenhuma vela acesa' : n === 1 ? '🕯️ 1 vela acesa' : `🕯️ ${n} velas acesas`;
+  }
+  document.getElementById('btnMsgVela').addEventListener('click', (e)=>{
+    if(!pendingStone) return;
+    pedirVela(pendingStone.userData.plotRef, e.currentTarget);
+  });
+  async function openMessagesFor(stone, { voltarAoMapa = false } = {}){
+    livroVoltaAoMapa = voltarAoMapa;
     pendingStone = stone;
+    const botaoVela = document.getElementById('btnMsgVela');
+    botaoVela.disabled = false; botaoVela.textContent = 'Acender uma vela';
     const d = stone.userData.data;
     const plotRef = stone.userData.plotRef;
     msgStoneName.textContent = d.name;
@@ -561,6 +575,7 @@ export function createMenuUi({ camera, lapides, world, dogController, pausedStat
     btnAdminDeleteStone.style.display = isAdmin() ? '' : 'none';
     btnShareStone.style.display = d.slug ? '' : 'none';
     messagesList.innerHTML = '<p class="message-empty">Carregando…</p>';
+    atualizarVelasDoLivro();
     messagesModalBack.classList.add('open');
     dogController.resetKeys();
     const list = await lapides.getMessages(d.id);
@@ -568,7 +583,10 @@ export function createMenuUi({ camera, lapides, world, dogController, pausedStat
   }
   function closeMessagesModal(){
     messagesModalBack.classList.remove('open');
+    const plot = pendingStone && pendingStone.userData.plotRef;
     pendingStone = null;
+    // aberto pela ficha do mapa: fechar volta para o mapa, na mesma ficha
+    if(livroVoltaAoMapa && plot){ livroVoltaAoMapa = false; mapaUi.abrirFichaDe(plot); }
   }
   btnMsgCancel.addEventListener('click', closeMessagesModal);
   btnShareStone.addEventListener('click', ()=>{
@@ -839,7 +857,7 @@ export function createMenuUi({ camera, lapides, world, dogController, pausedStat
     if(!vagaParaLogin) return;
     try {
       localStorage.setItem(VAGA_PENDENTE, JSON.stringify({
-        x: vagaParaLogin.x, z: vagaParaLogin.z,
+        tipo: vagaParaLogin.tipo, x: vagaParaLogin.plot.x, z: vagaParaLogin.plot.z,
         raca: dogController.getBreed() || racaGuardada(), quando: Date.now(),
       }));
     } catch(e){}
@@ -857,6 +875,15 @@ export function createMenuUi({ camera, lapides, world, dogController, pausedStat
     if(!plot) return;
     const raca = p.raca || racaGuardada() || 'golden';
     if(dogController.getBreed() !== raca) dogController.selectDog(raca);
+    if(p.tipo === 'vela'){
+      // pediu para acender uma vela: acende e mostra a ficha com a contagem nova
+      if(!plot.occupied || !plot.data) return;
+      startGame();
+      await world.velasCarregadas;
+      mapaUi.abrirFichaDe(plot);
+      acenderVela(plot);
+      return;
+    }
     if(plot.occupied){
       startGame();
       showToast('Essa vaga foi ocupada enquanto você entrava. Escolha outra no mapa.');
@@ -881,11 +908,39 @@ export function createMenuUi({ camera, lapides, world, dogController, pausedStat
     }
   }
 
+  /* ============ VELA NUMA HOMENAGEM ============
+     Pela ficha do mapa ou pelo livro de mensagens: a vela nasce na frente da pedra
+     no jardim 3D e conta nas "velas acesas" da homenagem (etapa 34). Pede login,
+     como a vela no chão; se o login for pelo Google, a vela é acesa na volta. */
+  async function acenderVela(plot){
+    if(!plot || !plot.data) return false;
+    const ok = await world.acenderVelaNaHomenagem(plot.data.id, plot);
+    if(ok){
+      chime(440, 0.06);
+      showToast(`Sua vela ficou acesa ao lado de ${plot.data.name}.`);
+    } else {
+      showToast('Não foi possível acender a vela. Tente de novo.');
+    }
+    mapaUi.velaAcesa(plot);
+    atualizarVelasDoLivro();
+    return ok;
+  }
+  function pedirVela(plot, botao){
+    if(!auth.getUser()) vagaParaLogin = { tipo: 'vela', plot };
+    requireAuth(async ()=>{
+      vagaParaLogin = null;
+      if(botao){ botao.disabled = true; botao.textContent = 'Acendendo…'; }
+      const ok = await acenderVela(plot);
+      if(botao && botao.isConnected){ botao.textContent = ok ? 'Vela acesa' : 'Acender uma vela'; botao.disabled = ok; }
+    });
+  }
+
   mapaUi.ligarAcoes({
     visitar: visitarDoMapa,
+    vela: pedirVela,
     mensagens: (plot)=>{
       const pedra = plot.data && lapides.acharLapide(plot.data.id);
-      if(pedra) openMessagesFor(pedra);
+      if(pedra) openMessagesFor(pedra, { voltarAoMapa: true });
     },
     criar: (plot)=> openModalFor(plot),
   });

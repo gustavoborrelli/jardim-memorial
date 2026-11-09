@@ -18,7 +18,9 @@
   se o jardim ganhar vagas, o mapa as desenha na próxima abertura.
 
   createMapaUi(deps) devolve openMap()/closeMap()/isOpen() e ligarAcoes(), que o
-  menuUi.js usa para dizer o que cada botão da ficha faz.
+  menuUi.js usa para dizer o que cada botão da ficha faz. A ficha mostra as velas
+  acesas e as mensagens da homenagem, e "Acender uma vela" acende ali mesmo, sem
+  fechar o mapa (etapa 34).
 */
 
 const NS = 'http://www.w3.org/2000/svg';
@@ -227,6 +229,11 @@ export function createMapaUi({ lapides, world, dogController, bounds }){
         el('text', { y: 1.15, 'text-anchor': 'middle', class: 'mt-titulo', 'font-size': 3.3, fill: TINTA }, corpo).textContent = (nome.trim()[0] || '?').toUpperCase();
       }
       el('circle', { r: 2.7, fill: 'none', stroke: TINTA, 'stroke-width': .12 }, corpo);
+      const velas = world.velasAcesas ? world.velasAcesas(d.id) : 0;
+      if(velas > 0){
+        desenharVela(corpo, 3.15, -.6, .95);
+        el('text', { x: 3.95, y: .35, class: 'mt-mao', 'font-weight': 700, 'font-size': 1.35, fill: TINTA }, corpo).textContent = velas;
+      }
       el('text', { y: acima ? -3.75 : 4.75, 'text-anchor': 'middle', class: 'mt-mao', 'font-weight': 700, 'font-size': 2, fill: TINTA,
         stroke: '#f3e6c6', 'stroke-width': .55, 'paint-order': 'stroke', 'stroke-linejoin': 'round' }, corpo).textContent = nome.length > 14 ? nome.slice(0, 13) + '…' : nome;
     } else {
@@ -238,6 +245,13 @@ export function createMapaUi({ lapides, world, dogController, bounds }){
     g.addEventListener('click', (e) => { e.stopPropagation(); abrirFicha(plot, g); });
     g.addEventListener('keydown', (e) => { if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); abrirFicha(plot, g); } });
     return g;
+  }
+
+  function desenharVela(pai, x, y, escala){
+    const g = el('g', { transform: `translate(${x} ${y}) scale(${escala})` }, pai);
+    el('circle', { cy: -.2, r: 1.5, fill: '#ffcf6b', opacity: .35 }, g);
+    el('rect', { x: -.32, y: .1, width: .64, height: 1.1, rx: .12, fill: '#f6efe0', stroke: TINTA, 'stroke-width': .1 }, g);
+    el('path', { class: 'mt-chama', d: 'M0 -1.25 C.55 -.6 .5 -.05 0 .1 C-.5 -.05 -.55 -.6 0 -1.25 Z', fill: '#e39a32', stroke: TINTA, 'stroke-width': .08 }, g);
   }
 
   function desenharFaixas(pai){
@@ -284,8 +298,10 @@ export function createMapaUi({ lapides, world, dogController, bounds }){
     el('circle', { cx: 12.2, cy: 4.6, r: .9, fill: 'none', stroke: VERDE, 'stroke-width': .12, 'stroke-dasharray': '.4 .3' }, g);
     el('use', { href: '#mt-pata', x: 11.6, y: 4, width: 1.2, height: 1.2, fill: VERDE, opacity: .6 }, g);
     el('text', { x: 13.5, y: 5.05, class: 'mt-mao', 'font-size': 1.45, fill: TINTA }, g).textContent = 'vaga livre';
-    el('polygon', { points: '21.6,3.7 22.4,5.4 20.8,5.4', fill: '#e39a32', stroke: TINTA, 'stroke-width': .1 }, g);
-    el('text', { x: 23, y: 5.05, class: 'mt-mao', 'font-size': 1.45, fill: TINTA }, g).textContent = 'você';
+    desenharVela(g, 20.4, 4.85, .62);
+    el('text', { x: 21.2, y: 5.05, class: 'mt-mao', 'font-size': 1.45, fill: TINTA }, g).textContent = 'velas';
+    el('polygon', { points: '25.4,3.7 26.2,5.4 24.6,5.4', fill: '#e39a32', stroke: TINTA, 'stroke-width': .1 }, g);
+    el('text', { x: 26.8, y: 5.05, class: 'mt-mao', 'font-size': 1.45, fill: TINTA }, g).textContent = 'você';
   }
 
   // onde o cachorro está e para onde olha. O rotation.y do three.js, visto de cima
@@ -338,9 +354,11 @@ export function createMapaUi({ lapides, world, dogController, bounds }){
           <button class="mt-fechar-ficha" type="button" aria-label="Fechar a ficha">×</button>
         </div>
         ${d.msg ? `<p class="mt-msg">“${escapar(d.msg)}”</p>` : ''}
+        <p class="mt-vida"><svg viewBox="-1 -1.5 2 3" aria-hidden="true"><rect x="-.32" y=".1" width=".64" height="1.1" rx=".12" fill="#f6efe0" stroke="#4a3424" stroke-width=".1"/><path d="M0 -1.25 C.55 -.6 .5 -.05 0 .1 C-.5 -.05 -.55 -.6 0 -1.25 Z" fill="#e39a32" stroke="#4a3424" stroke-width=".08"/></svg><span class="mt-vida-texto"></span></p>
         <div class="mt-acoes">
-          <button class="mt-btn mt-primario" type="button" data-acao="visitar">Visitar no jardim</button>
+          <button class="mt-btn mt-primario mt-largo" type="button" data-acao="vela" data-fica="1">Acender uma vela</button>
           <button class="mt-btn" type="button" data-acao="mensagens">Mensagens</button>
+          <button class="mt-btn" type="button" data-acao="visitar">Visitar no jardim</button>
         </div>`;
     } else {
       ficha.innerHTML = `
@@ -357,10 +375,45 @@ export function createMapaUi({ lapides, world, dogController, bounds }){
     ficha.querySelector('.mt-fechar-ficha').addEventListener('click', fecharFicha);
     ficha.querySelectorAll('[data-acao]').forEach(b => b.addEventListener('click', () => {
       const f = acoes[b.dataset.acao];
+      if(b.dataset.fica){ if(f) f(plot, b); return; } // vela: acende sem sair do mapa
       closeMap();
       if(f) f(plot);
     }));
     ficha.classList.add('aberta');
+    if(d) atualizarVida(plot);
+  }
+
+  // "3 velas acesas · 5 mensagens": as velas vêm do jardim, as mensagens do banco
+  let pedidoMsgs = 0;
+  async function atualizarVida(plot){
+    const alvo = ficha.querySelector('.mt-vida-texto');
+    if(!alvo || !plot.data) return;
+    const velas = world.velasAcesas ? world.velasAcesas(plot.data.id) : 0;
+    const textoVelas = velas === 0 ? 'Nenhuma vela acesa' : velas === 1 ? '1 vela acesa' : `${velas} velas acesas`;
+    alvo.textContent = textoVelas;
+    const meu = ++pedidoMsgs;
+    const msgs = await lapides.getMessages(plot.data.id);
+    if(meu !== pedidoMsgs || !ficha.contains(alvo)) return;
+    alvo.textContent = `${textoVelas} · ${msgs.length === 1 ? '1 mensagem' : `${msgs.length} mensagens`}`;
+  }
+
+  // depois de acender: o medalhão ganha a velinha e a ficha, a contagem nova
+  function velaAcesa(plot){
+    const m = marcadores.find(mk => mk.plot === plot);
+    if(m){
+      const eraAtual = atual === m.g;
+      const novo = desenharMedalhao(m.g.parentNode, plot);
+      m.g.replaceWith(novo);
+      m.g = novo;
+      if(eraAtual){ novo.classList.add('mt-ativa'); atual = novo; }
+    }
+    atualizarVida(plot);
+  }
+  // abre o mapa já com a ficha de uma vaga (volta do livro de mensagens, volta do login)
+  function abrirFichaDe(plot){
+    if(!isOpen()) openMap();
+    const m = marcadores.find(mk => mk.plot === plot);
+    if(m) abrirFicha(plot, m.g);
   }
   function fecharFicha(){
     ficha.classList.remove('aberta');
@@ -400,5 +453,5 @@ export function createMapaUi({ lapides, world, dogController, bounds }){
   btnFechar.addEventListener('click', closeMap);
   modalBack.addEventListener('click', e => { if(e.target === modalBack) closeMap(); });
 
-  return { openMap, closeMap, isOpen, fecharUmPasso, ligarAcoes };
+  return { openMap, closeMap, isOpen, fecharUmPasso, ligarAcoes, velaAcesa, abrirFichaDe };
 }

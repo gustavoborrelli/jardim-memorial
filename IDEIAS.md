@@ -665,7 +665,7 @@ flores/velas nas lápides dos outros (MVP family & friends).
     pelo link a uma estátua de gato com o maine coon escolhido. Quem estiver com a
     versão antiga aberta vê o gato de outra pessoa como dachshund até recarregar.
 
-33. 🔜 **Vaga guardada no login com Google** (branch `vaga-guardada`) — segunda parte
+33. ✅ **Vaga guardada no login com Google** — segunda parte
     do mapa de tesouro. O login com Google sai do site e volta recarregando a
     página: quem tocava em "Fazer uma homenagem aqui" caía de volta no menu e tinha
     de escolher o companheiro, andar até a vaga e tocar nela de novo. Agora, ao
@@ -683,6 +683,32 @@ flores/velas nas lápides dos outros (MVP family & friends).
     sair, a volta abre o formulário, a vaga ocupada abre o mapa, e o site aberto
     sem voltar do login não faz nada. A volta de verdade do Google só se confirma
     no ar.
+
+34. 🔜 **Vela numa homenagem** (branch `vela-na-ficha`) — terceira parte do mapa de
+    tesouro, e o item 8 da lista de melhorias: até aqui a vela era só um ponto no
+    chão e não pertencia a cachorro nenhum. A tabela `velas` ganhou `memorial_id`
+    (`supabase/018_vela_na_homenagem.sql`, que apaga as velas junto com a
+    homenagem). "Acender uma vela" está na ficha do mapa (botão grande, acende sem
+    fechar o mapa) e no livro de mensagens (linha "🕯️ 2 velas acesas · Acender uma
+    vela"). A vela nasce no jardim 3D na frente da pedra, entre ela e quem visita,
+    numa fileira que vai enchendo do meio para os lados. O medalhão do mapa ganha
+    uma velinha com o número de velas acesas, a ficha mostra "2 velas acesas · 5
+    mensagens", e a legenda do mapa explica a velinha.
+    - "Mensagens" na ficha abre o livro, e fechar o livro volta para o mapa, na
+      mesma ficha.
+    - Sem login, a vela pede login como a do chão; com o Google, a vela fica
+      guardada (a mesma `jardimVagaPendente` da etapa 33, agora com `tipo`) e é
+      acesa na volta, com o mapa aberto na ficha da homenagem.
+    - Se o banco recusar a vela, ela sai do jardim e aparece um aviso (senão a
+      contagem mentiria).
+    - Velas plantadas no chão continuam sem dono. "Velas acesas" conta as que
+      ainda não apagaram (cada vela queima de 8 a 10 dias).
+    Testado com Playwright no computador e no iPhone 14, com o banco simulado: a
+    vela vai para o banco com o `memorial_id`, a contagem passa de 1 para 2 no
+    medalhão, na ficha e no livro, o livro volta ao mapa, e as duas velas aparecem
+    na frente da estátua. Sem login, o login abre sobre o mapa e a vela fica
+    guardada para a volta. **Rodar `supabase/018_vela_na_homenagem.sql` no
+    Supabase antes do deploy**: sem a coluna, o banco recusa a vela da homenagem.
 
 ## Ideias soltas (não decidido ainda)
 
