@@ -11,9 +11,10 @@
   pelo em volta dos olhos virava um par de óculos.
 
   Golden e pastor sentados, dachshund deitado (escolha do Gustavo em 2026-11-08,
-  depois de ver as duas poses nas duas raças). Para sentar, o corpo gira em volta
-  do quadril e as patas da frente esticam até o ombro: no dachshund, de perna
-  curta e corpo comprido, viram palitos.
+  depois de ver as duas poses nas duas raças). O caramelo, que veio depois,
+  também deita: sentado, ao lado do pastor, os dois pareciam a mesma estátua.
+  Para sentar, o corpo gira em volta do quadril e as patas da frente esticam até
+  o ombro: no dachshund, de perna curta e corpo comprido, viram palitos.
 
   Deitado sai de perfil (focinho para +x) e sentado de três quartos, ambos com a
   cabeça virada para quem chega por +z. A malha fica em cache por raça e pose.
@@ -49,6 +50,14 @@ const MEDIDAS = {
     rabo: { r: 0.058, ponta: 0.034, comp: 0.46, pelo: 1.5 },
     pescoco: [[0, 0.6, 0.31], [0, 0.76, 0.44]],
     sentado: { inclina: 0.76, giro: 0.45, ergue: 0.1 },
+  },
+  caramelo: {
+    frente: { r1: 0.072, r2: 0.04, pe: [0.054, 0.038, 0.072], ante: 0.3 },
+    tras: { coxa: 0.098, canela: 0.042, pe: [0.054, 0.038, 0.074] },
+    rabo: { r: 0.05, ponta: 0.03, comp: 0.46, pelo: 1.2 },
+    pescoco: [[0, 0.6, 0.31], [0, 0.76, 0.44]],
+    // deitado, como o dachshund: sentado, de orelha em pé, se confundia com o pastor
+    deitado: { giro: 0.85, ergue: 0.1 },
   },
   dachshund: {
     frente: { r1: 0.07, r2: 0.04, pe: [0.05, 0.034, 0.066], ante: 0.2 },

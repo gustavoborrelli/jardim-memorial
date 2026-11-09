@@ -25,6 +25,11 @@ const ruido3 = (x, y, z) => {
 };
 const achatarX = (f, cx, k) => (x, y, z) => f(cx + (x-cx)*k, y, z)/k;
 const achatarZ = (f, cz, k) => (x, y, z) => f(x, y, cz + (z-cz)*k)/k;
+// achata ao longo de uma direção qualquer (n unitário), em volta do ponto c
+const achatarDir = (f, [cx, cy, cz], [nx, ny, nz], k) => (x, y, z) => {
+  const t = ((x-cx)*nx + (y-cy)*ny + (z-cz)*nz)*(k-1);
+  return f(x + nx*t, y + ny*t, z + nz*t)/k;
+};
 
 /* ============ material do pelo ============ */
 function materialPelo({ comprimento, densidade, cascas, rim = 0.32 }){
@@ -93,7 +98,7 @@ function materialPelo({ comprimento, densidade, cascas, rim = 0.32 }){
   return m;
 }
 
-/* ============ as três raças ============ */
+/* ============ as quatro raças ============ */
 export function receita(raca){
   if(raca === 'golden'){
     const OURO = lin(0xe2b066), MEL = lin(0xc48a3e), CREME = lin(0xf6e6c4), NARIZ_COR = lin(0x8d6236);
@@ -249,6 +254,95 @@ export function receita(raca){
         return p;
       },
       peloRabo(){ return 1.5; },
+    };
+  }
+
+  if(raca === 'caramelo'){
+    // o vira-lata caramelo: magro, de peito fundo e barriga recolhida, pelo curto
+    // cor de caramelo com peito e garganta creme, ponta do focinho escura, orelha
+    // em pé com a ponta dobrada para a frente e rabo em foice por cima do dorso
+    const CARAMELO = lin(0xdb9a52), TOSTADO = lin(0xb6712f), CREME = lin(0xf3e0bc), CLARO = lin(0xebc18a), MASCARA = lin(0x3a2416);
+    const olhos = { x: 0.072, y: 0.873, z: 0.638, r: 0.035 };
+    const normalFlap = [0, 0.94, 0.342];
+    return {
+      comprimento: 0.018, densidade: 180,
+      olhos,
+      nariz: { pos: [0, 0.806, 0.85], esc: [0.034, 0.027, 0.025] },
+      boca: { a: [0, 0.77, 0.842], b: [0.044, 0.755, 0.775], c: [0.073, 0.768, 0.7], haste: [0, 0.783, 0.85] },
+      lingua: { pos: [0.004, 0.745, 0.808], esc: [0.029, 0.056, 0.014] },
+      pescocoPivo: [0, 0.72, 0.42],
+      olhoAltura: 0.86, olhoFrente: 1.0,
+      tronco: esculpir([
+        [corrente([[0, 0.5, -0.33, 0.152], [0, 0.54, -0.04, 0.152], [0, 0.555, 0.24, 0.188]], 0.05), 0],
+        [elipsoide(0, 0.48, 0.3, 0.118, 0.172, 0.112), 0.08],
+        [cone([0, 0.6, 0.31], [0, 0.76, 0.44], 0.135, 0.1), 0.08],
+      ]),
+      caixaTronco: [[-0.26, 0.22, -0.56], [0.26, 0.86, 0.54]],
+      cabeca: esculpir([
+        [elipsoide(0, 0.85, 0.51, 0.138, 0.127, 0.148), 0],
+        [esfera(0.06, 0.886, 0.592, 0.046), 0.04],
+        [esfera(-0.06, 0.886, 0.592, 0.046), 0.04],
+        [esfera(0.072, 0.8, 0.585, 0.058), 0.06],
+        [esfera(-0.072, 0.8, 0.585, 0.058), 0.06],
+        [cone([0, 0.824, 0.61], [0, 0.8, 0.79], 0.079, 0.052), 0.065],
+        [cone([0, 0.762, 0.65], [0, 0.762, 0.772], 0.044, 0.033), 0.03],
+        [cone([0, 0.72, 0.42], [0, 0.82, 0.49], 0.104, 0.108), 0.07],
+      ]),
+      caixaCabeca: [[-0.22, 0.58, 0.28], [0.22, 1.02, 0.92]],
+      orelha: {
+        // em pé até o meio e a ponta dobrada para a frente: cada metade é achatada
+        // no próprio plano, senão a dobra encolhe junto com a orelha
+        forma: (s) => esculpir([
+          [achatarZ(cone([s*0.088, 0.925, 0.465], [s*0.108, 1.05, 0.46], 0.074, 0.034), 0.462, 2.7), 0],
+          [achatarDir(cone([s*0.107, 1.058, 0.468], [s*0.112, 1.03, 0.545], 0.034, 0.013), [s*0.107, 1.055, 0.47], normalFlap, 2.4), 0.015],
+        ]),
+        caixa: (s) => [[s*0.1 - 0.11, 0.84, 0.38], [s*0.1 + 0.11, 1.13, 0.6]],
+        pivo: (s) => [s*0.084, 0.93, 0.465],
+      },
+      patas: [
+        { pivo: [-0.11, 0.46, -0.33], forma: (x) => esculpir([[corrente([[x, 0.46, -0.33, 0.098], [x, 0.28, -0.39, 0.058], [x, 0.15, -0.42, 0.04], [x, 0.06, -0.385, 0.042]], 0.04), 0], [elipsoide(x, 0.038, -0.355, 0.054, 0.038, 0.074), 0.025]]) },
+        { pivo: [0.11, 0.46, -0.33], forma: (x) => esculpir([[corrente([[x, 0.46, -0.33, 0.098], [x, 0.28, -0.39, 0.058], [x, 0.15, -0.42, 0.04], [x, 0.06, -0.385, 0.042]], 0.04), 0], [elipsoide(x, 0.038, -0.355, 0.054, 0.038, 0.074), 0.025]]) },
+        { pivo: [-0.098, 0.47, 0.27], forma: (x) => esculpir([[corrente([[x, 0.47, 0.27, 0.072], [x, 0.26, 0.275, 0.045], [x, 0.06, 0.285, 0.04]], 0.03), 0], [elipsoide(x, 0.038, 0.31, 0.054, 0.038, 0.072), 0.025]]) },
+        { pivo: [0.098, 0.47, 0.27], forma: (x) => esculpir([[corrente([[x, 0.47, 0.27, 0.072], [x, 0.26, 0.275, 0.045], [x, 0.06, 0.285, 0.04]], 0.03), 0], [elipsoide(x, 0.038, 0.31, 0.054, 0.038, 0.072), 0.025]]) },
+      ],
+      rabo: {
+        pivo: [0, 0.56, -0.46],
+        forma: corrente([[0, 0.56, -0.46, 0.044], [0, 0.66, -0.57, 0.046], [0, 0.79, -0.6, 0.04], [0, 0.875, -0.56, 0.03], [0, 0.9, -0.5, 0.018]], 0.03),
+        caixa: [[-0.14, 0.44, -0.72], [0.14, 1.0, -0.36]],
+      },
+      cor(x, y, z, o){
+        const n = ruido3(x*2.2, y*2.2, z*2.2);
+        // dorso tostado, flanco caramelo
+        mixv(CARAMELO, TOSTADO, sst(0.6, 0.7, y + (n-0.5)*0.06)*(z < 0.42 ? 1 : sst(0.62, 0.42, z))*0.5, o);
+        // barriga, peito e garganta creme
+        mixv(o, CREME, sst(0.4, 0.3, y + (n-0.5)*0.05)*0.85, o);
+        mixv(o, CREME, sst(0.24, 0.34, z)*sst(0.64, 0.44, y)*0.85, o);
+        mixv(o, CREME, sst(0.79, 0.73, y)*sst(0.44, 0.56, z)*0.8, o);
+        // beiço e queixo claros; a ponta do focinho escura
+        mixv(o, CREME, sst(0.66, 0.74, z)*sst(0.81, 0.77, y)*0.7, o);
+        // (a máscara vem de longe: só na ponta virava um anel em volta do nariz)
+        mixv(o, MASCARA, sst(0.68, 0.85, z + (n-0.5)*0.03)*sst(0.72, 0.78, y)*0.62, o);
+        const dOlho = Math.hypot(Math.abs(x)-0.072, y-0.876, z-0.633);
+        if(dOlho < 0.06) mixv(o, TOSTADO, sst(0.06, 0.034, dOlho)*0.6, o);
+      },
+      corOrelha(x, y, z, o){ mixv(CARAMELO, TOSTADO, Math.min(1, sst(0.98, 1.05, y) + sst(0.49, 0.54, z))*0.75, o); },
+      corPata(x, y, z, o){ mixv(CARAMELO, CLARO, sst(0.3, 0.08, y), o); },
+      corRabo(x, y, z, o){
+        mixv(CARAMELO, TOSTADO, 0.4, o);
+        mixv(o, CREME, sst(0.86, 0.9, y)*sst(-0.56, -0.5, z)*0.8, o);
+      },
+      pelo(x, y, z){
+        let p = 1;
+        p *= 1 - sst(0.64, 0.76, z)*(y > 0.6 ? 0.85 : 0);
+        p += sst(0.22, 0.34, z)*sst(0.62, 0.42, y)*0.3;
+        if(y < 0.12) p *= 0.3;
+        const dOlho = Math.hypot(Math.abs(x)-0.072, y-0.876, z-0.633);
+        p *= sst(0.038, 0.062, dOlho);
+        const dNariz = Math.hypot(x, y-0.802, z-0.852);
+        p *= sst(0.03, 0.06, dNariz);
+        return p;
+      },
+      peloRabo(){ return 1.3; },
     };
   }
 

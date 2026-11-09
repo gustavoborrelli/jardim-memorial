@@ -455,7 +455,7 @@ flores/velas nas lápides dos outros (MVP family & friends).
     livre injetada na resposta do `jogo.js`. **Rodar `supabase/014_lapide_estatua.sql`
     no Supabase antes do deploy** e testar no celular.
 
-26. 🔜 **Link de cada homenagem** (branch `link-homenagem`) — no Brasil o WhatsApp é
+26. ✅ **Link de cada homenagem** — no Brasil o WhatsApp é
     o canal de distribuição inteiro, e não havia como mandar uma homenagem para
     alguém. Agora cada uma tem endereço próprio, `jardim-memorial.vercel.app/thor`.
     - **Endereço**: o banco escolhe na criação, a partir do nome, sem acento
@@ -497,6 +497,33 @@ flores/velas nas lápides dos outros (MVP family & friends).
     exige login na Vercel, e o robô do WhatsApp para nele. **Rodar
     `supabase/015_link_homenagem.sql` antes do deploy**: sem a coluna `slug`, gravar
     homenagem falha.
+
+27. 🔜 **Vira-lata caramelo** (branch `caramelo`) — pedido do usuário: o cachorro
+    mais comum do Brasil não estava entre as raças. Entrou nos dois lugares: como
+    quarta raça do passeio (cartão "Vira-lata Caramelo" no menu, que passou a uma
+    grade 2×2 também no celular, onde 4 cartões em coluna passariam da tela) e
+    como estátua (`estatua-caramelo`). A estátua nasceu sentada, como golden e
+    pastor, e o usuário pediu deitada, como o dachshund: sentado e de orelha em
+    pé, ao lado do pastor, os dois pareciam a mesma estátua.
+    O que faz ele ser caramelo e não um golden de outra cor: magro, de peito
+    fundo e barriga recolhida; pelo curto (`comprimento` 0,018, o menor depois do
+    dachshund); peito, garganta, beiço e barriga creme e "meias" claras nas
+    patas; ponta do focinho escura; orelha em pé com a ponta dobrada para a frente
+    e rabo em foice por cima do dorso, com a pontinha clara. A orelha é feita de
+    duas metades, cada uma achatada no próprio plano (`achatarDir` em `caes.js`):
+    achatada inteira, a dobra encolhia junto. Na pedra, a pose deitada e a orelha
+    dobrada separam o caramelo do pastor (sentado, orelha em pé).
+    Rodadas: (1) a máscara só na ponta do focinho virava um anel marrom em volta
+    do nariz — passou a vir de longe, bem mais fraca; (2) na luz do jardim o
+    caramelo do estúdio ficou ferrugem, quase setter irlandês — clareado e com
+    menos dorso tostado.
+    Testado com Playwright num estúdio (cachorro e estátua, ao lado das outras
+    raças) e no jogo com homenagens falsas: menu no computador e no iPhone 14,
+    passeio, e a chegada pelo link de uma estátua caramelo, em que a visita sai
+    com um cachorro caramelo. **Rodar `supabase/016_lapide_caramelo.sql` no
+    Supabase antes do deploy**: sem ele o banco recusa a estátua nova.
+    Quem estiver com o jardim aberto na versão antiga vê um caramelo de outra
+    pessoa como dachshund (a receita cai na última raça) até recarregar.
 
 ## Ideias soltas (não decidido ainda)
 

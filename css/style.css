@@ -781,7 +781,7 @@ canvas{display:block;outline:none;}
 /* dog breed cards */
 .dog-cards{
   display:grid;
-  grid-template-columns:repeat(3, 1fr);
+  grid-template-columns:repeat(2, 1fr);
   gap:10px;
 }
 .dog-card{
@@ -822,9 +822,6 @@ canvas{display:block;outline:none;}
   color:#9c8579;
   text-align:center;
   line-height:1.35;
-}
-@media (max-width:480px){
-  .dog-cards{ grid-template-columns:1fr; }
 }
 
 /* pause hint + pause menu */

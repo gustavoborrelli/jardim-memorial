@@ -71,7 +71,7 @@ export function createLapides(scene) {
   ];
   // as estátuas são o cachorro do passeio em mármore (gfx/estatuas.js); `raca` é a
   // chave da escultura em gfx/caes.js, e a pose vem dela (golden e pastor sentados,
-  // dachshund deitado)
+  // dachshund e caramelo deitados)
   const FORMATOS = [
     { id:'classica', label:'Clássica', icon:'🪨' },
     { id:'ossinho',  label:'Ossinho',  icon:'🦴' },
@@ -79,6 +79,7 @@ export function createLapides(scene) {
     { id:'estatua-golden',    label:'Golden',    icon:'🐕', raca:'golden' },
     { id:'estatua-pastor',    label:'Pastor',    icon:'🐕', raca:'shepherd' },
     { id:'estatua-dachshund', label:'Dachshund', icon:'🐕', raca:'dachshund' },
+    { id:'estatua-caramelo',  label:'Caramelo',  icon:'🐕', raca:'caramelo' },
   ];
 
   /* four named sections, one per quadrant */

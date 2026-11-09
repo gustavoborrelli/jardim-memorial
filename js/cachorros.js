@@ -3,9 +3,9 @@
 /*
   CACHORROS
   Controla o movimento do cachorro escolhido: teclado (WASD / setas), a câmera
-  que gira ao redor dele (touchpad / roda do mouse / toque). Os modelos das três
-  raças (Pastor Alemão, Dachshund, Golden Retriever) e a animação moram em
-  js/gfx/caes.js.
+  que gira ao redor dele (touchpad / roda do mouse / toque). Os modelos das quatro
+  raças (Pastor Alemão, Dachshund, Golden Retriever, Vira-lata Caramelo) e a
+  animação moram em js/gfx/caes.js.
 
   createDogController(scene, renderer, opts) devolve as funções que
   main.js usa a cada frame para mover o cachorro e atualizar a câmera.
