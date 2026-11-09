@@ -114,6 +114,8 @@ canvas{display:block;outline:none;}
   z-index:20;
 }
 .modal-back.open{ display:flex; }
+/* parte de uma tela desligada por enquanto (ex.: login com e-mail, LOGIN_COM_EMAIL) */
+.desligado{ display:none !important; }
 /* login pode ser pedido com o modal de mensagens já aberto atrás dele
    (diferente do modal de homenagem, que só abre depois do login) — garante
    que o login sempre fique por cima, não importa a ordem no DOM */

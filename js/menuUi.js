@@ -93,6 +93,13 @@ export function createMenuUi({ camera, lapides, world, dogController, pausedStat
   let pendingStone = null;
 
   /* ============ AUTH (entrar / criar conta) ============ */
+  // Login com e-mail e senha desligado até o jardim ter um e-mail de verdade
+  // (domínio próprio ou um Gmail do jardim no SMTP do Supabase): sem ele não há
+  // como recuperar a senha nem confirmar o e-mail de quem cria a conta. Decisão do
+  // Gustavo em 2026-11-09: por enquanto só Google. Para religar: true aqui, ligar a
+  // confirmação de e-mail no Supabase e trazer o "Esqueci minha senha" da app-ios.
+  const LOGIN_COM_EMAIL = false;
+  if(!LOGIN_COM_EMAIL) document.querySelectorAll('#authModalBack .login-email').forEach(el=> el.classList.add('desligado'));
   const authChip = document.getElementById('authChip');
   const authEmailLabel = document.getElementById('authEmail');
   const btnLogout = document.getElementById('btnLogout');
@@ -149,7 +156,7 @@ export function createMenuUi({ camera, lapides, world, dogController, pausedStat
     } else {
       // "Fazer login", e não "Entrar": o menu já tem o "Entrar no jardim"
       authTitle.textContent = 'Fazer login';
-      authSub.textContent = 'Entre para deixar uma homenagem no jardim.';
+      authSub.textContent = LOGIN_COM_EMAIL ? 'Entre para deixar uma homenagem no jardim.' : 'Entre com sua conta Google para deixar uma homenagem no jardim.';
       btnAuthConfirm.textContent = 'Entrar';
       authToggleText.textContent = 'Ainda não tem conta?';
       btnAuthToggleMode.textContent = 'Criar conta';
@@ -163,7 +170,7 @@ export function createMenuUi({ camera, lapides, world, dogController, pausedStat
     authEmailInput.value = '';
     authPasswordInput.value = '';
     authModalBack.classList.add('open');
-    setTimeout(()=> authEmailInput.focus(), 50);
+    if(LOGIN_COM_EMAIL) setTimeout(()=> authEmailInput.focus(), 50);
   }
   function closeAuthModal(){
     authModalBack.classList.remove('open');

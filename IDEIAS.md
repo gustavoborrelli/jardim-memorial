@@ -547,7 +547,7 @@ flores/velas nas lápides dos outros (MVP family & friends).
     (7 de teclado, 7 de toque), ☰ ausente no computador, ☰ → menu → "Entrar no
     jardim" de volta ao passeio.
 
-29. 🔜 **Dicas na primeira entrada e "Fazer login"** (branch `dicas-toque`) — itens 6 e
+29. ✅ **Dicas na primeira entrada e "Fazer login"** — itens 6 e
     7 da lista de melhorias de experiência.
     - **Dicas**: no celular os botões redondos são só ícones (☰ 🗺️ 🌼 🐾). Na primeira
       vez que a pessoa entra no jardim por toque, cada um ganha uma etiqueta ao lado
@@ -565,6 +565,21 @@ flores/velas nas lápides dos outros (MVP family & friends).
     Testado com Playwright no iPhone 14: dicas na entrada, somem com um toque, não
     voltam depois de recarregar; no computador, nenhuma dica.
 
+30. 🔜 **Só login com Google, por enquanto** (branch `so-google`) — o item seguinte da
+    lista era pôr um e-mail de verdade no Supabase (o servidor de teste dele trava
+    depois de poucos envios, e por isso a confirmação de e-mail está desligada). Sem
+    e-mail, quem entra com e-mail e senha não recupera a senha, e qualquer um cria
+    conta com o e-mail de outra pessoa. Decisão do usuário: por enquanto só Google;
+    domínio próprio (com Resend) ou um Gmail do jardim vêm depois, quando for
+    divulgar. Em 2026-11-09 havia 5 contas, todas de teste: a do administrador tem
+    e-mail **e** Google ligados (a regra do 008 olha o e-mail do token, que é o
+    mesmo), então o admin segue funcionando; uma conta só de e-mail criou 1
+    homenagem, que continua no jardim.
+    A janela de login mostra só "Continuar com Google". A parte de e-mail e senha
+    ficou no código, desligada por `LOGIN_COM_EMAIL` em `js/menuUi.js` (classe
+    `login-email` no HTML). Para religar: `true`, ligar a confirmação de e-mail no
+    Supabase e trazer o "Esqueci minha senha" da `app-ios`.
+
 ## Ideias soltas (não decidido ainda)
 
 - A leva de dinamismo social planejada em conjunto está completa: (1)
@@ -573,7 +588,7 @@ flores/velas nas lápides dos outros (MVP family & friends).
 - Pensar em um limite de tamanho/qtd de fotos por lápide.
 - Vale a pena limitar quantas flores/mensagens uma pessoa pode deixar por
   dia, pra evitar spam visual no jardim?
-- E-mail de confirmação: o Supabase usa um servidor de teste próprio, com
+- (Ver etapa 30: por enquanto só login com Google.) E-mail de confirmação: o Supabase usa um servidor de teste próprio, com
   limite baixo de envios por hora (ficamos sem receber depois de testar
   algumas vezes seguidas). "Confirm email" está desligado de novo por causa
   disso. Quando for mandar o link pra valer pros amigos, vale configurar um
