@@ -584,7 +584,7 @@ flores/velas nas lápides dos outros (MVP family & friends).
     cadastro aberto). O "Confirm email" do Supabase aparece ligado, ao contrário da
     nota antiga abaixo: ao religar o e-mail, o SMTP é obrigatório.
 
-31. 🔜 **Mapa de tesouro** (branch `mapa-ilustrado`) — começo de "Fazer uma homenagem"
+31. ✅ **Mapa de tesouro** — começo de "Fazer uma homenagem"
     + guardar a vaga antes do login. O usuário pediu que a vaga fosse escolhida num
     mapa "em forma de desenho, como aqueles mapas de tesouro", com prévia de quem
     está lá, e pensou em separar mundo 2D e 3D para quem prefere algo rápido. Ficou
@@ -620,7 +620,7 @@ flores/velas nas lápides dos outros (MVP family & friends).
     a estátua com o livro de mensagens aberto, vaga livre abrindo o login. Na
     primeira versão a visita atravessava a fonte e não chegava em 16 s.
 
-32. 🔜 **Gatos** (branch `gatos`) — pedido do usuário: as três raças de gato mais
+32. ✅ **Gatos** — pedido do usuário: as três raças de gato mais
     comuns, sem a "respiração de cachorro" na 1ª pessoa e com andar de gato.
     Entraram **Siamês, Persa e Maine Coon** como companheiros do passeio (menu
     separado em Cachorros e Gatos; com três gatos, o último cartão ocupa a linha
@@ -664,6 +664,25 @@ flores/velas nas lápides dos outros (MVP family & friends).
     jogo com Playwright: menu no computador e no iPhone 14, persa andando, visita
     pelo link a uma estátua de gato com o maine coon escolhido. Quem estiver com a
     versão antiga aberta vê o gato de outra pessoa como dachshund até recarregar.
+
+33. 🔜 **Vaga guardada no login com Google** (branch `vaga-guardada`) — segunda parte
+    do mapa de tesouro. O login com Google sai do site e volta recarregando a
+    página: quem tocava em "Fazer uma homenagem aqui" caía de volta no menu e tinha
+    de escolher o companheiro, andar até a vaga e tocar nela de novo. Agora, ao
+    tocar em "Continuar com Google" a partir de uma vaga, o navegador guarda a vaga
+    e o companheiro (`jardimVagaPendente`); na volta, já logada, a pessoa entra no
+    jardim parada na frente da vaga, com o formulário aberto. Se a vaga foi ocupada
+    nesse meio-tempo, um aviso e o mapa aberto para escolher outra.
+    Para não levar ninguém a uma vaga velha: só retoma quando a página é a volta do
+    login (`voltouDoLogin` em `chegada.js`, que lê o `#access_token` do endereço
+    antes de o Supabase apagá-lo), com até 20 minutos; quem desistiu no Google ou
+    abriu o site de outro jeito tem a vaga esquecida. O "Fazer login" do topo não
+    guarda vaga nenhuma.
+    Testado com Playwright, com a volta do Google simulada (sessão falsa no
+    endereço e `/auth/v1/user` respondido pelo teste): a vaga é guardada antes de
+    sair, a volta abre o formulário, a vaga ocupada abre o mapa, e o site aberto
+    sem voltar do login não faz nada. A volta de verdade do Google só se confirma
+    no ar.
 
 ## Ideias soltas (não decidido ainda)
 

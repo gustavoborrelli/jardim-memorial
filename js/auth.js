@@ -48,8 +48,8 @@ export function createAuth() {
   }
 
   // Redireciona pro Google e volta pro jardim já logado (fluxo OAuth padrão
-  // do Supabase). Como a página recarrega, quem chamou isso a partir de uma
-  // ação pendente (ex.: "plantar flor") precisa refazer o clique depois.
+  // do Supabase). Como a página recarrega, a ação pendente se perde; a única
+  // que volta sozinha é a homenagem numa vaga (menuUi.js guarda a vaga antes).
   async function signInWithGoogle() {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',

@@ -12,7 +12,7 @@
   cada frame (updateHints) ou a cada clique (openModalFor, chime).
 */
 import * as THREE from 'three';
-import { homenagemDoLink, slugPedido, htmlCartao, linkDaHomenagem } from './chegada.js';
+import { homenagemDoLink, slugPedido, htmlCartao, linkDaHomenagem, voltouDoLogin } from './chegada.js';
 import { GATOS } from './gfx/gatos.js';
 import { gerarCartao } from './cartao.js';
 
@@ -122,6 +122,8 @@ export function createMenuUi({ camera, lapides, world, dogController, pausedStat
 
   // Se já está logado, roda a ação na hora; senão guarda pra depois e abre o login.
   // Usado tanto por "deixar homenagem" quanto por "plantar flor".
+  // a vaga que pediu login (homenagem): guardada antes de ir para o Google
+  let vagaParaLogin = null;
   function requireAuth(action){
     if(auth.getUser()){ action(); return; }
     pendingAuthAction = action;
@@ -176,6 +178,7 @@ export function createMenuUi({ camera, lapides, world, dogController, pausedStat
   function closeAuthModal(){
     authModalBack.classList.remove('open');
     pendingAuthAction = null;
+    vagaParaLogin = null;
   }
   btnAuthCancel.addEventListener('click', closeAuthModal);
   authModalBack.addEventListener('click', e=>{ if(e.target===authModalBack) closeAuthModal(); });
@@ -215,6 +218,7 @@ export function createMenuUi({ camera, lapides, world, dogController, pausedStat
 
   btnLoginOpen.addEventListener('click', ()=>{
     pendingAuthAction = null;
+    vagaParaLogin = null;
     openAuthModal();
   });
 
@@ -222,6 +226,7 @@ export function createMenuUi({ camera, lapides, world, dogController, pausedStat
     btnGoogleLogin.disabled = true;
     authError.textContent = '';
     try{
+      guardarVagaPendente();
       await auth.signInWithGoogle();
       // a página vai redirecionar pro Google agora; nada mais a fazer aqui.
     } catch(err){
@@ -390,6 +395,7 @@ export function createMenuUi({ camera, lapides, world, dogController, pausedStat
     pendingPlot = null;
   }
   function openModalFor(plot){
+    if(!auth.getUser()) vagaParaLogin = plot;
     requireAuth(()=>{
       pendingPlot = plot;
       openModal();
@@ -820,6 +826,61 @@ export function createMenuUi({ camera, lapides, world, dogController, pausedStat
       },
     });
   }
+  /* ============ VAGA GUARDADA NO LOGIN COM GOOGLE ============
+     O login com Google sai do site e volta recarregando a página: o que a pessoa
+     estava fazendo se perdia, e ela caía no menu e tinha de achar a vaga de novo.
+     Antes de sair, a vaga escolhida (e o companheiro) fica guardada no navegador;
+     na volta, já logada, ela entra no jardim na frente da vaga, com o formulário
+     aberto. Se a vaga foi ocupada nesse meio-tempo, abre o mapa para escolher
+     outra. Quem desistiu do Google (ou abriu o site de outro jeito) não é levado
+     a lugar nenhum: a vaga guardada é esquecida. */
+  const VAGA_PENDENTE = 'jardimVagaPendente';
+  function guardarVagaPendente(){
+    if(!vagaParaLogin) return;
+    try {
+      localStorage.setItem(VAGA_PENDENTE, JSON.stringify({
+        x: vagaParaLogin.x, z: vagaParaLogin.z,
+        raca: dogController.getBreed() || racaGuardada(), quando: Date.now(),
+      }));
+    } catch(e){}
+  }
+  function lerVagaPendente(){
+    try { return JSON.parse(localStorage.getItem(VAGA_PENDENTE) || 'null'); } catch(e){ return null; }
+  }
+  function esquecerVagaPendente(){ try { localStorage.removeItem(VAGA_PENDENTE); } catch(e){} }
+
+  async function retomarVagaPendente(p){
+    esquecerVagaPendente();
+    if(!p || Date.now() - p.quando > 20*60*1000) return;
+    await lapides.carregadas;
+    const plot = lapides.plots.find(pl => Number(pl.x) === Number(p.x) && Number(pl.z) === Number(p.z));
+    if(!plot) return;
+    const raca = p.raca || racaGuardada() || 'golden';
+    if(dogController.getBreed() !== raca) dogController.selectDog(raca);
+    if(plot.occupied){
+      startGame();
+      showToast('Essa vaga foi ocupada enquanto você entrava. Escolha outra no mapa.');
+      mapaUi.openMap();
+      return;
+    }
+    // na frente da vaga e virado para ela (as pedras olham para +z)
+    dogController.posicionar(plot.x, plot.z + 2.3, Math.PI);
+    startGame();
+    openModalFor(plot);
+  }
+  {
+    const pendente = lerVagaPendente();
+    if(pendente && !voltouDoLogin) esquecerVagaPendente();
+    else if(pendente){
+      let feito = false;
+      const retomar = (user)=>{ if(user && !feito){ feito = true; retomarVagaPendente(pendente); } };
+      auth.onChange(retomar);
+      retomar(auth.getUser());
+      // voltou do Google sem login (desistiu ou deu erro): esquece a vaga
+      setTimeout(()=>{ if(!feito) esquecerVagaPendente(); }, 12000);
+    }
+  }
+
   mapaUi.ligarAcoes({
     visitar: visitarDoMapa,
     mensagens: (plot)=>{

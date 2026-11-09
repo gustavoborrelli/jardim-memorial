@@ -23,6 +23,11 @@ export function slugDoLink(){
 
 export const slugPedido = slugDoLink();
 
+// voltando do login com Google: o Supabase devolve a sessão no endereço
+// (#access_token=…, ou #error=… se a pessoa desistiu) e logo a apaga dali.
+// Este módulo roda antes do cliente do Supabase existir, então ainda vê.
+export const voltouDoLogin = /access_token=|error_description=|[?&]code=/.test(location.hash + location.search);
+
 /* a homenagem do link (linha da tabela memoriais), ou null se não houver link,
    se não existir ou se a rede falhar */
 export const homenagemDoLink = slugPedido
