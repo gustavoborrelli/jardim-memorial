@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,500&family=Inter:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,500&family=Inter:wght@400;500;600&family=IM+Fell+English+SC&family=Caveat:wght@500;700&display=swap');
 
 :root{
   --sky1:#7fb8e8;
@@ -301,123 +301,67 @@ canvas{display:block;outline:none;}
 .message-delete:hover{ color:#e88a8a; }
 
 /* mapa 2D do jardim */
-.modal-map{
-  width:min(560px, 92vw);
-  max-height:88vh;
-  overflow-y:auto;
+/* ===== mapa de tesouro (js/mapa.js) =====
+   papel e tinta de propósito: o mapa é um objeto do jardim, não um painel do app */
+.mt-fundo{ background:rgba(24,16,10,0.72); padding:calc(10px + env(safe-area-inset-top, 0px)) 10px calc(10px + env(safe-area-inset-bottom, 0px)); box-sizing:border-box; }
+.mt-quadro{ position:relative; width:min(620px, 100%); height:100%; max-height:1000px; display:flex; flex-direction:column; gap:8px; overflow:hidden; }
+.mt-topo{ display:flex; gap:8px; align-items:center; }
+.mt-busca{
+  flex:1; min-width:0; font-family:'Inter',sans-serif; font-size:14px;
+  padding:10px 14px; border-radius:12px; border:1.5px solid rgba(74,52,36,0.5);
+  background:#f6ead0; color:#4a3424;
 }
-.map-svg{
-  display:block;
-  width:100%;
-  aspect-ratio:1/1;
-  margin:4px 0 12px;
-  border-radius:12px;
-  background:#221c2c;
+.mt-busca::placeholder{ color:#8a7058; }
+.mt-busca:focus{ outline:2px solid #e39a32; outline-offset:1px; }
+.mt-fechar{
+  width:42px; height:42px; flex-shrink:0; border-radius:50%; cursor:pointer;
+  border:1.5px solid rgba(74,52,36,0.5); background:#f6ead0; color:#4a3424; font-size:24px; line-height:1;
 }
-/* mesmas cores do chão/avenidas/praça de verdade no jardim 3D (mundo.js),
-   pra o mapa funcionar como referência visual e não só um esquema abstrato */
-.map-ground{
-  fill:#8fb56d;
-  stroke:#5b4a3d;
-  stroke-width:0.2;
-}
-.map-avenue{
-  fill:#e2cfa6;
-}
-.map-plaza{
-  fill:#ddc79e;
-  stroke:#bfa87e;
-  stroke-width:0.35;
-}
-.map-fountain{
-  fill:#5cc2c9;
-  opacity:0.85;
-}
-.map-section-label{
-  fill:#f4efe6;
+.mt-svg{ flex:1; min-height:0; width:100%; display:block; filter:drop-shadow(0 10px 18px rgba(10,6,2,0.5)); }
+.mt-dica{ margin:0; text-align:center; font-family:'Caveat',cursive; font-size:19px; color:#f1e2c2; }
+.mt-titulo{ font-family:'IM Fell English SC', Georgia, serif; }
+.mt-mao{ font-family:'Caveat', 'Bradley Hand', cursive; }
+.mt-vaga{ cursor:pointer; outline:none; }
+.mt-vaga .mt-corpo{ transition:transform .15s ease, opacity .2s ease; transform-box:fill-box; transform-origin:center; }
+.mt-vaga:hover .mt-corpo, .mt-vaga.mt-ativa .mt-corpo, .mt-vaga.mt-achada .mt-corpo{ transform:scale(1.08); }
+.mt-vaga.mt-ativa .mt-aro, .mt-vaga.mt-achada .mt-aro{ stroke:#e39a32; stroke-width:.45; }
+.mt-vaga:focus-visible .mt-corpo{ filter:drop-shadow(0 0 .6px #e39a32); }
+.mt-vaga.mt-apagada .mt-corpo{ opacity:.25; }
+.mt-ficha{
+  position:absolute; left:0; right:0; bottom:0; z-index:2;
+  transform:translateY(105%); transition:transform .3s cubic-bezier(.2,.8,.2,1);
+  background:radial-gradient(ellipse at 20% 0%, rgba(255,250,235,.7), transparent 60%), #f2e4c4;
+  color:#4a3424; border-radius:18px 18px 0 0; box-shadow:0 -10px 30px rgba(10,6,2,.4);
+  padding:10px 18px 18px; max-height:80%; overflow-y:auto; box-sizing:border-box;
   font-family:'Inter',sans-serif;
-  font-size:1.35px;
-  font-weight:600;
-  letter-spacing:0.02px;
-  paint-order:stroke fill;
-  stroke:rgba(30,22,38,0.55);
-  stroke-width:0.32;
 }
-.map-marker{
-  stroke:rgba(30,22,38,0.5);
-  stroke-width:0.12;
-  cursor:pointer;
-  transition:opacity 0.15s ease;
+.mt-ficha.aberta{ transform:translateY(0); }
+.mt-alca{ width:44px; height:5px; border-radius:3px; background:rgba(74,52,36,.25); margin:0 auto 10px; }
+.mt-ficha-topo{ display:flex; gap:12px; align-items:center; }
+.mt-ficha-nome{ min-width:0; }
+.mt-moldura{
+  width:76px; height:76px; flex-shrink:0; border-radius:50%; padding:3px; margin:6px; box-sizing:border-box;
+  background:#f8eed8; box-shadow:0 0 0 1.5px #4a3424, 0 0 0 5px var(--cor, #c9beb0), 0 0 0 6.5px #4a3424;
 }
-.map-marker.empty{
-  fill:rgba(244,239,230,0.35);
-  stroke:rgba(30,22,38,0.4);
-  stroke-dasharray:0.22;
+.mt-moldura img{ width:100%; height:100%; border-radius:50%; object-fit:cover; display:block; }
+.mt-moldura.mt-inicial{ display:grid; place-items:center; font-family:'IM Fell English SC', Georgia, serif; font-size:34px; }
+.mt-moldura.mt-vazia{ display:grid; place-items:center; background:rgba(61,107,69,.08); box-shadow:0 0 0 1.5px #3d6b45; }
+.mt-moldura.mt-vazia svg{ width:42px; height:42px; }
+.mt-ficha h3{ font-family:'IM Fell English SC', Georgia, serif; font-weight:400; font-size:28px; line-height:1.05; margin:0; overflow-wrap:anywhere; }
+.mt-datas{ margin:4px 0 0; font-size:13px; color:#7b5d43; }
+.mt-fechar-ficha{ margin-left:auto; align-self:flex-start; border:0; background:transparent; font-size:26px; line-height:1; color:#7b5d43; cursor:pointer; padding:4px 6px; }
+.mt-msg{ font-family:'Caveat',cursive; font-size:23px; line-height:1.2; margin:12px 0 14px; overflow-wrap:anywhere; }
+.mt-texto{ font-size:14px; line-height:1.5; margin:12px 0 14px; }
+.mt-nota{ font-size:12.5px; color:#7b5d43; margin:10px 0 0; text-align:center; }
+.mt-acoes{ display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.mt-acoes .mt-btn:only-child{ grid-column:1 / -1; }
+.mt-btn{
+  font-family:'Inter',sans-serif; font-weight:600; font-size:14px; cursor:pointer;
+  border-radius:12px; padding:12px 14px; border:1.5px solid #4a3424; background:transparent; color:#4a3424;
 }
-.map-marker.dim{ opacity:0.2; }
-.map-marker.selected{
-  stroke:var(--amber);
-  stroke-width:0.28;
-  animation:map-pulse 1.1s ease-out infinite;
-}
-@keyframes map-pulse{
-  0%{ stroke-opacity:1; }
-  70%{ stroke-opacity:0.15; }
-  100%{ stroke-opacity:1; }
-}
-.map-dog-marker polygon{
-  fill:var(--amber);
-  stroke:#fff;
-  stroke-width:0.14;
-  stroke-linejoin:round;
-}
-.map-legend{
-  display:flex; gap:16px;
-  font-size:11.5px;
-  color:rgba(244,239,230,0.65);
-  margin-bottom:12px;
-}
-.map-legend span{ display:flex; align-items:center; gap:6px; }
-.map-legend-dot{
-  width:10px; height:10px;
-  border-radius:50%;
-  display:inline-block;
-}
-.map-legend-dot.occupied{ background:var(--amber); }
-.map-legend-dot.empty{ background:transparent; border:1.5px dashed rgba(244,239,230,0.5); }
-
-.map-results{
-  max-height:160px;
-  overflow-y:auto;
-  margin-bottom:14px;
-}
-.map-result-item{
-  display:flex; justify-content:space-between; align-items:baseline; gap:10px;
-  width:100%;
-  background:none; border:none;
-  border-bottom:1px solid rgba(244,239,230,0.1);
-  padding:8px 2px;
-  font-family:'Inter',sans-serif;
-  color:var(--cream);
-  text-align:left;
-  cursor:pointer;
-}
-.map-result-item:last-child{ border-bottom:none; }
-.map-result-item:hover{ color:var(--amber); }
-.map-result-section{
-  font-size:10.5px;
-  color:rgba(244,239,230,0.5);
-  white-space:nowrap;
-}
-.map-results-empty{
-  font-size:12.5px;
-  font-style:italic;
-  color:rgba(244,239,230,0.5);
-  padding:6px 0;
-}
-
-/* botão pra abrir o mapa — mesmo estilo redondo dos outros dois, empilhado
-   mais uma posição acima */
+.mt-btn.mt-primario{ background:#3d6b45; border-color:#3d6b45; color:#f8eed8; }
+.mt-btn:focus-visible, .mt-fechar:focus-visible, .mt-fechar-ficha:focus-visible{ outline:3px solid #e39a32; outline-offset:2px; }
+@media (prefers-reduced-motion: reduce){ .mt-ficha, .mt-vaga .mt-corpo{ transition:none; } }
 .map-toggle{
   position:absolute;
   right:26px; bottom:150px;

@@ -579,6 +579,46 @@ flores/velas nas lápides dos outros (MVP family & friends).
     ficou no código, desligada por `LOGIN_COM_EMAIL` em `js/menuUi.js` (classe
     `login-email` no HTML). Para religar: `true`, ligar a confirmação de e-mail no
     Supabase e trazer o "Esqueci minha senha" da `app-ios`.
+    Com o ok do usuário, o provedor Email também foi desligado no painel do
+    Supabase (conferido em `/auth/v1/settings`: email falso, google verdadeiro,
+    cadastro aberto). O "Confirm email" do Supabase aparece ligado, ao contrário da
+    nota antiga abaixo: ao religar o e-mail, o SMTP é obrigatório.
+
+31. 🔜 **Mapa de tesouro** (branch `mapa-ilustrado`) — começo de "Fazer uma homenagem"
+    + guardar a vaga antes do login. O usuário pediu que a vaga fosse escolhida num
+    mapa "em forma de desenho, como aqueles mapas de tesouro", com prévia de quem
+    está lá, e pensou em separar mundo 2D e 3D para quem prefere algo rápido. Ficou
+    decidido **um jardim só, com duas portas** (dois mundos fariam cada coisa duas
+    vezes): o mapa ilustrado é a porta rápida e o 3D, o passeio. Três decisões dele:
+    (1) o site vai abrir no mapa, com "Passear no jardim" como botão grande; (2) do
+    mapa dá para ver, acender vela, deixar mensagem e criar homenagem, e andar e
+    plantar flor ficam no 3D — o que reverte o "mapa de verdade, não atalho mágico"
+    da etapa 18; (3) chão e caminhos por código, enfeites como desenho. Antes de
+    programar, um esboço interativo numa página privada; ele aprovou o visual.
+    **Primeira parte (esta):** o mapa do botão 🗺️ virou o mapa de tesouro
+    (`js/mapa.js` reescrito): papel com borda rasgada, traço de tinta à mão e
+    aquarela (filtros SVG de turbulência), árvores em volta da cerca, fonte,
+    jardineiras, arcos de entrada, os campos em faixas de pergaminho, rosa dos
+    ventos, legenda com a contagem de homenagens e vagas, rastro de patinhas da
+    entrada até a praça e a seta de "você". Cada homenagem é um medalhão com a foto
+    (ou a inicial) e o aro na cor escolhida; vaga livre é um círculo tracejado com
+    patinha. Tocar abre uma ficha de pergaminho: na homenagem, "Visitar no jardim"
+    (o cachorro sai de onde está, contorna a fonte pela beira da praça, entra pelo
+    arco do campo e pelo corredor do meio até a frente da pedra, e o livro de
+    mensagens abre) e "Mensagens"; na vaga livre, "Fazer uma homenagem aqui", que
+    abre o formulário (ou o login). A busca por nome ficou: esmaece quem não bate.
+    As vagas são desenhadas **maiores que no 3D** (colunas em 9,5 e 19 em vez de 9
+    e 15), como nos mapas ilustrados de parque: no tamanho real o medalhão não
+    caberia num toque de celular. `paraMapa()` estica as distâncias por trechos, e a
+    seta do cachorro passa pela mesma conta. Nos campos do norte o nome vai acima
+    do medalhão e nos do sul abaixo, para a faixa caber junto da avenida leste-oeste.
+    Fontes novas: IM Fell English SC (títulos do mapa) e Caveat (letra à mão).
+    Falta: guardar a vaga na volta do Google, vela e mensagem direto da ficha (pede
+    ligar a vela a uma homenagem no banco, o item 8 da lista) e abrir o site no mapa.
+    Testado com Playwright no computador e no iPhone 14, com homenagens falsas (uma
+    com foto): mapa, ficha, busca (15 apagadas, 1 achada), visita da entrada sul até
+    a estátua com o livro de mensagens aberto, vaga livre abrindo o login. Na
+    primeira versão a visita atravessava a fonte e não chegava em 16 s.
 
 ## Ideias soltas (não decidido ainda)
 

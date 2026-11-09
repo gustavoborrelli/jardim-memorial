@@ -781,6 +781,50 @@ export function createMenuUi({ camera, lapides, world, dogController, pausedStat
     });
   }
 
+  /* ============ BOTÕES DA FICHA DO MAPA DE TESOURO (js/mapa.js) ============
+     "Visitar no jardim": o cachorro sai de onde está, sem teletransporte (etapa 18).
+     De outro campo, vai até a avenida mais perto, contorna a praça e entra pela
+     avenida norte-sul do campo; dali, o corredor do meio (|x| = 12) leva à frente
+     da pedra sem passar por cima de outra, como na chegada pelo link. */
+  function visitarDoMapa(plot){
+    const dog = dogController.getDog();
+    if(!dog || !plot.data) return;
+    const alvo = { x: plot.x, z: plot.z };
+    const sx = Math.sign(alvo.x) || 1, sz = Math.sign(alvo.z) || 1;
+    const frente = alvo.z + 2.3;
+    const { x, z } = dog.position;
+    const dentroDeUmCampo = Math.abs(x) > 2.5 && Math.abs(z) > 2.5;
+    const mesmoCampo = dentroDeUmCampo && Math.sign(x) === sx && Math.sign(z) === sz;
+    const pontos = [];
+    if(!mesmoCampo){
+      let aqui = [x, z];
+      if(dentroDeUmCampo){
+        aqui = Math.abs(x) < Math.abs(z) ? [Math.sign(x)*1.2, z] : [x, Math.sign(z)*1.2];
+        pontos.push(aqui);
+      }
+      // do outro lado da praça: contorna a fonte pela beira, em vez de empurrar nela
+      if(Math.sign(aqui[1]) !== sz || Math.abs(aqui[1]) < 2.5) pontos.push([sx*3.3, sz*3.3]);
+      pontos.push([sx*1.2, sz*12]);
+    }
+    pontos.push([sx*12, mesmoCampo ? z : sz*12], [sx*12, frente], [alvo.x, frente]);
+    dogController.caminharPor(pontos, {
+      olharPara: alvo,
+      camera: cameraDaChegada(alvo.x, (frente + alvo.z)/2, Math.PI),
+      aoChegar: ()=>{
+        const pedra = lapides.acharLapide(plot.data.id);
+        if(pedra && !pausedState.value) openMessagesFor(pedra);
+      },
+    });
+  }
+  mapaUi.ligarAcoes({
+    visitar: visitarDoMapa,
+    mensagens: (plot)=>{
+      const pedra = plot.data && lapides.acharLapide(plot.data.id);
+      if(pedra) openMessagesFor(pedra);
+    },
+    criar: (plot)=> openModalFor(plot),
+  });
+
   // no celular não existe ESC: é o botão ☰ que pausa e volta para o menu
   document.getElementById('btnMenuToggle').addEventListener('click', ()=>{
     if(pausedState.value) return;
@@ -797,7 +841,7 @@ export function createMenuUi({ camera, lapides, world, dogController, pausedStat
       if(shareModalBack.classList.contains('open')){ fecharCompartilhar(); return; }
       if(modalBack.classList.contains('open')){ closeModal(); return; }
       if(messagesModalBack.classList.contains('open')){ closeMessagesModal(); return; }
-      if(mapModalBack.classList.contains('open')){ mapaUi.closeMap(); return; }
+      if(mapModalBack.classList.contains('open')){ mapaUi.fecharUmPasso(); return; }
       if(pausedState.value){
         if(!dogController.getDog()){ showMenuPanel(menuDogs); return; } // can't enter without a companion
         startGame();
