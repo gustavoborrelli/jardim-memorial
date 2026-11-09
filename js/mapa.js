@@ -372,9 +372,10 @@ function criarMapaUi(fonteInicial){
         <p class="mt-vida"><svg viewBox="-1 -1.5 2 3" aria-hidden="true"><rect x="-.32" y=".1" width=".64" height="1.1" rx=".12" fill="#f6efe0" stroke="#4a3424" stroke-width=".1"/><path d="M0 -1.25 C.55 -.6 .5 -.05 0 .1 C-.5 -.05 -.55 -.6 0 -1.25 Z" fill="#e39a32" stroke="#4a3424" stroke-width=".08"/></svg><span class="mt-vida-texto"></span></p>
         <div class="mt-acoes">
           <button class="mt-btn mt-primario mt-largo" type="button" data-acao="vela" data-fica="1">Acender uma vela</button>
-          <button class="mt-btn" type="button" data-acao="mensagens">Mensagens</button>
+          <button class="mt-btn" type="button" data-acao="mensagens" data-fica="1">Mensagens</button>
           <button class="mt-btn" type="button" data-acao="visitar">Visitar no jardim</button>
-        </div>`;
+        </div>
+        ${acoes.podeEditar && acoes.podeEditar(plot) ? '<p class="mt-nota"><button class="mt-link" type="button" data-acao="editar" data-fica="1">Editar esta homenagem</button></p>' : ''}`;
     } else {
       ficha.innerHTML = `
         <div class="mt-alca"></div>
@@ -384,7 +385,7 @@ function criarMapaUi(fonteInicial){
           <button class="mt-fechar-ficha" type="button" aria-label="Fechar a ficha">×</button>
         </div>
         <p class="mt-texto">Aqui pode ficar a homenagem do seu companheiro, com nome, foto, datas e uma mensagem.</p>
-        <div class="mt-acoes"><button class="mt-btn mt-primario" type="button" data-acao="criar">Fazer uma homenagem aqui</button></div>
+        <div class="mt-acoes"><button class="mt-btn mt-primario" type="button" data-acao="criar" data-fica="1">Fazer uma homenagem aqui</button></div>
         <p class="mt-nota">Para gravar, você entra com sua conta Google.</p>`;
     }
     ficha.querySelector('.mt-fechar-ficha').addEventListener('click', fecharFicha);
@@ -395,7 +396,10 @@ function criarMapaUi(fonteInicial){
     }
     ficha.querySelectorAll('[data-acao]').forEach(b => b.addEventListener('click', () => {
       const f = acoes[b.dataset.acao];
-      if(b.dataset.fica){ if(f) f(plot, b); return; } // vela: acende sem sair do mapa
+      // só "Visitar no jardim" sai do mapa; vela, mensagens, criar e editar abrem por
+      // cima dele, e ao terminar a pessoa está de volta ao mapa (na primeira tela,
+      // fechar o mapa deixava um jardim pausado e sem botões)
+      if(b.dataset.fica){ if(f) f(plot, b); return; }
       closeMap();
       if(f) f(plot);
     }));
@@ -514,6 +518,8 @@ function criarMapaUi(fonteInicial){
   modalBack.addEventListener('click', e => { if(e.target === modalBack && !isInicio()) closeMap(); });
 
   const ehVivo = () => vivo;
+  // redesenha com as homenagens de agora (depois de criar ou editar), sem perder a ficha
+  function atualizar(){ trocarFonte(fonte); }
 
-  return { openMap, openInicio, isInicio, closeMap, isOpen, fecharUmPasso, ligarAcoes, velaAcesa, abrirFichaDe, trocarFonte, usarJogo, ehVivo };
+  return { openMap, openInicio, isInicio, closeMap, isOpen, fecharUmPasso, ligarAcoes, velaAcesa, abrirFichaDe, trocarFonte, usarJogo, ehVivo, atualizar };
 }

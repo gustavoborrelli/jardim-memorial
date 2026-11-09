@@ -710,7 +710,7 @@ flores/velas nas lápides dos outros (MVP family & friends).
     guardada para a volta. **Rodar `supabase/018_vela_na_homenagem.sql` no
     Supabase antes do deploy**: sem a coluna, o banco recusa a vela da homenagem.
 
-35. 🔜 **O site abre no mapa** (branch `abre-no-mapa`) — última parte do mapa de
+35. ✅ **O site abre no mapa** — última parte do mapa de
     tesouro e a primeira das três decisões do usuário: a primeira tela é o mapa
     ilustrado, com "Passear no jardim" como botão grande e "Menu" ao lado (o cartão
     de sempre: escolher companheiro, como jogar, sobre, som, por cima do mapa).
@@ -741,6 +741,32 @@ flores/velas nas lápides dos outros (MVP family & friends).
     ficha com velas e mensagens, Passear com e sem companheiro guardado, ESC/☰
     voltando ao mapa, Menu e ESC no Menu, chegada pelo link e o teste das velas da
     etapa 34 pelo caminho novo.
+
+36. 🔜 **Editar a própria homenagem** (branch `editar-homenagem`) — item 4 da lista de
+    melhorias. O banco já deixava o autor atualizar a linha (003); faltava a tela.
+    Quem criou a homenagem vê "Editar" no livro de mensagens e "Editar esta
+    homenagem" na ficha do mapa (o banco confere de novo). Abre o formulário de
+    sempre, já preenchido (formato, cor, nome, datas, mensagem e a foto atual), com
+    "Salvar alterações". Foto nova só se a pessoa escolher outra; o cartão da prévia
+    no WhatsApp é refeito quando o nome, as datas ou a foto mudam. O link continua o
+    mesmo (o gatilho do 015 prende o `slug`). A pedra é trocada na hora no jardim,
+    e quem estiver com o jardim aberto também a vê mudar (evento UPDATE em tempo
+    real; a própria edição, que volta pelo mesmo evento, não refaz a pedra).
+    Sem migração no banco.
+    Dois problemas da primeira tela (etapa 35) pegos no teste e corrigidos:
+    - Criar, editar e mensagens fechavam o mapa antes de abrir; da primeira tela,
+      ao terminar, a pessoa ficava num jardim pausado e sem botões. Agora só
+      "Visitar no jardim" sai do mapa: o formulário, o livro de mensagens e o
+      compartilhar abrem por cima dele (z-index 45), e o mapa se redesenha com a
+      homenagem nova ou editada.
+    - "Visitar no jardim" antes de escolher companheiro fechava o mapa e não fazia
+      nada (não havia cachorro para caminhar). Agora entra com o companheiro
+      guardado, ou um golden, e caminha até a pedra.
+    Testado com Playwright no computador e no iPhone 14, com usuário e banco
+    simulados: "Editar" só na homenagem própria, formulário preenchido, o banco
+    recebe só as mudanças, a clássica vira estátua caramelo com coleira coral, o
+    mapa continua aberto com a ficha nova, e o livro mostra "Editar" ao autor. Os
+    testes das velas e da primeira tela continuam passando.
 
 ## Ideias soltas (não decidido ainda)
 

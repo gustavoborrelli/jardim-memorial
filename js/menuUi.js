@@ -379,7 +379,14 @@ export function createMenuUi({ camera, lapides, world, dogController, pausedStat
     reader.readAsDataURL(file);
   });
 
+  // o mesmo formulário cria e edita; `editando` é a vaga da homenagem sendo editada
+  let editando = null;
+  const tituloForm = modalBack.querySelector('h2'), subForm = modalBack.querySelector('.sub');
   function openModal(){
+    editando = null;
+    tituloForm.textContent = 'Uma homenagem';
+    subForm.textContent = 'Essas palavras ficarão gravadas na pedra escolhida.';
+    btnConfirm.textContent = 'Gravar na pedra';
     dogController.resetKeys();
     modalBack.classList.add('open');
     inName.value=''; inDates.value=''; inMsg.value='';
@@ -393,6 +400,65 @@ export function createMenuUi({ camera, lapides, world, dogController, pausedStat
   function closeModal(){
     modalBack.classList.remove('open');
     pendingPlot = null;
+    editando = null;
+  }
+
+  /* ============ EDITAR A PRÓPRIA HOMENAGEM (etapa 36) ============
+     Só quem criou vê o "Editar" (no livro de mensagens e na ficha do mapa); o banco
+     confere de novo (003). Abre o formulário de sempre já preenchido. */
+  const podeEditar = (plot) => {
+    const user = auth.getUser();
+    return !!(user && plot && plot.data && plot.data.criadoPor && plot.data.criadoPor === user.id);
+  };
+  function abrirEdicao(plot){
+    if(!podeEditar(plot)) return;
+    openModal();
+    editando = plot;
+    const d = plot.data;
+    tituloForm.textContent = 'Editar homenagem';
+    subForm.textContent = 'O link da homenagem continua o mesmo.';
+    btnConfirm.textContent = 'Salvar alterações';
+    inName.value = d.name || '';
+    inDates.value = d.dates || '';
+    inMsg.value = d.msg || '';
+    pendingFormato = lapides.FORMATOS.some(f => f.id === d.formato) ? d.formato : lapides.FORMATOS[0].id;
+    pendingCor = d.cor || lapides.PALETTE[0].hex;
+    formatoPicker.querySelectorAll('.formato-opt').forEach(el=> el.classList.toggle('active', el.dataset.id===pendingFormato));
+    corPicker.querySelectorAll('.cor-opt').forEach(el=> {
+      const c = lapides.PALETTE.find(p => p.id === el.dataset.id);
+      el.classList.toggle('active', !!c && c.hex.toLowerCase() === String(pendingCor).toLowerCase());
+    });
+    if(d.photoUrl){
+      photoPreview.innerHTML = `<img src="${d.photoUrl.replace(/"/g, '&quot;')}" alt=""><span>Foto atual. Escolha outra para trocar.</span>`;
+      photoPreview.classList.add('show');
+    }
+  }
+  async function salvarEdicao(){
+    const plot = editando;
+    const d = plot.data;
+    const name = inName.value.trim() || 'Sem nome';
+    const dates = inDates.value.trim();
+    const msg = inMsg.value.trim() || 'Para sempre lembrado com carinho.';
+    const photoFile = inPhoto.files && inPhoto.files[0] || null;
+    btnConfirm.disabled = true;
+    btnConfirm.textContent = 'Salvando...';
+    try {
+      const foto = pendingPhotoImg || d.photo || null;
+      const mudouCartao = photoFile || name !== d.name || dates !== (d.dates || '');
+      const cartao = mudouCartao ? await gerarCartao({ nome: name, datas: dates, foto }).catch(() => null) : null;
+      const row = await lapides.updateMemorial(plot, { name, dates, msg, photoFile, formato: pendingFormato, cor: pendingCor, cartao });
+      lapides.trocarPedra(plot, { ...d, ...{ name: row.nome_pet, dates: row.datas, msg: row.mensagem, photoUrl: row.foto_url, formato: row.formato, cor: row.cor }, photo: foto });
+      chime(660, 0.1);
+      showToast(`A homenagem de "${name}" foi atualizada.`);
+      closeModal();
+      mapaUi.atualizar();
+    } catch(err){
+      console.error('Erro ao editar memorial:', err);
+      showToast('Não foi possível salvar as alterações. Tente novamente.');
+    } finally {
+      btnConfirm.disabled = false;
+      btnConfirm.textContent = editando ? 'Salvar alterações' : 'Gravar na pedra';
+    }
   }
   function openModalFor(plot){
     if(!auth.getUser()) vagaParaLogin = { tipo: 'homenagem', plot };
@@ -405,6 +471,7 @@ export function createMenuUi({ camera, lapides, world, dogController, pausedStat
   modalBack.addEventListener('click', e=>{ if(e.target===modalBack) closeModal(); });
 
   btnConfirm.addEventListener('click', async ()=>{
+    if(editando) return salvarEdicao();
     const name = inName.value.trim() || 'Sem nome';
     const dates = inDates.value.trim();
     const msg = inMsg.value.trim() || 'Para sempre lembrado com carinho.';
@@ -424,6 +491,7 @@ export function createMenuUi({ camera, lapides, world, dogController, pausedStat
         formato: pendingFormato, cor: pendingCor,
       };
       lapides.createTribute(plot, data);
+      mapaUi.atualizar(); // criada pelo mapa: o medalhão novo aparece nele
 
       // gather fireflies briefly
       world.gatherFireflies(plot.x, plot.z);
@@ -574,6 +642,7 @@ export function createMenuUi({ camera, lapides, world, dogController, pausedStat
     inMsgText.value = '';
     btnAdminDeleteStone.style.display = isAdmin() ? '' : 'none';
     btnShareStone.style.display = d.slug ? '' : 'none';
+    document.getElementById('btnEditStone').style.display = podeEditar(stone.userData.plotRef) ? '' : 'none';
     messagesList.innerHTML = '<p class="message-empty">Carregando…</p>';
     atualizarVelasDoLivro();
     messagesModalBack.classList.add('open');
@@ -589,6 +658,11 @@ export function createMenuUi({ camera, lapides, world, dogController, pausedStat
     if(livroVoltaAoMapa && plot){ livroVoltaAoMapa = false; mapaUi.abrirFichaDe(plot); }
   }
   btnMsgCancel.addEventListener('click', closeMessagesModal);
+  document.getElementById('btnEditStone').addEventListener('click', ()=>{
+    const plot = pendingStone && pendingStone.userData.plotRef;
+    closeMessagesModal();
+    if(plot) abrirEdicao(plot);
+  });
   btnShareStone.addEventListener('click', ()=>{
     if(!pendingStone) return;
     const d = pendingStone.userData.data;
@@ -847,8 +921,14 @@ export function createMenuUi({ camera, lapides, world, dogController, pausedStat
      avenida norte-sul do campo; dali, o corredor do meio (|x| = 12) leva à frente
      da pedra sem passar por cima de outra, como na chegada pelo link. */
   function visitarDoMapa(plot){
+    if(!plot.data) return;
+    // da primeira tela, ainda sem companheiro: entra com o de sempre (ou um golden)
+    if(!dogController.getDog()){
+      const raca = racaGuardada();
+      dogController.selectDog(raca && document.querySelector(`.dog-card[data-breed="${raca}"]`) ? raca : 'golden');
+    }
+    if(pausedState.value) startGame();
     const dog = dogController.getDog();
-    if(!dog || !plot.data) return;
     const alvo = { x: plot.x, z: plot.z };
     const sx = Math.sign(alvo.x) || 1, sz = Math.sign(alvo.z) || 1;
     const frente = alvo.z + 2.3;
@@ -975,6 +1055,8 @@ export function createMenuUi({ camera, lapides, world, dogController, pausedStat
       if(pedra) openMessagesFor(pedra, { voltarAoMapa: true });
     },
     criar: (plot)=> openModalFor(plot),
+    editar: (plot)=> abrirEdicao(plot),
+    podeEditar,
   });
 
   // no celular não existe ESC: é o botão ☰ que pausa e volta para o menu

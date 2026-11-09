@@ -686,7 +686,50 @@ export function createLapides(scene) {
       payload => installFromRow(payload.new, true))
     .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'memoriais' },
       payload => removeStoneById(payload.old.id))
+    // quem tem o jardim aberto vê a edição de outra pessoa na hora (etapa 36)
+    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'memoriais' },
+      async payload => {
+        const plot = plots.find(p => p.data && p.data.id === payload.new.id);
+        if(!plot) return;
+        // a própria edição volta por aqui também: se nada mudou na pedra, não refaz
+        const n = payload.new, d = plot.data;
+        if(n.nome_pet === d.name && n.datas === d.dates && n.mensagem === d.msg && n.formato === d.formato && n.cor === d.cor && n.foto_url === d.photoUrl) return;
+        const photo = payload.new.foto_url === plot.data.photoUrl ? plot.data.photo : await loadImage(payload.new.foto_url);
+        trocarPedra(plot, dadosDaLinha(payload.new, photo));
+      })
     .subscribe();
+
+  /* ============ EDITAR A PRÓPRIA HOMENAGEM (etapa 36) ============
+     O banco já deixava o autor atualizar a linha (003); faltava a tela. O endereço
+     do link não muda (um gatilho do 015 o prende), então o link que já circulou
+     continua valendo. Foto nova só se a pessoa escolher outra; o cartão da prévia
+     no WhatsApp é refeito com o nome, as datas e a foto novos. */
+  async function updateMemorial(plot, { name, dates, msg, photoFile, formato, cor, cartao }){
+    const atual = plot.data;
+    let fotoUrl = atual.photoUrl || null;
+    if(photoFile){
+      const ext = (photoFile.name.split('.').pop() || 'jpg').toLowerCase();
+      const path = `${plot.x}_${plot.z}_${Date.now()}.${ext}`;
+      const { error: uploadError } = await supabase.storage.from('fotos-memoriais').upload(path, photoFile);
+      if(uploadError) throw uploadError;
+      fotoUrl = supabase.storage.from('fotos-memoriais').getPublicUrl(path).data.publicUrl;
+    }
+    const mudancas = { nome_pet: name, datas: dates, mensagem: msg, foto_url: fotoUrl, formato: formato || 'classica', cor: cor || PALETTE[0].hex };
+    if(cartao){
+      const path = `cartoes/${plot.x}_${plot.z}_${Date.now()}.jpg`;
+      const { error: erroCartao } = await supabase.storage.from('fotos-memoriais').upload(path, cartao, { contentType: 'image/jpeg' });
+      if(erroCartao) console.warn('Cartão da prévia não subiu:', erroCartao.message);
+      else mudancas.cartao_url = supabase.storage.from('fotos-memoriais').getPublicUrl(path).data.publicUrl;
+    }
+    const { data: row, error } = await supabase.from('memoriais').update(mudancas).eq('id', atual.id).select('*').single();
+    if(error) throw error;
+    return row;
+  }
+  // troca a pedra de uma vaga já ocupada pela versão nova (formato, cor, texto, foto)
+  function trocarPedra(plot, data){
+    if(plot.mesh) stoneGroup.remove(plot.mesh);
+    return installStone(plot, data, true);
+  }
 
   /* ============ SUPABASE: salvar um novo memorial ============ */
   /* `cartao` é a imagem da prévia no WhatsApp (js/cartao.js). Se ela falhar, a
@@ -812,6 +855,8 @@ export function createLapides(scene) {
     FORMATOS,
     createTribute,
     saveMemorial,
+    updateMemorial,
+    trocarPedra,
     deleteMemorial,
     getMessages,
     saveMessage,
