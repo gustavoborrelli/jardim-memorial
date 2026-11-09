@@ -2,7 +2,7 @@
 
 /*
   CACHORROS
-  Controla o movimento do cachorro escolhido: teclado (WASD / setas), a câmera
+  Controla o movimento do companheiro escolhido (cachorro ou gato): teclado (WASD / setas), a câmera
   que gira ao redor dele (touchpad / roda do mouse / toque). Os modelos das quatro
   raças (Pastor Alemão, Dachshund, Golden Retriever, Vira-lata Caramelo) e a
   animação moram em js/gfx/caes.js.
@@ -252,7 +252,8 @@ export function createDogController(scene, renderer, { isPaused, plaza, bounds }
         worldZ = -moveX*Math.sin(camAzimuth) + moveZ*Math.cos(camAzimuth);
       }
 
-      const speed = piloto ? 2.9 : 3.2;
+      // gato anda um pouco mais devagar: o passo dele é mais curto e calmo
+      const speed = (piloto ? 2.9 : 3.2)*(dogParts.velocidade || 1);
       dog.position.x += worldX*speed*dt;
       dog.position.z += worldZ*speed*dt;
       dog.position.x = Math.max(-bounds, Math.min(bounds, dog.position.x));
@@ -309,8 +310,11 @@ export function createDogController(scene, renderer, { isPaused, plaza, bounds }
       // leve embalo de andada: sobe/desce no dobro da passada, balanço
       // lateral na passada — só pra não parecer uma câmera de espectador
       // flutuando, mesmo sutil.
-      const bobY = Math.sin(elapsed*18) * (isMoving ? 0.022 : 0.006);
-      const bobX = Math.sin(elapsed*9) * (isMoving ? 0.016 : 0);
+      // gato: parado, a câmera fica parada (nada da respiração curta de cachorro);
+      // andando, um embalo baixo preso ao próprio passo dele
+      const gato = dogParts.especie === 'gato';
+      const bobY = gato ? (isMoving ? Math.sin(dogParts.anim.passo*2)*0.005 : 0) : Math.sin(elapsed*18) * (isMoving ? 0.022 : 0.006);
+      const bobX = gato ? (isMoving ? Math.sin(dogParts.anim.passo)*0.004 : 0) : Math.sin(elapsed*9) * (isMoving ? 0.016 : 0);
 
       const px = tx + fwdX*dogParts.eyeForward + rightX*bobX;
       const pz = tz + fwdZ*dogParts.eyeForward + rightZ*bobX;
@@ -320,17 +324,19 @@ export function createDogController(scene, renderer, { isPaused, plaza, bounds }
       return;
     }
 
-    const target = new THREE.Vector3(tx, 0.9, tz);
+    // gato tem metade do tamanho: câmera mais perto e mais baixa, senão ele some na tela
+    const gato = dogParts && dogParts.especie === 'gato';
+    const target = new THREE.Vector3(tx, gato ? 0.55 : 0.9, tz);
     if(foco && dog){
       target.x += (foco.x - tx)*focoPeso;
       target.z += (foco.z - tz)*focoPeso;
     }
     // sem cachorro ainda (menu inicial): passeio lento e aberto em volta da praça
     // (alto o bastante pra passar por cima de todas as árvores)
-    const dist = dog ? camDist : 17;
+    const dist = dog ? camDist*(gato ? 0.72 : 1) : 17;
     const cx = target.x + dist*Math.sin(camAzimuth)*Math.cos(camElevation);
     const cz = target.z + dist*Math.cos(camAzimuth)*Math.cos(camElevation);
-    const cy = dog ? target.y + dist*Math.sin(camElevation) + 1.1 : 7.4;
+    const cy = dog ? target.y + dist*Math.sin(camElevation) + (gato ? 0.75 : 1.1) : 7.4;
     camera.position.set(cx,cy,cz);
     camera.lookAt(target.x, target.y+0.3, target.z);
   }

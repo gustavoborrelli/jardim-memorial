@@ -59,6 +59,24 @@ const MEDIDAS = {
     // deitado, como o dachshund: sentado, de orelha em pé, se confundia com o pastor
     deitado: { giro: 0.85, ergue: 0.1 },
   },
+  // gato: um tipo só de estátua (em mármore, sem a cor, as raças de gato não se
+  // distinguem — decisão do Gustavo em 2026-11-09). Sai do siamês, o de silhueta
+  // mais "gato": sentado, de orelhas em pé e rabo enrolado nas patas da frente.
+  siames: {
+    frente: { r1: 0.047, r2: 0.026, pe: [0.028, 0.02, 0.033], ante: 0.12 },
+    tras: { coxa: 0.058, canela: 0.024, pe: [0.028, 0.02, 0.034] },
+    rabo: { r: 0.024, ponta: 0.015, comp: 0.34, pelo: 1 },
+    // a coleira fica baixa: com a cabeça maior, no meio do pescoço ela cortava o rosto
+    pescoco: [[0, 0.3, 0.19], [0, 0.4, 0.27]],
+    // o gato tem metade do tamanho do cachorro: com a mesma grade, a ponta da
+    // orelha furava. Grade mais fina, orelha mais grossa, focinho mais curto e
+    // cabeça maior (de perfil, o focinho do siamês na pedra lembrava raposa)
+    celula: 0.55,
+    orelha: { desce: 0, abre: 0, pelo: 1.8 },
+    focinho: { de: 0.43, estica: 0.4 },
+    cabeca: 1.3,
+    sentado: { inclina: 0.95, giro: 0.45, ergue: 0.02 },
+  },
   dachshund: {
     frente: { r1: 0.07, r2: 0.04, pe: [0.05, 0.034, 0.066], ante: 0.2 },
     tras: { coxa: 0.082, canela: 0.042, pe: [0.05, 0.034, 0.068] },
@@ -363,7 +381,8 @@ export function geoEstatua(raca, celula, pose = poseDaRaca(raca)){
   const chave = raca + pose + celula;
   if(CACHE.has(chave)) return CACHE.get(chave);
   const { campo, campoPescoco, caixa, corpo: mov, M } = campoEstatua(raca, pose);
-  const corpo = malhaSDF(comAtalho(campo, caixa, celula), caixa, celula);
+  const h = celula*(M.celula || 1);
+  const corpo = malhaSDF(comAtalho(campo, caixa, h), caixa, h);
 
   const [A, B] = M.pescoco.map(mov.ponto);
   const anel = anelDoPescoco(campoPescoco, A, B, 0.62, 0.006);

@@ -15,6 +15,7 @@
 import * as THREE from 'three';
 import { malhaSDF, esculpir, esfera, elipsoide, cone, corrente } from './sdf.js';
 import { escolherPerfil } from './qualidade.js';
+import { GATOS, receitaGato } from './gatos.js';
 
 const lin = (hex) => { const c = new THREE.Color(hex); return [c.r, c.g, c.b]; };
 const mixv = (a, b, t, o) => { o[0] = a[0]+(b[0]-a[0])*t; o[1] = a[1]+(b[1]-a[1])*t; o[2] = a[2]+(b[2]-a[2])*t; return o; };
@@ -98,8 +99,9 @@ function materialPelo({ comprimento, densidade, cascas, rim = 0.32 }){
   return m;
 }
 
-/* ============ as quatro raças ============ */
+/* ============ as quatro raças (os gatos moram em gatos.js) ============ */
 export function receita(raca){
+  if(GATOS.includes(raca)) return receitaGato(raca);
   if(raca === 'golden'){
     const OURO = lin(0xe2b066), MEL = lin(0xc48a3e), CREME = lin(0xf6e6c4), NARIZ_COR = lin(0x8d6236);
     const olhos = { x: 0.082, y: 0.868, z: 0.655, r: 0.041 };
@@ -484,6 +486,15 @@ function esculturas(raca, perfil){
 const matOlho = new THREE.MeshStandardMaterial({ color: 0x1b100a, roughness: 0.08, metalness: 0, envMapIntensity: 2.2 });
 const matBrilhoOlho = new THREE.MeshBasicMaterial({ color: 0xffffff });
 const matNariz = new THREE.MeshStandardMaterial({ color: 0x17110f, roughness: 0.26, envMapIntensity: 1.6 });
+// gato: íris colorida com pupila em fenda, nariz na cor da raça, bigodes
+const matPupila = new THREE.MeshStandardMaterial({ color: 0x0b0806, roughness: 0.1, envMapIntensity: 2 });
+const matBigode = new THREE.MeshBasicMaterial({ color: 0xf6f1e6, transparent: true, opacity: 0.85 });
+const matsCor = new Map();
+function matDaCor(hex, opts){
+  const k = hex + JSON.stringify(opts);
+  if(!matsCor.has(k)) matsCor.set(k, new THREE.MeshStandardMaterial({ color: hex, ...opts }));
+  return matsCor.get(k);
+}
 const matLingua = new THREE.MeshStandardMaterial({ color: 0xe77f8d, roughness: 0.42 });
 const matBoca = new THREE.MeshStandardMaterial({ color: 0x1a1110, roughness: 0.8 });
 const geoOlho = new THREE.SphereGeometry(1, 18, 14);
@@ -559,9 +570,18 @@ export function construirCao(raca){
     const o = new THREE.Group();
     const c = naSuperficie(R.cabeca, [s*R.olhos.x, R.olhos.y, R.olhos.z], -R.olhos.r*0.42);
     o.position.set(c[0] - P[0], c[1] - P[1], c[2] - P[2]);
-    const globo = new THREE.Mesh(geoOlho, matOlho);
+    const globo = new THREE.Mesh(geoOlho, R.olhos.iris ? matDaCor(R.olhos.iris, { roughness: 0.12, envMapIntensity: 2.2 }) : matOlho);
     globo.scale.setScalar(R.olhos.r);
     o.add(globo);
+    if(R.olhos.iris){
+      // pupila em fenda, na frente do globo e virada um pouco para fora, como o olho
+      const vira = s*0.3;
+      const pupila = new THREE.Mesh(geoOlho, matPupila);
+      pupila.position.set(Math.sin(vira)*R.olhos.r*0.84, 0, Math.cos(vira)*R.olhos.r*0.84);
+      pupila.rotation.y = vira;
+      pupila.scale.set(R.olhos.r*0.17, R.olhos.r*0.72, R.olhos.r*0.22);
+      o.add(pupila);
+    }
     const brilho = new THREE.Mesh(geoBrilho, matBrilhoOlho);
     brilho.scale.setScalar(R.olhos.r*0.26);
     brilho.position.set(-R.olhos.r*0.26, R.olhos.r*0.42, R.olhos.r*0.8);
@@ -570,7 +590,7 @@ export function construirCao(raca){
     return o;
   });
 
-  const nariz = new THREE.Mesh(geoNariz, matNariz);
+  const nariz = new THREE.Mesh(geoNariz, R.nariz.cor ? matDaCor(R.nariz.cor, { roughness: 0.4 }) : matNariz);
   nariz.position.set(R.nariz.pos[0]-P[0], R.nariz.pos[1]-P[1], R.nariz.pos[2]-P[2]);
   nariz.scale.set(...R.nariz.esc);
   head.add(nariz);
@@ -588,10 +608,25 @@ export function construirCao(raca){
     };
     [-1, 1].forEach(s => {
       const pts = curvaBase(s).getPoints(9).map(pt);
-      head.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 18, 0.0048, 5, false), matBoca));
+      head.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 18, R.bocaEspessura || 0.0048, 5, false), matBoca));
     });
     const haste = [new THREE.Vector3(...b.haste), new THREE.Vector3(...b.a)].map(pt);
-    head.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(haste), 3, 0.0045, 5, false), matBoca));
+    head.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(haste), 3, (R.bocaEspessura || 0.0048)*0.94, 5, false), matBoca));
+  }
+
+  // bigodes: três de cada lado, saindo da almofada do focinho e caindo um pouco
+  if(R.bigodes){
+    const B = R.bigodes, Pv = new THREE.Vector3(...P);
+    [-1, 1].forEach(s => {
+      for(let i = 0; i < 3; i++){
+        const raiz = new THREE.Vector3(s*B.raiz[0], B.raiz[1] + (1 - i)*0.006, B.raiz[2]);
+        const abre = (1 - i)*0.024;
+        const meio = raiz.clone().add(new THREE.Vector3(s*B.comp*0.5, abre*0.6 + 0.005, -B.comp*0.12));
+        const fim = raiz.clone().add(new THREE.Vector3(s*B.comp, abre - 0.012, -B.comp*0.3));
+        const curva = new THREE.CatmullRomCurve3([raiz, meio, fim].map(v => v.sub(Pv)));
+        head.add(new THREE.Mesh(new THREE.TubeGeometry(curva, 8, 0.0016, 4, false), matBigode));
+      }
+    });
   }
 
   const tongue = new THREE.Mesh(geoLingua, matLingua);
@@ -626,6 +661,8 @@ export function construirCao(raca){
     eyeHeight: R.olhoAltura,
     eyeForward: R.olhoFrente,
     breed: raca,
+    especie: R.especie || 'cao',
+    velocidade: R.velocidade || 1,
     // estado de animação
     anim: { blink: 1.5 + Math.random()*3, piscando: 0, lingua: 0, olhar: 0, olharAlvo: 0, olharTimer: 1, passo: 0, peso: 0 },
   };
@@ -633,6 +670,7 @@ export function construirCao(raca){
 
 /* ============ animação: chamada a cada quadro, com ou sem movimento ============ */
 export function animarCao(p, dt, elapsed, andando){
+  if(p.especie === 'gato') return animarGato(p, dt, elapsed, andando);
   const a = p.anim;
   a.peso += ((andando ? 1 : 0) - a.peso)*Math.min(1, dt*7);
   const k = a.peso;
@@ -687,4 +725,56 @@ export function animarCao(p, dt, elapsed, andando){
   const pulsar = 1 + Math.sin(elapsed*11)*0.1;
   p.tongue.scale.set(b[0], Math.max(0.001, b[1]*a.lingua*pulsar), b[2]);
   p.tongue.visible = a.lingua > 0.02;
+}
+
+/* Andar de gato: as quatro patas uma de cada vez, na ordem traseira esquerda,
+   dianteira esquerda, traseira direita, dianteira direita (o cachorro trota, com
+   as patas em diagonal aos pares). O corpo desliza quase sem quicar, a cabeça
+   fica parada, o rabo erguido balança devagar e não há língua de fora. Parado,
+   respira devagar; nada da respiração curta de cachorro. */
+const FASE_GATO = [0, Math.PI, Math.PI/2, Math.PI*1.5]; // patas: tras. esq., tras. dir., diant. esq., diant. dir.
+function animarGato(p, dt, elapsed, andando){
+  const a = p.anim;
+  a.peso += ((andando ? 1 : 0) - a.peso)*Math.min(1, dt*6);
+  const k = a.peso;
+  if(andando) a.passo += dt*7.5;
+
+  p.legs.forEach((leg, i) => { leg.rotation.x = -Math.sin(a.passo + FASE_GATO[i])*0.34*k; });
+
+  const respira = Math.sin(elapsed*1.3)*0.5 + 0.5;
+  p.body.position.y = p.bodyBaseY + Math.sin(a.passo*2)*0.003*k + respira*0.0025*(1 - k);
+  p.body.rotation.x = 0;
+  p.body.rotation.z = Math.sin(a.passo)*0.012*k; // o quadril rola de leve a cada passo
+
+  // rabo: erguido, balanço lento; andando, um pouco mais firme
+  p.tail.rotation.y = Math.sin(elapsed*1.25)*(0.14 - 0.05*k);
+  p.tail.rotation.x = Math.sin(elapsed*0.6)*0.05 - 0.04*k;
+
+  // cabeça firme no andar; parado, olha em volta com calma
+  a.olharTimer -= dt;
+  if(a.olharTimer <= 0){
+    a.olharAlvo = Math.random() < 0.4 ? 0 : (Math.random() - 0.5)*0.9;
+    a.olharTimer = 2.5 + Math.random()*4;
+  }
+  a.olhar += (a.olharAlvo*(1 - k) - a.olhar)*Math.min(1, dt*2);
+  p.head.rotation.y = a.olhar;
+  p.head.rotation.x = Math.sin(a.passo*2)*0.006*k + Math.sin(elapsed*0.8)*0.008*(1 - k);
+  p.head.rotation.z = a.olhar*-0.1;
+
+  // orelhas: paradas, com uma torcidinha de vez em quando
+  p.ears.forEach((e, i) => {
+    const s = i === 0 ? -1 : 1;
+    const torce = Math.max(0, Math.sin(elapsed*0.7 + i*2.3) - 0.93)*2.2;
+    e.rotation.z = s*torce;
+    e.rotation.x = 0;
+  });
+
+  // piscada lenta de gato
+  a.blink -= dt;
+  if(a.blink <= 0){ a.piscando = 0.28; a.blink = 3 + Math.random()*5; }
+  if(a.piscando > 0) a.piscando -= dt;
+  const aberto = a.piscando > 0 ? 0.1 : 1;
+  p.eyes.forEach(e => { e.scale.y += (aberto - e.scale.y)*Math.min(1, dt*18); });
+
+  p.tongue.visible = false;
 }

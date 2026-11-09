@@ -80,6 +80,7 @@ export function createLapides(scene) {
     { id:'estatua-pastor',    label:'Pastor',    icon:'🐕', raca:'shepherd' },
     { id:'estatua-dachshund', label:'Dachshund', icon:'🐕', raca:'dachshund' },
     { id:'estatua-caramelo',  label:'Caramelo',  icon:'🐕', raca:'caramelo' },
+    { id:'estatua-gato',      label:'Gato',      icon:'🐈', raca:'siames', especie:'gato' },
   ];
 
   /* four named sections, one per quadrant */

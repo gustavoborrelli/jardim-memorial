@@ -775,6 +775,11 @@ canvas{display:block;outline:none;}
 .menu-panel .back-row{ text-align:center; margin-top:18px; }
 
 /* dog breed cards */
+.grupo-racas{
+  font-family:'Inter',sans-serif; font-size:11px; font-weight:600;
+  letter-spacing:.08em; text-transform:uppercase; color:#9c8579;
+  margin:14px 0 8px; text-align:left;
+}
 .dog-cards{
   display:grid;
   grid-template-columns:repeat(2, 1fr);
@@ -793,6 +798,9 @@ canvas{display:block;outline:none;}
   font-family:'Inter',sans-serif;
   transition:transform 0.15s ease, border-color 0.15s ease, background 0.15s ease;
 }
+/* número ímpar de cartões (os gatos): o último ocupa a linha inteira, deitado */
+.dog-card:last-child:nth-child(odd){ grid-column:1 / -1; flex-direction:row; justify-content:center; text-align:left; gap:12px; }
+.dog-card:last-child:nth-child(odd) .dog-desc{ text-align:left; }
 .dog-card:hover{
   transform:translateY(-3px);
   border-color:#e8a23d;

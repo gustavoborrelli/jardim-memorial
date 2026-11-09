@@ -13,6 +13,7 @@
 */
 import * as THREE from 'three';
 import { homenagemDoLink, slugPedido, htmlCartao, linkDaHomenagem } from './chegada.js';
+import { GATOS } from './gfx/gatos.js';
 import { gerarCartao } from './cartao.js';
 
 export function createMenuUi({ camera, lapides, world, dogController, pausedState, auth, mapaUi }) {
@@ -760,7 +761,10 @@ export function createMenuUi({ camera, lapides, world, dogController, pausedStat
   function visitar(h){
     // estátua de raça: a visita é com um cachorro da mesma raça
     const estatua = lapides.FORMATOS.find(f => f.id === h.formato && f.raca);
-    const raca = (estatua && estatua.raca) || racaGuardada() || dogController.getBreed() || 'golden';
+    // estátua de gato (um tipo só): a visita é com o gato que a pessoa escolheu, se for gato
+    const gatoGuardado = GATOS.includes(racaGuardada()) ? racaGuardada() : null;
+    const racaDaEstatua = estatua && (estatua.especie === 'gato' ? (gatoGuardado || estatua.raca) : estatua.raca);
+    const raca = racaDaEstatua || racaGuardada() || dogController.getBreed() || 'golden';
     if(dogController.getBreed() !== raca) dogController.selectDog(raca);
     const alvo = { x: Number(h.plot_x), z: Number(h.plot_z) };
     const sx = Math.sign(alvo.x) || 1, sz = Math.sign(alvo.z) || 1;

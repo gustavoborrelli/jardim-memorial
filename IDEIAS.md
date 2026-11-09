@@ -620,6 +620,45 @@ flores/velas nas lápides dos outros (MVP family & friends).
     a estátua com o livro de mensagens aberto, vaga livre abrindo o login. Na
     primeira versão a visita atravessava a fonte e não chegava em 16 s.
 
+32. 🔜 **Gatos** (branch `gatos`) — pedido do usuário: as três raças de gato mais
+    comuns, sem a "respiração de cachorro" na 1ª pessoa e com andar de gato.
+    Entraram **Siamês, Persa e Maine Coon** como companheiros do passeio (menu
+    separado em Cachorros e Gatos; com três gatos, o último cartão ocupa a linha
+    inteira). Os gatos moram em `js/gfx/gatos.js`: um molde só (`montarGato`) com
+    proporções por raça — o siamês esguio, de cabeça em cunha, orelhas grandes e
+    pontas escuras; o persa atarracado, de cara achatada, orelha pequena e pelo
+    longo; o maine coon grande (×1,16), tigrado, com peito branco e tufos na ponta
+    das orelhas. A montagem e a animação são as de `caes.js`, que reconhece
+    `especie: 'gato'`: olhos coloridos com **pupila em fenda**, nariz na cor da
+    raça, **bigodes**, boca fina e nenhuma língua de fora.
+    - **Andar de gato**: as quatro patas uma de cada vez, na ordem traseira
+      esquerda, dianteira esquerda, traseira direita, dianteira direita (o cachorro
+      trota, com as patas em diagonal aos pares); o corpo quase não quica, a cabeça
+      fica firme, o quadril rola de leve, o rabo erguido balança devagar, a piscada
+      é lenta e a orelha dá uma torcidinha de vez em quando. Anda a 82% da
+      velocidade do cachorro. Conferido em quatro quadros do ciclo, de lado.
+    - **1ª pessoa**: a câmera do cachorro balançava quase 3 vezes por segundo até
+      parado (é a "respiração" que o usuário viu); a do gato fica parada quando ele
+      está parado e, andando, tem um embalo baixo preso ao próprio passo.
+    - **Câmera de 3ª pessoa**: mais perto (72%) e mais baixa para gato, senão ele
+      sumia na tela.
+    - **Estátua**: um tipo só, "Gato" (`estatua-gato`), a pedido do usuário: em
+      mármore, sem a cor, as raças de gato não se distinguem. Sai do siamês,
+      sentado, ereto, de cabeça redonda quase sem focinho (de perfil, o focinho do
+      siamês na pedra lembrava raposa, e de longe a estátua se confundia com a do
+      pastor) e rabo enrolado nas patas. Como o gato tem metade do tamanho do
+      cachorro, a grade da escultura é mais fina (`celula: 0.55`) — com a mesma,
+      a ponta da orelha furava — e a coleira fica baixa, senão cortava o rosto.
+      Visita pelo link a uma estátua de gato: com o gato que a pessoa escolheu, se
+      for gato; senão, um siamês. **Rodar `supabase/017_lapide_gato.sql` no
+      Supabase antes do deploy.**
+    - Textos: "Escolher cachorro" virou "Escolher companheiro", e o "Como jogar" e
+      as dicas da primeira entrada deixaram de falar só de cachorro.
+    Testado no estúdio (as três raças ao lado do caramelo, de perto e o andar) e no
+    jogo com Playwright: menu no computador e no iPhone 14, persa andando, visita
+    pelo link a uma estátua de gato com o maine coon escolhido. Quem estiver com a
+    versão antiga aberta vê o gato de outra pessoa como dachshund até recarregar.
+
 ## Ideias soltas (não decidido ainda)
 
 - A leva de dinamismo social planejada em conjunto está completa: (1)

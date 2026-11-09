@@ -30,7 +30,7 @@
         <p class="tagline">Um jardim ensolarado para passear, plantar flores<br>e guardar a memória dos nossos melhores amigos.</p>
         <div class="menu-btns">
           <button class="menu-btn primary" id="btnPlay">▶ &nbsp;Entrar no jardim</button>
-          <button class="menu-btn ghost" id="btnDogs">🐾 Escolher cachorro</button>
+          <button class="menu-btn ghost" id="btnDogs">🐾 Escolher companheiro</button>
           <button class="menu-btn ghost" id="btnHow">Como jogar</button>
           <button class="menu-btn ghost" id="btnAbout">Sobre</button>
         </div>
@@ -49,6 +49,7 @@
 
       <div class="menu-panel" id="menuDogs">
         <h2>Escolha seu companheiro</h2>
+        <h3 class="grupo-racas">Cachorros</h3>
         <div class="dog-cards">
           <button class="dog-card" data-breed="shepherd">
             <span class="dog-swatch"><i style="background:#c0803d"></i><i style="background:#2b2320"></i></span>
@@ -71,15 +72,33 @@
             <span class="dog-desc">Esperto, fiel e a cara do Brasil</span>
           </button>
         </div>
+        <h3 class="grupo-racas">Gatos</h3>
+        <div class="dog-cards">
+          <button class="dog-card" data-breed="siames">
+            <span class="dog-swatch"><i style="background:#efe3cc"></i><i style="background:#3e2c22"></i></span>
+            <span class="dog-name">Siamês</span>
+            <span class="dog-desc">Elegante, de olhos azuis e muito conversador</span>
+          </button>
+          <button class="dog-card" data-breed="persa">
+            <span class="dog-swatch"><i style="background:#f1eadf"></i><i style="background:#d9852a"></i></span>
+            <span class="dog-name">Persa</span>
+            <span class="dog-desc">Peludo, de cara achatada e calmo como ele só</span>
+          </button>
+          <button class="dog-card" data-breed="mainecoon">
+            <span class="dog-swatch"><i style="background:#8d6a47"></i><i style="background:#3b2a1d"></i></span>
+            <span class="dog-name">Maine Coon</span>
+            <span class="dog-desc">Gigante gentil, de tufos nas orelhas e cauda felpuda</span>
+          </button>
+        </div>
         <div class="back-row"><button class="menu-btn ghost" data-back>← Voltar</button></div>
       </div>
 
       <div class="menu-panel" id="menuHow">
         <h2>Como jogar</h2>
         <!-- so-teclado: computador; so-toque: celular e tablet (css, pointer:coarse) -->
-        <div class="rule so-teclado"><span class="ico">🐕</span><span><b>W A S D</b> ou setas movem o cãozinho. Ele sempre anda na direção em que a câmera está olhando.</span></div>
+        <div class="rule so-teclado"><span class="ico">🐕</span><span><b>W A S D</b> ou setas movem seu companheiro. Ele sempre anda na direção em que a câmera está olhando.</span></div>
         <div class="rule so-teclado"><span class="ico">🎥</span><span><b>Dois dedos no touchpad</b> (ou roda do mouse) giram a câmera ao redor dele.</span></div>
-        <div class="rule so-toque"><span class="ico">🐕</span><span>O <b>círculo no canto da tela</b> move o cãozinho. Ele sempre anda na direção em que a câmera está olhando.</span></div>
+        <div class="rule so-toque"><span class="ico">🐕</span><span>O <b>círculo no canto da tela</b> move seu companheiro. Ele sempre anda na direção em que a câmera está olhando.</span></div>
         <div class="rule so-toque"><span class="ico">🎥</span><span><b>Arraste o dedo</b> na tela para girar a câmera ao redor dele.</span></div>
         <div class="rule so-teclado"><span class="ico">🌸</span><span><b>Clique no gramado</b> para plantar uma flor colorida onde quiser. O botão 🌼/🕯️ no canto alterna entre plantar flor ou vela — a vela dura bem mais tempo.</span></div>
         <div class="rule so-toque"><span class="ico">🌸</span><span><b>Toque no gramado</b> para plantar uma flor colorida onde quiser. O botão 🌼/🕯️ alterna entre plantar flor ou vela — a vela dura bem mais tempo.</span></div>
@@ -87,8 +106,8 @@
         <div class="rule so-toque"><span class="ico">🪦</span><span><b>Toque numa pedra vazia</b> (círculo de pedrinhas com uma patinha) para gravar nome, foto, datas e uma mensagem. O jardim tem quatro campos: Recanto do Sol, Bosque da Saudade, Campo das Estrelas e Prado dos Companheiros.</span></div>
         <div class="rule so-teclado"><span class="ico">💬</span><span><b>Passe o mouse sobre uma lápide</b> para ler a homenagem gravada nela, e clique para deixar uma mensagem.</span></div>
         <div class="rule so-toque"><span class="ico">💬</span><span><b>Toque numa lápide</b> para ler a homenagem e deixar uma mensagem.</span></div>
-        <div class="rule so-teclado"><span class="ico">🗺️</span><span><b>M</b> abre o mapa do jardim, e <b>V</b> troca a câmera de trás do cachorro para os olhos dele.</span></div>
-        <div class="rule so-toque"><span class="ico">🗺️</span><span>O botão <b>🗺️</b> abre o mapa do jardim, e o <b>🐾</b> troca a câmera de trás do cachorro para os olhos dele.</span></div>
+        <div class="rule so-teclado"><span class="ico">🗺️</span><span><b>M</b> abre o mapa do jardim, e <b>V</b> troca a câmera de trás do seu companheiro para os olhos dele.</span></div>
+        <div class="rule so-toque"><span class="ico">🗺️</span><span>O botão <b>🗺️</b> abre o mapa do jardim, e o <b>🐾</b> troca a câmera de trás do seu companheiro para os olhos dele.</span></div>
         <div class="rule so-teclado"><span class="ico">⏸️</span><span><b>ESC</b> pausa e volta para este menu a qualquer momento.</span></div>
         <div class="rule so-toque"><span class="ico">⏸️</span><span>O botão <b>☰</b> pausa e volta para este menu a qualquer momento.</span></div>
         <div class="back-row"><button class="menu-btn ghost" data-back>← Voltar</button></div>
@@ -146,7 +165,7 @@
     <span class="dica dica-botao dica-menu">Menu</span>
     <span class="dica dica-botao dica-mapa">Mapa do jardim</span>
     <span class="dica dica-botao dica-planta">Flor ou vela</span>
-    <span class="dica dica-botao dica-visao">Visão do cachorro</span>
+    <span class="dica dica-botao dica-visao">Ver pelos olhos dele</span>
     <span class="dica dica-andar">Arraste para andar</span>
     <span class="dica dica-olhar">Arraste a tela para olhar em volta</span>
   </div>
