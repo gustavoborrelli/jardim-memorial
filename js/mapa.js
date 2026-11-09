@@ -14,14 +14,20 @@
   posição relativa é a mesma (campo, fileira, coluna): paraMapa() estica as
   distâncias por trechos, e a seta do cachorro passa pela mesma conta.
 
-  Tudo sai dos dados reais (lapides.plots, world.PLAZA, world.AVENUES, bounds):
-  se o jardim ganhar vagas, o mapa as desenha na próxima abertura.
+  As medidas saem de planta.js e as homenagens de uma "fonte" trocável: quando o
+  site abre, o mapa é a primeira tela (etapa 35) e desenha com uma leitura rápida
+  do banco feita por main.js, antes de o 3D existir; quando o jogo fica pronto,
+  usarJogo() troca para as homenagens vivas do jardim (lapides.plots), que mudam
+  em tempo real. Os botões da ficha só funcionam com o jogo pronto.
 
-  createMapaUi(deps) devolve openMap()/closeMap()/isOpen() e ligarAcoes(), que o
-  menuUi.js usa para dizer o que cada botão da ficha faz. A ficha mostra as velas
+  obterMapaUi() devolve sempre o mesmo mapa (main.js e jogo.js o compartilham):
+  openMap()/openInicio()/closeMap()/isOpen(), ligarAcoes() para o menuUi.js
+  dizer o que cada botão faz, e usarJogo() para a troca de fonte. A ficha mostra as velas
   acesas e as mensagens da homenagem, e "Acender uma vela" acende ali mesmo, sem
   fechar o mapa (etapa 34).
 */
+
+import { PLAZA, AVENUES, BOUNDS } from './planta.js';
 
 const NS = 'http://www.w3.org/2000/svg';
 const TINTA = '#4a3424', VERDE = '#3d6b45', MADEIRA = '#6b4e33';
@@ -37,15 +43,24 @@ const escapar = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;',
 // sorteio com semente: as árvores saem no mesmo lugar toda vez
 function sorteador(s){ return () => { s |= 0; s = s + 0x6D2B79F5 | 0; let t = Math.imul(s ^ s >>> 15, 1 | s); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
 
-export function createMapaUi({ lapides, world, dogController, bounds }){
+let unico = null;
+export function obterMapaUi(fonteInicial){
+  if(!unico) unico = criarMapaUi(fonteInicial || { plots: [] });
+  return unico;
+}
+
+function criarMapaUi(fonteInicial){
+  // de onde vêm as homenagens: { plots, velasAcesas(id), getMessages(id), getDog(), parar() }
+  let fonte = fonteInicial;
+  let vivo = false; // fonte viva do jogo: os botões da ficha funcionam
   const modalBack = document.getElementById('mapModalBack');
   const svg = document.getElementById('mapSvg');
   const busca = document.getElementById('mapSearchInput');
   const ficha = document.getElementById('mapFicha');
   const btnFechar = document.getElementById('btnMapClose');
 
-  const L = bounds;
-  const AV = world.AVENUES[0].w/2;
+  const L = BOUNDS;
+  const AV = AVENUES[0].w/2;
   // trechos do esticamento: avenida igual, colunas de vagas (9 e 15) mais afastadas
   const REAL = [0, AV, 9, 15, L], MAPA = [0, AV, 9.5, 19, L];
   function paraMapa(v){
@@ -109,7 +124,7 @@ export function createMapaUi({ lapides, world, dogController, bounds }){
     const tinta = el('g', { filter: 'url(#mt-tinta)', fill: 'none', stroke: TINTA, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, svg);
     const enfeites = el('g', {}, svg);
     const sorte = sorteador(19);
-    const PRACA = world.PLAZA.r - .3;
+    const PRACA = PLAZA.r - .3;
 
     // gramado e avenidas
     el('rect', { x: -L, y: -L, width: 2*L, height: 2*L, fill: '#a3c27a', opacity: .6 }, aguadas);
@@ -229,7 +244,7 @@ export function createMapaUi({ lapides, world, dogController, bounds }){
         el('text', { y: 1.15, 'text-anchor': 'middle', class: 'mt-titulo', 'font-size': 3.3, fill: TINTA }, corpo).textContent = (nome.trim()[0] || '?').toUpperCase();
       }
       el('circle', { r: 2.7, fill: 'none', stroke: TINTA, 'stroke-width': .12 }, corpo);
-      const velas = world.velasAcesas ? world.velasAcesas(d.id) : 0;
+      const velas = fonte.velasAcesas ? fonte.velasAcesas(d.id) : 0;
       if(velas > 0){
         desenharVela(corpo, 3.15, -.6, .95);
         el('text', { x: 3.95, y: .35, class: 'mt-mao', 'font-weight': 700, 'font-size': 1.35, fill: TINTA }, corpo).textContent = velas;
@@ -256,7 +271,7 @@ export function createMapaUi({ lapides, world, dogController, bounds }){
 
   function desenharFaixas(pai){
     const campos = new Map();
-    lapides.plots.forEach(p => {
+    fonte.plots.forEach(p => {
       if(!campos.has(p.section)) campos.set(p.section, { x: 0, z: 0, n: 0 });
       const c = campos.get(p.section); c.x += p.x; c.z += p.z; c.n++;
     });
@@ -289,7 +304,7 @@ export function createMapaUi({ lapides, world, dogController, bounds }){
     const g = el('g', { transform: `translate(${-L + 9.5} ${L + 5.1})` }, pai);
     el('rect', { x: 0, y: 0, width: 30, height: 8, rx: .5, fill: '#f8edd4', stroke: TINTA, 'stroke-width': .16 }, g);
     el('rect', { x: .45, y: .45, width: 29.1, height: 7.1, rx: .35, fill: 'none', stroke: TINTA, 'stroke-width': .06 }, g);
-    const ocupadas = lapides.plots.filter(p => p.occupied && p.data).length, livres = lapides.plots.length - ocupadas;
+    const ocupadas = fonte.plots.filter(p => p.occupied && p.data).length, livres = fonte.plots.length - ocupadas;
     el('text', { x: 15, y: 2.05, 'text-anchor': 'middle', class: 'mt-titulo', 'font-size': 1.3, fill: TINTA }, g).textContent =
       `${ocupadas} ${ocupadas === 1 ? 'homenagem' : 'homenagens'} · ${livres} ${livres === 1 ? 'vaga livre' : 'vagas livres'}`;
     el('circle', { cx: 2.2, cy: 4.6, r: 1, fill: '#f8edd4', stroke: TINTA, 'stroke-width': .12 }, g);
@@ -308,7 +323,7 @@ export function createMapaUi({ lapides, world, dogController, bounds }){
   // (x para a direita, z para baixo), gira ao contrário do rotate() do SVG: o ângulo
   // é negado, senão a seta sai espelhada leste-oeste (etapa 18).
   function desenharCachorro(pai){
-    const dog = dogController.getDog();
+    const dog = fonte.getDog && fonte.getDog();
     if(!dog) return;
     const g = el('g', { class: 'mt-voce', transform: `translate(${paraMapa(dog.position.x)} ${paraMapa(dog.position.z)}) rotate(${-dog.rotation.y*180/Math.PI})` }, pai);
     el('circle', { r: 1.5, fill: '#ffcf6b', opacity: .35 }, g);
@@ -321,7 +336,7 @@ export function createMapaUi({ lapides, world, dogController, bounds }){
     desenharFaixas(camadaDinamica);
     desenharLegenda(camadaDinamica);
     const vagas = el('g', {}, camadaDinamica);
-    marcadores = lapides.plots.map(plot => ({ plot, g: desenharMedalhao(vagas, plot) }));
+    marcadores = fonte.plots.map(plot => ({ plot, g: desenharMedalhao(vagas, plot) }));
     desenharCachorro(camadaDinamica);
   }
 
@@ -373,6 +388,11 @@ export function createMapaUi({ lapides, world, dogController, bounds }){
         <p class="mt-nota">Para gravar, você entra com sua conta Google.</p>`;
     }
     ficha.querySelector('.mt-fechar-ficha').addEventListener('click', fecharFicha);
+    if(!vivo){
+      // o jardim ainda está sendo montado: a ficha já mostra tudo, os botões esperam
+      ficha.querySelectorAll('[data-acao]').forEach(b => { b.disabled = true; });
+      ficha.querySelector('.mt-acoes').insertAdjacentHTML('afterend', '<p class="mt-nota">preparando o jardim…</p>');
+    }
     ficha.querySelectorAll('[data-acao]').forEach(b => b.addEventListener('click', () => {
       const f = acoes[b.dataset.acao];
       if(b.dataset.fica){ if(f) f(plot, b); return; } // vela: acende sem sair do mapa
@@ -388,11 +408,11 @@ export function createMapaUi({ lapides, world, dogController, bounds }){
   async function atualizarVida(plot){
     const alvo = ficha.querySelector('.mt-vida-texto');
     if(!alvo || !plot.data) return;
-    const velas = world.velasAcesas ? world.velasAcesas(plot.data.id) : 0;
+    const velas = fonte.velasAcesas ? fonte.velasAcesas(plot.data.id) : 0;
     const textoVelas = velas === 0 ? 'Nenhuma vela acesa' : velas === 1 ? '1 vela acesa' : `${velas} velas acesas`;
     alvo.textContent = textoVelas;
     const meu = ++pedidoMsgs;
-    const msgs = await lapides.getMessages(plot.data.id);
+    const msgs = fonte.getMessages ? await fonte.getMessages(plot.data.id) : [];
     if(meu !== pedidoMsgs || !ficha.contains(alvo)) return;
     alvo.textContent = `${textoVelas} · ${msgs.length === 1 ? '1 mensagem' : `${msgs.length} mensagens`}`;
   }
@@ -424,34 +444,76 @@ export function createMapaUi({ lapides, world, dogController, bounds }){
   svg.addEventListener('click', fecharFicha);
 
   function openMap(){
+    modalBack.classList.remove('mt-modo-inicio');
+    abrir();
+  }
+  // a primeira tela do site: o mapa com "Passear no jardim" embaixo e sem o ×
+  function openInicio(){
+    modalBack.classList.add('mt-modo-inicio');
+    document.body.classList.add('em-casa');
+    abrir();
+  }
+  function isInicio(){ return isOpen() && modalBack.classList.contains('mt-modo-inicio'); }
+  function abrir(){
     redesenhar();
     busca.value = '';
     filtrar();
     fecharFicha();
     modalBack.classList.add('open');
-    dogController.resetKeys(); // para o cachorro na hora, senão ele some pelo jardim atrás do mapa
+    if(fonte.parar) fonte.parar(); // para o cachorro na hora, senão ele some pelo jardim atrás do mapa
     // as faixas medem o texto: se a fonte do título ainda não tinha chegado, mede de novo
-    const fonte = '10px "IM Fell English SC"';
-    if(document.fonts && document.fonts.check && !document.fonts.check(fonte)){
-      document.fonts.load(fonte).then(() => { if(isOpen() && !atual){ redesenhar(); filtrar(); } }).catch(() => {});
+    const letra = '10px "IM Fell English SC"';
+    if(document.fonts && document.fonts.check && !document.fonts.check(letra)){
+      document.fonts.load(letra).then(() => { if(isOpen() && !atual){ redesenhar(); filtrar(); } }).catch(() => {});
     }
   }
   function closeMap(){
     fecharFicha();
-    modalBack.classList.remove('open');
+    modalBack.classList.remove('open', 'mt-modo-inicio');
+    document.body.classList.remove('em-casa');
+  }
+
+  // troca a fonte das homenagens sem fechar o mapa nem perder a ficha aberta
+  function trocarFonte(nova, { viva = vivo } = {}){
+    const aberta = atual && marcadores.find(m => m.g === atual);
+    const onde = aberta ? [aberta.plot.x, aberta.plot.z] : null;
+    fonte = nova;
+    vivo = viva;
+    if(!isOpen()) return;
+    redesenhar();
+    filtrar();
+    if(onde){
+      const m = marcadores.find(mk => Number(mk.plot.x) === onde[0] && Number(mk.plot.z) === onde[1]);
+      if(m) abrirFicha(m.plot, m.g);
+    } else fecharFicha();
+  }
+  // o jogo ficou pronto: quando as pedras e as velas carregarem, o mapa passa a
+  // usar as homenagens vivas do jardim e os botões da ficha começam a funcionar
+  function usarJogo({ lapides, world, dogController }){
+    return Promise.all([lapides.carregadas, world.velasCarregadas]).then(() => {
+      trocarFonte({
+        plots: lapides.plots,
+        velasAcesas: (id) => world.velasAcesas(id),
+        getMessages: (id) => lapides.getMessages(id),
+        getDog: () => dogController.getDog(),
+        parar: () => dogController.resetKeys(),
+      }, { viva: true });
+    });
   }
   function isOpen(){
     return modalBack.classList.contains('open');
   }
-  // Esc: fecha a ficha antes do mapa
+  // Esc: fecha a ficha antes do mapa (a primeira tela não se fecha com Esc)
   function fecharUmPasso(){
     if(ficha.classList.contains('aberta')){ fecharFicha(); return; }
-    closeMap();
+    if(!isInicio()) closeMap();
   }
   function ligarAcoes(a){ acoes = a || {}; }
 
   btnFechar.addEventListener('click', closeMap);
-  modalBack.addEventListener('click', e => { if(e.target === modalBack) closeMap(); });
+  modalBack.addEventListener('click', e => { if(e.target === modalBack && !isInicio()) closeMap(); });
 
-  return { openMap, closeMap, isOpen, fecharUmPasso, ligarAcoes, velaAcesa, abrirFichaDe };
+  const ehVivo = () => vivo;
+
+  return { openMap, openInicio, isInicio, closeMap, isOpen, fecharUmPasso, ligarAcoes, velaAcesa, abrirFichaDe, trocarFonte, usarJogo, ehVivo };
 }

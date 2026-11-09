@@ -685,6 +685,8 @@ export function createMenuUi({ camera, lapides, world, dogController, pausedStat
   }
   function startGame(){
     dogController.alinharCamera();
+    mapaUi.closeMap(); // a primeira tela é o mapa: passear o fecha
+    document.body.classList.add('passeando');
     menuScreen.classList.add('hidden');
     pausedState.value = false;
     startAmbient();
@@ -757,7 +759,37 @@ export function createMenuUi({ camera, lapides, world, dogController, pausedStat
     btnVisitar.onclick = ()=> visitar(h);
     if(pausedState.value) showMenuPanel(menuChegada);
   });
-  document.getElementById('btnVerJardim').addEventListener('click', ()=> showMenuPanel(menuHome));
+  document.getElementById('btnVerJardim').addEventListener('click', ()=> irParaCasa());
+
+  /* ============ O MAPA COMO PRIMEIRA TELA (etapa 35) ============
+     O site abre no mapa de tesouro (main.js o desenha antes do 3D). "Passear no
+     jardim" entra com o companheiro de sempre, ou pede para escolher um; "Menu" abre
+     o cartão de sempre (escolher companheiro, como jogar, sobre, som) por cima do
+     mapa. O ☰ e o ESC do passeio voltam para cá. */
+  function irParaCasa(){
+    pausedState.value = true;
+    dogController.resetKeys();
+    menuScreen.classList.add('hidden');
+    mapaUi.openInicio();
+  }
+  function passear(){
+    if(!dogController.getDog()){
+      const raca = racaGuardada();
+      if(raca && document.querySelector(`.dog-card[data-breed="${raca}"]`)) dogController.selectDog(raca);
+      else { showMenuPanel(menuDogs); menuScreen.classList.remove('hidden'); return; }
+    }
+    startGame();
+  }
+  const btnPassear = document.getElementById('btnPassear');
+  const btnMapaMenu = document.getElementById('btnMapaMenu');
+  btnPassear.addEventListener('click', passear);
+  btnMapaMenu.addEventListener('click', ()=>{ showMenuPanel(menuHome); menuScreen.classList.remove('hidden'); });
+  document.getElementById('btnMenuMapa').addEventListener('click', ()=> irParaCasa());
+  // os dois botões da primeira tela funcionam quando o jogo está pronto (agora)
+  btnPassear.disabled = false; btnPassear.textContent = 'Passear no jardim';
+  btnMapaMenu.disabled = false;
+  // sem resposta rápida do banco, main.js não abriu o mapa: abre agora
+  if(!slugPedido && !mapaUi.isOpen() && menuScreen.classList.contains('hidden')) irParaCasa();
 
   /* Na frente da pedra o cachorro olha para ela, e a câmera ficaria atrás dele. Na
      fileira de fora, "atrás" é a cerca e as árvores grandes de sombra: a câmera
@@ -948,10 +980,7 @@ export function createMenuUi({ camera, lapides, world, dogController, pausedStat
   // no celular não existe ESC: é o botão ☰ que pausa e volta para o menu
   document.getElementById('btnMenuToggle').addEventListener('click', ()=>{
     if(pausedState.value) return;
-    showMenuPanel(menuHome);
-    menuScreen.classList.remove('hidden');
-    pausedState.value = true;
-    dogController.resetKeys();
+    irParaCasa();
   });
 
   window.addEventListener('keydown', e=>{
@@ -961,15 +990,11 @@ export function createMenuUi({ camera, lapides, world, dogController, pausedStat
       if(shareModalBack.classList.contains('open')){ fecharCompartilhar(); return; }
       if(modalBack.classList.contains('open')){ closeModal(); return; }
       if(messagesModalBack.classList.contains('open')){ closeMessagesModal(); return; }
+      // o cartão do menu aberto por cima do mapa da primeira tela: volta ao mapa
+      if(!menuScreen.classList.contains('hidden') && mapaUi.isInicio()){ menuScreen.classList.add('hidden'); return; }
       if(mapModalBack.classList.contains('open')){ mapaUi.fecharUmPasso(); return; }
-      if(pausedState.value){
-        if(!dogController.getDog()){ showMenuPanel(menuDogs); return; } // can't enter without a companion
-        startGame();
-      } else {
-        showMenuPanel(menuHome);
-        menuScreen.classList.remove('hidden');
-        pausedState.value = true;
-      }
+      // passeando: ESC volta para o mapa da primeira tela
+      if(!pausedState.value) irParaCasa();
       return;
     }
     if(e.key.toLowerCase() === 'v'){

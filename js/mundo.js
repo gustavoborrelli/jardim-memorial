@@ -23,20 +23,14 @@ import { criarMobilia } from './gfx/mobilia.js';
 import { criarFonte } from './gfx/fonte.js';
 import { criarBorboletas, criarPassaros, criarPetalas, criarAr } from './gfx/vida.js';
 import { texturaBrilho, torneado } from './gfx/materiais.js';
+import { PLAZA, AVENUES } from './planta.js';
 import { sorteador } from './gfx/ruido.js';
 
 export function createWorld(scene, { renderer, perfil, pos }) {
   const sorte = sorteador(2024);
 
   /* ============ O DESENHO DO JARDIM ============ */
-  const PLAZA = { x:0, z:0, r:5.5 };
-  // quatro avenidas partindo da praça; x,z = centro, w,l = extensão nos eixos
-  const AVENUES = [
-    { x:0, z:-16.5, w:4.2, l:22 },
-    { x:0, z:16.5, w:4.2, l:22 },
-    { x:-16.5, z:0, w:22, l:4.2 },
-    { x:16.5, z:0, w:22, l:4.2 },
-  ];
+  // praça e avenidas moram em planta.js: o mapa de tesouro usa as mesmas
   const sdRetangulo = (x, z, cx, cz, hx, hz) => {
     const qx = Math.abs(x-cx)-hx, qz = Math.abs(z-cz)-hz;
     return Math.hypot(Math.max(qx, 0), Math.max(qz, 0)) + Math.min(Math.max(qx, qz), 0);

@@ -29,13 +29,14 @@
         <h1>Jardim Memorial</h1>
         <p class="tagline">Um jardim ensolarado para passear, plantar flores<br>e guardar a memória dos nossos melhores amigos.</p>
         <div class="menu-btns">
-          <button class="menu-btn primary" id="btnPlay">▶ &nbsp;Entrar no jardim</button>
+          <button class="menu-btn primary" id="btnPlay">▶ &nbsp;Passear no jardim</button>
+          <button class="menu-btn ghost" id="btnMenuMapa">🗺️ Mapa do jardim</button>
           <button class="menu-btn ghost" id="btnDogs">🐾 Escolher companheiro</button>
           <button class="menu-btn ghost" id="btnHow">Como jogar</button>
           <button class="menu-btn ghost" id="btnAbout">Sobre</button>
         </div>
         <button class="ambient-toggle" id="btnAmbientToggle" aria-pressed="true">🔊 Som ambiente</button>
-        <div class="credits">feito com Three.js · aperte ESC no jogo para voltar aqui</div>
+        <div class="credits">feito com Three.js · aperte ESC no jogo para voltar ao mapa</div>
       </div>
 
       <!-- quem chega pelo link de uma homenagem (js/chegada.js) -->
@@ -108,14 +109,14 @@
         <div class="rule so-toque"><span class="ico">💬</span><span><b>Toque numa lápide</b> para ler a homenagem e deixar uma mensagem.</span></div>
         <div class="rule so-teclado"><span class="ico">🗺️</span><span><b>M</b> abre o mapa do jardim, e <b>V</b> troca a câmera de trás do seu companheiro para os olhos dele.</span></div>
         <div class="rule so-toque"><span class="ico">🗺️</span><span>O botão <b>🗺️</b> abre o mapa do jardim, e o <b>🐾</b> troca a câmera de trás do seu companheiro para os olhos dele.</span></div>
-        <div class="rule so-teclado"><span class="ico">⏸️</span><span><b>ESC</b> pausa e volta para este menu a qualquer momento.</span></div>
-        <div class="rule so-toque"><span class="ico">⏸️</span><span>O botão <b>☰</b> pausa e volta para este menu a qualquer momento.</span></div>
+        <div class="rule so-teclado"><span class="ico">⏸️</span><span><b>ESC</b> pausa e volta para o mapa do jardim a qualquer momento.</span></div>
+        <div class="rule so-toque"><span class="ico">⏸️</span><span>O botão <b>☰</b> pausa e volta para o mapa do jardim a qualquer momento.</span></div>
         <div class="back-row"><button class="menu-btn ghost" data-back>← Voltar</button></div>
       </div>
 
       <div class="menu-panel" id="menuAbout">
         <h2>Sobre</h2>
-        <p class="about-text">O Jardim Memorial é um pequeno espaço virtual para celebrar a memória de cães que já partiram. Não há pontuação nem objetivo — apenas um lugar tranquilo para caminhar, plantar flores e deixar palavras de carinho.</p>
+        <p class="about-text">O Jardim Memorial é um pequeno espaço virtual para celebrar a memória de cães e gatos que já partiram. Não há pontuação nem objetivo — apenas um lugar tranquilo para caminhar, plantar flores e deixar palavras de carinho.</p>
         <p class="about-text">As homenagens ficam gravadas permanentemente: feche o navegador e, ao voltar, elas continuam lá, na mesma pedra.</p>
         <div class="back-row"><button class="menu-btn ghost" data-back>← Voltar</button></div>
       </div>
@@ -125,7 +126,7 @@
 
   <div class="veil"></div>
 
-  <div class="pause-chip" id="pauseChip"><b>ESC</b> — menu / pausa</div>
+  <div class="pause-chip" id="pauseChip"><b>ESC</b> — mapa / pausa</div>
 
   <div class="hud title-block">
     <h1>Jardim Memorial</h1>
@@ -162,7 +163,7 @@
   <!-- primeira entrada pelo toque (js/menuUi.js): o nome de cada botão redondo e
        do círculo de andar, por alguns segundos e uma vez só -->
   <div class="dicas-toque" id="dicasToque" aria-hidden="true">
-    <span class="dica dica-botao dica-menu">Menu</span>
+    <span class="dica dica-botao dica-menu">Voltar ao mapa</span>
     <span class="dica dica-botao dica-mapa">Mapa do jardim</span>
     <span class="dica dica-botao dica-planta">Flor ou vela</span>
     <span class="dica dica-botao dica-visao">Ver pelos olhos dele</span>
@@ -297,6 +298,11 @@
       </div>
       <svg id="mapSvg" class="mt-svg" role="img" aria-label="Mapa ilustrado do jardim"></svg>
       <p class="mt-dica">Toque numa homenagem ou numa vaga livre</p>
+      <!-- só na primeira tela (mt-modo-inicio) -->
+      <div class="mt-inicio-barra">
+        <button class="mt-btn mt-primario mt-passear" id="btnPassear" type="button" disabled>preparando o jardim…</button>
+        <button class="mt-btn mt-menu" id="btnMapaMenu" type="button" disabled>Menu</button>
+      </div>
       <section class="mt-ficha" id="mapFicha" aria-live="polite"></section>
     </div>
   </div>

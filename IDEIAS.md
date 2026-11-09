@@ -684,7 +684,7 @@ flores/velas nas lápides dos outros (MVP family & friends).
     sem voltar do login não faz nada. A volta de verdade do Google só se confirma
     no ar.
 
-34. 🔜 **Vela numa homenagem** (branch `vela-na-ficha`) — terceira parte do mapa de
+34. ✅ **Vela numa homenagem** — terceira parte do mapa de
     tesouro, e o item 8 da lista de melhorias: até aqui a vela era só um ponto no
     chão e não pertencia a cachorro nenhum. A tabela `velas` ganhou `memorial_id`
     (`supabase/018_vela_na_homenagem.sql`, que apaga as velas junto com a
@@ -709,6 +709,38 @@ flores/velas nas lápides dos outros (MVP family & friends).
     na frente da estátua. Sem login, o login abre sobre o mapa e a vela fica
     guardada para a volta. **Rodar `supabase/018_vela_na_homenagem.sql` no
     Supabase antes do deploy**: sem a coluna, o banco recusa a vela da homenagem.
+
+35. 🔜 **O site abre no mapa** (branch `abre-no-mapa`) — última parte do mapa de
+    tesouro e a primeira das três decisões do usuário: a primeira tela é o mapa
+    ilustrado, com "Passear no jardim" como botão grande e "Menu" ao lado (o cartão
+    de sempre: escolher companheiro, como jogar, sobre, som, por cima do mapa).
+    Quem chega pelo link de uma homenagem continua vendo o cartão dela primeiro, e
+    "Ver o jardim todo" leva ao mapa.
+    - **Antes do 3D**: o mapa (`js/mapa.js`, SVG puro) não depende mais do jogo.
+      As medidas do jardim (praça, avenidas, cerca, campos e vagas) foram para
+      `js/planta.js`, usado pelo 3D e pelo mapa, e `main.js` desenha o mapa com
+      uma leitura simples do banco (`buscarRest` em `chegada.js`: homenagens e
+      velas acesas). Como no cartão do link, o jogo só começa a montar depois de o
+      mapa ser pintado (ou 1,5 s, se o banco demorar). Medido no build de produção,
+      dentro da página: mapa em 0,24 s, jardim pronto em 1,1 s.
+    - **Fonte trocável**: quando o jogo fica pronto e as pedras e velas carregam,
+      `usarJogo()` troca a fonte do mapa para as homenagens vivas do jardim sem
+      fechar o mapa nem a ficha aberta. Até lá, a ficha já mostra tudo, mas os
+      botões ficam desligados com "preparando o jardim…".
+    - **Navegação**: "Passear no jardim" entra com o companheiro de sempre (o
+      guardado no navegador) ou abre a escolha de companheiro. O ☰ e o ESC do
+      passeio voltam ao mapa (antes voltavam ao cartão do menu); no cartão, "Mapa
+      do jardim" volta ao mapa; ESC com o cartão aberto também. O 🗺️ do passeio
+      abre o mesmo mapa no modo de sempre, com ×. Na primeira tela, o HUD do
+      passeio sai de cena (`em-casa`), e o login e os avisos ficam acima do mapa.
+    - Textos: "Entrar no jardim" virou "Passear no jardim", o ESC/☰ do "Como jogar"
+      e das dicas "voltam ao mapa", e o "Sobre" fala de cães e gatos.
+    Bug pego no teste: dentro da função que abre o mapa, um `const fonte` (a letra
+    do título) escondia a fonte das homenagens, e a abertura dava erro em silêncio.
+    Testado com Playwright no computador e no iPhone 14: mapa na primeira tela,
+    ficha com velas e mensagens, Passear com e sem companheiro guardado, ESC/☰
+    voltando ao mapa, Menu e ESC no Menu, chegada pelo link e o teste das velas da
+    etapa 34 pelo caminho novo.
 
 ## Ideias soltas (não decidido ainda)
 

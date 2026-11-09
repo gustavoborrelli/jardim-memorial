@@ -39,6 +39,14 @@ export const homenagemDoLink = slugPedido
       .catch(() => null)
   : Promise.resolve(null);
 
+// leitura simples de uma tabela do banco, sem o cliente do Supabase (que mora no
+// pedaço pesado): é o que deixa o mapa da primeira tela aparecer antes do 3D
+export function buscarRest(caminho){
+  return fetch(`${URL_SUPABASE}/rest/v1/${caminho}`, {
+    headers: { apikey: CHAVE, Authorization: `Bearer ${CHAVE}` },
+  }).then(r => (r.ok ? r.json() : Promise.reject(new Error(r.status))));
+}
+
 const escapar = (s) => String(s ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
 
 /* o miolo do cartão (foto, nome, datas, mensagem), usado na tela de carregamento

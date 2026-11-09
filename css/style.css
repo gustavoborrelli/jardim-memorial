@@ -100,7 +100,7 @@ canvas{display:block;outline:none;}
   opacity:0;
   transform:translateY(-6px);
   transition:opacity 0.35s ease, transform 0.35s ease;
-  z-index:6;
+  z-index:55; /* também por cima do mapa da primeira tela e dos modais */
   pointer-events:none;
 }
 .toast.show{ opacity:1; transform:translateY(0); }
@@ -119,7 +119,7 @@ canvas{display:block;outline:none;}
 /* login pode ser pedido com o modal de mensagens já aberto atrás dele
    (diferente do modal de homenagem, que só abre depois do login) — garante
    que o login sempre fique por cima, não importa a ordem no DOM */
-#authModalBack{ z-index:30; }
+#authModalBack{ z-index:50; } /* acima do mapa da primeira tela (35) e do menu (40) */
 .modal{
   width:min(420px, 88vw);
   background:linear-gradient(180deg, #2c2438, #221c2c);
@@ -319,6 +319,19 @@ canvas{display:block;outline:none;}
 }
 .mt-svg{ flex:1; min-height:0; width:100%; display:block; filter:drop-shadow(0 10px 18px rgba(10,6,2,0.5)); }
 .mt-dica{ margin:0; text-align:center; font-family:'Caveat',cursive; font-size:19px; color:#f1e2c2; }
+/* primeira tela do site: o mapa fica por cima da tela de carregamento (e abaixo do
+   menu), sem o ×, com "Passear no jardim" e "Menu" embaixo */
+.mt-fundo.mt-modo-inicio{ z-index:35; background:radial-gradient(ellipse at 50% 40%, #3a2c22 0%, #1d1510 100%); }
+.mt-modo-inicio .mt-fechar{ display:none; }
+.mt-inicio-barra{ display:none; gap:8px; }
+.mt-modo-inicio .mt-inicio-barra{ display:flex; }
+.mt-modo-inicio .mt-dica{ font-size:17px; }
+.mt-passear{ flex:1; font-size:16px; padding:14px 16px; }
+.mt-btn.mt-menu{ background:#f6ead0; flex:0 0 auto; }
+.mt-inicio-barra .mt-btn[disabled]{ opacity:.75; }
+/* com o mapa como primeira tela, a interface do passeio sai de cena */
+.em-casa .hud, .em-casa .pause-chip, .em-casa .view-toggle, .em-casa .plant-toggle,
+.em-casa .map-toggle, .em-casa .joystick, .em-casa .dicas-toque{ opacity:0 !important; pointer-events:none !important; }
 .mt-titulo{ font-family:'IM Fell English SC', Georgia, serif; }
 .mt-mao{ font-family:'Caveat', 'Bradley Hand', cursive; }
 .mt-vaga{ cursor:pointer; outline:none; }

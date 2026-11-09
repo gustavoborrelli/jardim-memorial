@@ -18,6 +18,7 @@ import { matPedra, matMadeira, torneado } from './gfx/materiais.js';
 import { malhaSDF, esculpir, caixa, elipsoide } from './gfx/sdf.js';
 import { normalDeAltura, sorteador } from './gfx/ruido.js';
 import { escolherPerfil } from './gfx/qualidade.js';
+import { SECTIONS, VAGAS, dadosDaLinha } from './planta.js';
 import { geoEstatua, poseDaRaca } from './gfx/estatuas.js';
 
 // as vagas: quatro por jardim. Exportado porque o chão precisa saber onde elas
@@ -83,22 +84,8 @@ export function createLapides(scene) {
     { id:'estatua-gato',      label:'Gato',      icon:'🐈', raca:'siames', especie:'gato' },
   ];
 
-  /* four named sections, one per quadrant */
-  const SECTIONS = [
-    {name:'Recanto do Sol',          sx: 1, sz: -1},
-    {name:'Bosque da Saudade',       sx: -1, sz: -1},
-    {name:'Campo das Estrelas',      sx: 1, sz: 1},
-    {name:'Prado dos Companheiros',  sx: -1, sz: 1},
-  ];
-
-  const plots = [];
-  SECTIONS.forEach(sec=>{
-    [9,15].forEach(ax=>{
-      [9,15].forEach(az=>{
-        plots.push({x:sec.sx*ax, z:sec.sz*az, section:sec.name, occupied:false, mesh:null, data:null});
-      });
-    });
-  });
+  /* os quatro campos e as vagas moram em planta.js (o mapa usa os mesmos) */
+  const plots = VAGAS.map(v => ({ ...v, occupied:false, mesh:null, data:null }));
 
   /* entrance archway with a name plank for each section */
   function makeSectionSign(text){
@@ -659,18 +646,7 @@ export function createLapides(scene) {
     );
     if(!plot || plot.occupied) return;
     const photo = await loadImage(row.foto_url);
-    installStone(plot, {
-      id: row.id,
-      criadoPor: row.criado_por,
-      name: row.nome_pet,
-      dates: row.datas,
-      msg: row.mensagem,
-      photo,
-      photoUrl: row.foto_url,
-      formato: row.formato,
-      cor: row.cor,
-      slug: row.slug,
-    }, animate);
+    installStone(plot, dadosDaLinha(row, photo), animate);
   }
 
   // tira a lápide da cena e devolve a vaga como vazia (usado tanto por quem

@@ -14,8 +14,9 @@ import { createDogController } from './cachorros.js';
 import { createMenuUi } from './menuUi.js';
 import { createAuth } from './auth.js';
 import { createPresence } from './presenca.js';
-import { createMapaUi } from './mapa.js';
+import { obterMapaUi } from './mapa.js';
 import { escolherPerfil, criarGovernador, escalaDePixels } from './gfx/qualidade.js';
+import { BOUNDS } from './planta.js';
 import { criarPos } from './gfx/pos.js';
 
 /* ============ BASIC SETUP ============ */
@@ -55,7 +56,7 @@ const world = createWorld(scene, { renderer, perfil, pos });
 const lapides = createLapides(scene);
 world.scatterFlowers(90, lapides.plots);
 
-const BOUNDS = 25.5;
+// a cerca mora em planta.js, junto com as outras medidas que o mapa usa
 const pausedState = { value: true }; // starts on the menu
 
 const dogController = createDogController(scene, renderer, {
@@ -65,7 +66,9 @@ const dogController = createDogController(scene, renderer, {
 });
 
 const auth = createAuth();
-const mapaUi = createMapaUi({ lapides, world, dogController, bounds: BOUNDS });
+// o mesmo mapa da primeira tela (main.js), agora com as homenagens vivas do jardim
+const mapaUi = obterMapaUi();
+mapaUi.usarJogo({ lapides, world, dogController });
 const menuUi = createMenuUi({ camera, lapides, world, dogController, pausedState, auth, mapaUi });
 const presence = createPresence({ scene, dogController, pausedState });
 
