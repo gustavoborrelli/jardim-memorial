@@ -650,7 +650,13 @@ flores/velas nas lápides dos outros (MVP family & friends).
       cachorro, a grade da escultura é mais fina (`celula: 0.55`) — com a mesma,
       a ponta da orelha furava — e a coleira fica baixa, senão cortava o rosto.
       Visita pelo link a uma estátua de gato: com o gato que a pessoa escolheu, se
-      for gato; senão, um siamês. **Rodar `supabase/017_lapide_gato.sql` no
+      for gato; senão, um siamês.
+      Depois de publicada, o usuário viu um "pescoço corcunda" na estátua. Eram
+      três coisas somadas: o corpo inclinado demais para sentar (0,95, mais que nos
+      cachorros; voltou a 0,78), o pescoço próprio da cabeça somado ao do corpo (a
+      estátua usa agora `cabecaEstatua`, a cabeça sem o pescoço) e a ponta do
+      pescoço do corpo, já inclinado, saindo atrás do crânio (a cabeça recua 6 cm e
+      sobe pouco mais de 1 cm, opções `recua`/`sobe` da pose). **Rodar `supabase/017_lapide_gato.sql` no
       Supabase antes do deploy.**
     - Textos: "Escolher cachorro" virou "Escolher companheiro", e o "Como jogar" e
       as dicas da primeira entrada deixaram de falar só de cachorro.

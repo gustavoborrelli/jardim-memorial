@@ -74,8 +74,8 @@ const MEDIDAS = {
     celula: 0.55,
     orelha: { desce: 0, abre: 0, pelo: 1.8 },
     focinho: { de: 0.43, estica: 0.4 },
-    cabeca: 1.3,
-    sentado: { inclina: 0.95, giro: 0.45, ergue: 0.02 },
+    cabeca: 1.2,
+    sentado: { inclina: 0.78, giro: 0.45, ergue: 0.02, recua: 0.06, sobe: 0.012 },
   },
   dachshund: {
     frente: { r1: 0.07, r2: 0.04, pe: [0.05, 0.034, 0.066], ante: 0.2 },
@@ -240,7 +240,13 @@ function campoEstatua(raca, pose){
   somar(corpo.campo(limitada(troncoPelo, crescer(R.caixaTronco))), caixaCorpo(crescer(R.caixaTronco)), 0, true);
 
   // cabeça e orelhas: nariz e olhos entram na pedra (estátua não tem olho de vidro)
-  const mov0 = movimentoCabeca(P, corpo.ponto(P), Q.ergue, -Q.giro);
+  // `recua`/`sobe`: leva a cabeça para trás e para cima do pescoço. No gato, a
+  // ponta do pescoço do corpo, já inclinado, ficava atrás do crânio e virava um
+  // calombo na nuca
+  const Pn = corpo.ponto(P);
+  if(Q.recua) Pn[2] -= Q.recua;
+  if(Q.sobe) Pn[1] += Q.sobe;
+  const mov0 = movimentoCabeca(P, Pn, Q.ergue, -Q.giro);
   // escala em volta do pivô do pescoço, junto com o resto do movimento da cabeça
   const e = M.cabeca || 1;
   const escalar = (f) => (x, y, z) => f(P[0] + (x - P[0])/e, P[1] + (y - P[1])/e, P[2] + (z - P[2])/e)*e;
@@ -249,7 +255,7 @@ function campoEstatua(raca, pose){
     ponto: ([x, y, z]) => mov0.ponto([P[0] + (x - P[0])*e, P[1] + (y - P[1])*e, P[2] + (z - P[2])*e]),
   };
   const caixaMovida = (cx) => caixaDosPontos(cantos(crescer(cx)).map(mov.ponto));
-  let cabeca = esculpir([[R.cabeca, 0], [elipsoide(...R.nariz.pos, ...R.nariz.esc), 0.016]]);
+  let cabeca = esculpir([[R.cabecaEstatua || R.cabeca, 0], [elipsoide(...R.nariz.pos, ...R.nariz.esc), 0.016]]);
   [-1, 1].forEach(s => {
     const c = naSuperficie(R.cabeca, [s*R.olhos.x, R.olhos.y, R.olhos.z], R.olhos.r*0.45);
     cabeca = subtrair(cabeca, esfera(c[0], c[1], c[2], R.olhos.r*0.72), 0.01);

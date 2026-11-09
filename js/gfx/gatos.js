@@ -74,6 +74,9 @@ function montarGato(m){
   ];
   if(m.cunha) partesCabeca.push([cone([0, H[1] + ry*0.1, H[2]], [0, yFoc + 0.004*S, zFoc + 0.01*S], rx*0.6, rx*0.34), 0.04*S]);
   const cabeca = esculpir(partesCabeca);
+  // na estátua o pescoço é só o do corpo: com o da cabeça junto, os dois somavam
+  // um calombo na nuca (o "pescoço corcunda" que o Gustavo viu)
+  const cabecaEstatua = esculpir(partesCabeca.filter((p, i) => i !== 5));
   const caixaCabeca = caixaDe([H, pescoco, [0, yFoc, zFoc + foc]], Math.max(rx, ry, rz)*1.35 + 0.04);
 
   // nariz e boca nascem da superfície de verdade
@@ -157,7 +160,7 @@ function montarGato(m){
     bigodes: { raiz: [rx*0.34, yFoc - ry*0.04, zFoc + 0.01*S], comp: 0.15*S },
     pescocoPivo: pescoco,
     olhoAltura: olhos.y, olhoFrente: nariz[2] + 0.07,
-    tronco, caixaTronco, cabeca, caixaCabeca, orelha, patas, rabo,
+    tronco, caixaTronco, cabeca, cabecaEstatua, caixaCabeca, orelha, patas, rabo,
     cor: pinta.cor, corOrelha: pinta.corOrelha, corPata: pinta.corPata, corRabo: pinta.corRabo,
     pelo,
     peloRabo: () => m.peloRabo,
