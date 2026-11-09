@@ -746,6 +746,15 @@ export function createMenuUi({ camera, lapides, world, dogController, pausedStat
     });
   }
 
+  // no celular não existe ESC: é o botão ☰ que pausa e volta para o menu
+  document.getElementById('btnMenuToggle').addEventListener('click', ()=>{
+    if(pausedState.value) return;
+    showMenuPanel(menuHome);
+    menuScreen.classList.remove('hidden');
+    pausedState.value = true;
+    dogController.resetKeys();
+  });
+
   window.addEventListener('keydown', e=>{
     if(e.key === 'Escape'){
       // if a modal is open, ESC closes it instead of opening the pause menu

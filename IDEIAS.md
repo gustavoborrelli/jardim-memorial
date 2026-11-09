@@ -426,8 +426,7 @@ flores/velas nas lápides dos outros (MVP family & friends).
     Colorimetria: o r128 não convertia as cores de sRGB; isso provavelmente explica boa
     parte do ar "lavado" que aparecia nas reclamações das etapas 17 e 21.
 
-25. 🔜 **Estátuas de raça** (branch `lapide-raca`; a 24 é o app de iPhone, na
-    `app-ios`) — pergunta do usuário: com os gráficos novos, dá pra ter lápide em
+25. ✅ **Estátuas de raça** (a 24 é o app de iPhone, na `app-ios`) — pergunta do usuário: com os gráficos novos, dá pra ter lápide em
     forma de raça? Três formatos novos, um por raça do menu: Golden, Pastor e
     Dachshund. Cada um é o próprio cachorro do passeio talhado em mármore sobre um
     pedestal de granito com a homenagem gravada na frente (`js/gfx/estatuas.js`).
@@ -498,7 +497,7 @@ flores/velas nas lápides dos outros (MVP family & friends).
     `supabase/015_link_homenagem.sql` antes do deploy**: sem a coluna `slug`, gravar
     homenagem falha.
 
-27. 🔜 **Vira-lata caramelo** (branch `caramelo`) — pedido do usuário: o cachorro
+27. ✅ **Vira-lata caramelo** — pedido do usuário: o cachorro
     mais comum do Brasil não estava entre as raças. Entrou nos dois lugares: como
     quarta raça do passeio (cartão "Vira-lata Caramelo" no menu, que passou a uma
     grade 2×2 também no celular, onde 4 cartões em coluna passariam da tela) e
@@ -524,6 +523,29 @@ flores/velas nas lápides dos outros (MVP family & friends).
     Supabase antes do deploy**: sem ele o banco recusa a estátua nova.
     Quem estiver com o jardim aberto na versão antiga vê um caramelo de outra
     pessoa como dachshund (a receita cai na última raça) até recarregar.
+
+28. 🔜 **Menu e ajuda no celular** (branch `menu-toque`) — primeiro item da lista de
+    melhorias de experiência: no celular, depois de entrar no jardim, não havia como
+    voltar ao menu (o caminho era o ESC), e o "Como jogar" falava de WASD, touchpad,
+    mouse e ESC. Veio da branch `app-ios`, sem o código de moderação e de conta, que
+    depende do 013:
+    - **Botão ☰** no topo da coluna de botões redondos (🗺️ 🌼 🐾), só em tela de
+      toque: pausa e abre o menu, como o ESC. Usa o estilo do botão do mapa.
+    - **"Como jogar" de toque**: cada regra tem a versão de teclado (`so-teclado`) e a
+      de toque (`so-toque`), trocadas pelo CSS em `pointer:coarse`. Na `app-ios`, o
+      `.so-toque{display:none}` perdia para o `.menu-panel .rule{display:flex}`, mais
+      específico, e o computador mostraria as duas versões; aqui o seletor repete
+      `.menu-panel .rule`. Entrou uma regra nova nas duas versões, do mapa e da troca
+      de câmera (M e V no teclado, 🗺️ e 🐾 no toque), e as vagas vazias deixaram de
+      ser "círculos verdes", que não existem desde a etapa 23: são o círculo de
+      pedrinhas com uma patinha. A linha "aperte ESC para voltar aqui" some no toque.
+    - **Menu que rola**: com as regras novas, o "Como jogar" passou da altura do
+      iPhone 14 e cortava o título e o "Voltar", porque o `align-items:center`
+      centraliza mesmo sem espaço. A tela do menu rola, e o cartão se centraliza com
+      `margin:auto`, que não corta o topo. Vale também no computador com janela baixa.
+    Testado com Playwright no computador e no iPhone 14: regras visíveis em cada um
+    (7 de teclado, 7 de toque), ☰ ausente no computador, ☰ → menu → "Entrar no
+    jardim" de volta ao passeio.
 
 ## Ideias soltas (não decidido ainda)
 

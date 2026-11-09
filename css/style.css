@@ -434,6 +434,9 @@ canvas{display:block;outline:none;}
 }
 .map-toggle:hover{ transform:translateY(-1px); background:rgba(30,22,38,0.75); }
 .map-toggle:active{ transform:translateY(0) scale(0.96); }
+/* o botão ☰ usa o estilo do mapa, mas só aparece no toque (ver pointer:coarse) */
+.map-toggle.menu-toggle{ display:none; }
+.menu-panel .rule.so-toque{ display:none; }
 
 /* auth */
 .auth-chip{
@@ -567,6 +570,13 @@ canvas{display:block;outline:none;}
   .view-toggle{ bottom:calc(22px + env(safe-area-inset-bottom, 0px)); right:18px; width:48px; height:48px; font-size:18px; }
   .plant-toggle{ bottom:calc(78px + env(safe-area-inset-bottom, 0px)); right:18px; width:48px; height:48px; font-size:18px; }
   .map-toggle{ bottom:calc(134px + env(safe-area-inset-bottom, 0px)); right:18px; width:48px; height:48px; font-size:18px; }
+  .map-toggle.menu-toggle{ display:flex; bottom:calc(190px + env(safe-area-inset-bottom, 0px)); }
+
+  /* "Como jogar": as regras de toque no lugar das de teclado. O seletor repete
+     .menu-panel .rule para vencer o display:flex dele */
+  .menu-panel .rule.so-toque{ display:flex; }
+  .menu-panel .rule.so-teclado{ display:none; }
+  .menu-card .credits{ display:none; } /* fala de ESC */
 
   /* HUD mais enxuto em telas de toque: sem dicas de teclado (não existe),
      sem o aviso de ESC (idem), título mais discreto, botões mais compactos */
@@ -668,8 +678,14 @@ canvas{display:block;outline:none;}
   position:absolute; inset:0;
   z-index:40;
   display:flex;
-  align-items:center;
+  /* o cartão pode ser mais alto que a tela (o "Como jogar" no celular): a tela do
+     menu rola e o cartão se centraliza com margin:auto, que, ao contrário do
+     align-items:center, não corta o topo quando falta espaço */
+  align-items:flex-start;
   justify-content:center;
+  overflow-y:auto;
+  padding:calc(16px + env(safe-area-inset-top, 0px)) 0 calc(16px + env(safe-area-inset-bottom, 0px));
+  box-sizing:border-box;
   /* o jardim de verdade aparece atrás do menu, com a luz da hora de quem visita:
      é a primeira coisa que a pessoa vê. Só uma vinheta pra destacar o cartão. */
   background:radial-gradient(ellipse at 50% 46%, rgba(38,24,16,0.05) 0%, rgba(38,24,16,0.4) 100%);
@@ -682,6 +698,7 @@ canvas{display:block;outline:none;}
 .menu-screen:not(.hidden) ~ .view-toggle,
 .menu-screen:not(.hidden) ~ .plant-toggle,
 .menu-screen:not(.hidden) ~ .map-toggle,
+.menu-screen:not(.hidden) ~ .menu-toggle,
 .menu-screen:not(.hidden) ~ .joystick{ opacity:0; pointer-events:none; }
 .menu-card{
   text-align:center;
@@ -693,6 +710,7 @@ canvas{display:block;outline:none;}
   box-shadow:0 24px 70px rgba(90,50,40,0.32);
   max-width:420px;
   width:88vw;
+  margin:auto;
   box-sizing:border-box;
 }
 .menu-card .paw{

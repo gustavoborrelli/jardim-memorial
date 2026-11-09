@@ -76,12 +76,21 @@
 
       <div class="menu-panel" id="menuHow">
         <h2>Como jogar</h2>
-        <div class="rule"><span class="ico">🐕</span><span><b>W A S D</b> ou setas movem o cãozinho. Ele sempre anda na direção em que a câmera está olhando.</span></div>
-        <div class="rule"><span class="ico">🎥</span><span><b>Dois dedos no touchpad</b> (ou roda do mouse) giram a câmera ao redor dele.</span></div>
-        <div class="rule"><span class="ico">🌸</span><span><b>Clique no gramado</b> para plantar uma flor colorida onde quiser. O botão 🌼/🕯️ no canto alterna entre plantar flor ou vela — a vela dura bem mais tempo.</span></div>
-        <div class="rule"><span class="ico">🪦</span><span><b>Clique numa pedra vazia</b> (círculos verdes) para gravar nome, foto, datas e uma mensagem. O jardim tem quatro campos: Recanto do Sol, Bosque da Saudade, Campo das Estrelas e Prado dos Companheiros.</span></div>
-        <div class="rule"><span class="ico">💬</span><span><b>Passe o mouse sobre uma lápide</b> para ler a homenagem gravada nela.</span></div>
-        <div class="rule"><span class="ico">⏸️</span><span><b>ESC</b> pausa e volta para este menu a qualquer momento.</span></div>
+        <!-- so-teclado: computador; so-toque: celular e tablet (css, pointer:coarse) -->
+        <div class="rule so-teclado"><span class="ico">🐕</span><span><b>W A S D</b> ou setas movem o cãozinho. Ele sempre anda na direção em que a câmera está olhando.</span></div>
+        <div class="rule so-teclado"><span class="ico">🎥</span><span><b>Dois dedos no touchpad</b> (ou roda do mouse) giram a câmera ao redor dele.</span></div>
+        <div class="rule so-toque"><span class="ico">🐕</span><span>O <b>círculo no canto da tela</b> move o cãozinho. Ele sempre anda na direção em que a câmera está olhando.</span></div>
+        <div class="rule so-toque"><span class="ico">🎥</span><span><b>Arraste o dedo</b> na tela para girar a câmera ao redor dele.</span></div>
+        <div class="rule so-teclado"><span class="ico">🌸</span><span><b>Clique no gramado</b> para plantar uma flor colorida onde quiser. O botão 🌼/🕯️ no canto alterna entre plantar flor ou vela — a vela dura bem mais tempo.</span></div>
+        <div class="rule so-toque"><span class="ico">🌸</span><span><b>Toque no gramado</b> para plantar uma flor colorida onde quiser. O botão 🌼/🕯️ alterna entre plantar flor ou vela — a vela dura bem mais tempo.</span></div>
+        <div class="rule so-teclado"><span class="ico">🪦</span><span><b>Clique numa pedra vazia</b> (círculo de pedrinhas com uma patinha) para gravar nome, foto, datas e uma mensagem. O jardim tem quatro campos: Recanto do Sol, Bosque da Saudade, Campo das Estrelas e Prado dos Companheiros.</span></div>
+        <div class="rule so-toque"><span class="ico">🪦</span><span><b>Toque numa pedra vazia</b> (círculo de pedrinhas com uma patinha) para gravar nome, foto, datas e uma mensagem. O jardim tem quatro campos: Recanto do Sol, Bosque da Saudade, Campo das Estrelas e Prado dos Companheiros.</span></div>
+        <div class="rule so-teclado"><span class="ico">💬</span><span><b>Passe o mouse sobre uma lápide</b> para ler a homenagem gravada nela, e clique para deixar uma mensagem.</span></div>
+        <div class="rule so-toque"><span class="ico">💬</span><span><b>Toque numa lápide</b> para ler a homenagem e deixar uma mensagem.</span></div>
+        <div class="rule so-teclado"><span class="ico">🗺️</span><span><b>M</b> abre o mapa do jardim, e <b>V</b> troca a câmera de trás do cachorro para os olhos dele.</span></div>
+        <div class="rule so-toque"><span class="ico">🗺️</span><span>O botão <b>🗺️</b> abre o mapa do jardim, e o <b>🐾</b> troca a câmera de trás do cachorro para os olhos dele.</span></div>
+        <div class="rule so-teclado"><span class="ico">⏸️</span><span><b>ESC</b> pausa e volta para este menu a qualquer momento.</span></div>
+        <div class="rule so-toque"><span class="ico">⏸️</span><span>O botão <b>☰</b> pausa e volta para este menu a qualquer momento.</span></div>
         <div class="back-row"><button class="menu-btn ghost" data-back>← Voltar</button></div>
       </div>
 
@@ -129,6 +138,8 @@
   <button class="view-toggle" id="btnViewToggle" title="Alternar visão 1ª/3ª pessoa (V)">🐾</button>
   <button class="plant-toggle" id="btnPlantToggle" title="Alternar entre plantar flor ou vela">🌼</button>
   <button class="map-toggle" id="btnMapToggle" title="Ver mapa do jardim (M)">🗺️</button>
+  <!-- só no toque: no celular não existe ESC para voltar ao menu -->
+  <button class="map-toggle menu-toggle" id="btnMenuToggle" title="Menu" aria-label="Abrir o menu">☰</button>
 
   <div class="hint-empty" id="hintEmpty">clique para deixar uma homenagem aqui</div>
   <div class="epitaph-card" id="epitaphCard">
