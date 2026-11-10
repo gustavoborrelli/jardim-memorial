@@ -28,7 +28,14 @@ export const POSICOES_VAGA = [];
   [9,15].forEach(ax=> [9,15].forEach(az=> POSICOES_VAGA.push({ x: sx*ax, z: sz*az })));
 });
 
-export function createLapides(scene) {
+/* opções (etapa 37: cada jardim tem as suas; sem nada, é o Jardim Memorial):
+   vagas — [{x, z, section, rot?}] (rot: para onde a pedra olha; 0 = +z)
+   placas — [{nome, tipo: 'arco'|'placa', x, z, rot}] no lugar dos arcos dos campos
+   altura(x, z) — a altura do chão (jardim com relevo)
+   semBanco — protótipo: não lê nem escuta o banco de homenagens
+   exemplos — [{vaga, formato, cor, name, dates, msg}] pedras só desta tela */
+export function createLapides(scene, { vagas = VAGAS, placas = null, altura = null, semBanco = false, exemplos = [] } = {}) {
+  const alturaEm = (x, z) => altura ? altura(x, z) : 0;
 
   const stoneGroup = new THREE.Group();
   scene.add(stoneGroup);
@@ -85,7 +92,7 @@ export function createLapides(scene) {
   ];
 
   /* os quatro campos e as vagas moram em planta.js (o mapa usa os mesmos) */
-  const plots = VAGAS.map(v => ({ ...v, occupied:false, mesh:null, data:null }));
+  const plots = vagas.map(v => ({ ...v, occupied:false, mesh:null, data:null }));
 
   /* entrance archway with a name plank for each section */
   function makeSectionSign(text){
@@ -119,7 +126,7 @@ export function createLapides(scene) {
   const geoVigaArco = new RoundedBoxGeometry(3.3, 0.12, 0.14, 2, 0.03);
   const geoTabua = new RoundedBoxGeometry(2.96, 0.66, 0.05, 2, 0.02);
   const geoFace = new THREE.PlaneGeometry(2.88, 0.6);
-  SECTIONS.forEach(sec=>{
+  function montarArco(nome){
     const g = new THREE.Group();
     [-1.4, 1.4].forEach(off=>{
       const post = new THREE.Mesh(geoPosteArco, archWood);
@@ -144,7 +151,7 @@ export function createLapides(scene) {
       g.add(c);
     });
     // uma face de cada lado: o nome se lê de quem vem de qualquer direção
-    const tex = makeSectionSign(sec.name);
+    const tex = makeSectionSign(nome);
     const matFace = new THREE.MeshStandardMaterial({ map: tex, roughness: 0.8, transparent: true });
     [0, Math.PI].forEach(rot => {
       const face = new THREE.Mesh(geoFace, matFace);
@@ -152,11 +159,47 @@ export function createLapides(scene) {
       face.position.set(0, 1.86, rot === 0 ? 0.027 : -0.027);
       g.add(face);
     });
-    // stand at the edge of the N-S avenue, marking the walk-in entrance to the quadrant
-    g.position.set(sec.sx*4.7, 0, sec.sz*12);
-    g.rotation.y = -sec.sx * Math.PI/2;
-    scene.add(g);
-  });
+    return g;
+  }
+  // placa de beira de trilha: um poste na ponta e uma tábua menor com o nome
+  function montarPlaca(nome){
+    const g = new THREE.Group();
+    const post = new THREE.Mesh(geoPosteArco, archWood);
+    post.scale.set(1, 0.62, 1);
+    post.position.x = -0.86;
+    post.castShadow = post.receiveShadow = true;
+    g.add(post);
+    const plank = new THREE.Mesh(geoTabua, archWood);
+    plank.scale.setScalar(0.55);
+    plank.position.y = 1.18;
+    plank.castShadow = plank.receiveShadow = true;
+    g.add(plank);
+    const matFace = new THREE.MeshStandardMaterial({ map: makeSectionSign(nome), roughness: 0.8, transparent: true });
+    [0, Math.PI].forEach(rot => {
+      const face = new THREE.Mesh(geoFace, matFace);
+      face.scale.setScalar(0.55);
+      face.rotation.y = rot;
+      face.position.set(0, 1.18, rot === 0 ? 0.016 : -0.016);
+      g.add(face);
+    });
+    return g;
+  }
+  if(placas){
+    placas.forEach(p => {
+      const g = p.tipo === 'placa' ? montarPlaca(p.nome) : montarArco(p.nome);
+      g.position.set(p.x, alturaEm(p.x, p.z), p.z);
+      g.rotation.y = p.rot;
+      scene.add(g);
+    });
+  } else {
+    SECTIONS.forEach(sec=>{
+      const g = montarArco(sec.name);
+      // stand at the edge of the N-S avenue, marking the walk-in entrance to the quadrant
+      g.position.set(sec.sx*4.7, 0, sec.sz*12);
+      g.rotation.y = -sec.sx * Math.PI/2;
+      scene.add(g);
+    });
+  }
 
   function loadImage(url){
     return new Promise(resolve=>{
@@ -536,9 +579,10 @@ export function createLapides(scene) {
 
     g.scale.setScalar(scaleVar);
     g.rotation.z = jitterTilt;
-    g.position.set(plot.x, 0, plot.z);
-    g.userData = { isStone:true, plotRef:plot, data, baseRotY: jitterRot };
-    g.rotation.y = jitterRot;
+    g.position.set(plot.x, alturaEm(plot.x, plot.z), plot.z);
+    const rotY = (plot.rot || 0) + jitterRot;
+    g.userData = { isStone:true, plotRef:plot, data, baseRotY: rotY };
+    g.rotation.y = rotY;
     return g;
   }
 
@@ -562,14 +606,15 @@ export function createLapides(scene) {
     // alvo real do clique: fino e invisível, do mesmo tamanho de sempre
     const hitDisc = new THREE.Mesh(new THREE.CircleGeometry(0.72, 16), new THREE.MeshBasicMaterial());
     hitDisc.rotation.x = -Math.PI/2;
-    hitDisc.position.set(plot.x, 0.02, plot.z);
+    hitDisc.position.set(plot.x, alturaEm(plot.x, plot.z) + 0.02, plot.z);
     hitDisc.visible = false;
     hitDisc.userData = { isEmptyPlot:true, plotRef:plot };
     stoneGroup.add(hitDisc);
     plot.marker = hitDisc;
 
     const visual = new THREE.Group();
-    visual.position.set(plot.x, 0, plot.z);
+    visual.position.set(plot.x, alturaEm(plot.x, plot.z), plot.z);
+    visual.rotation.y = plot.rot || 0;
     visual.userData = { plotRef:plot };
     const r = sorteador(Math.abs(Math.round(plot.x*31 + plot.z*17)) + 3);
     const N = 15;
@@ -663,6 +708,14 @@ export function createLapides(scene) {
   }
 
   async function loadMemoriais(){
+    if(semBanco){
+      // protótipo: só as pedras de exemplo, sem foto
+      exemplos.forEach((ex, i) => {
+        const plot = plots[ex.vaga];
+        if(plot && !plot.occupied) installStone(plot, { id: `exemplo-${i}`, name: ex.name, dates: ex.dates, msg: ex.msg, photo: null, formato: ex.formato, cor: ex.cor }, false);
+      });
+      return;
+    }
     const { data: rows, error } = await supabase.from('memoriais').select('*');
     if(error){
       console.error('Não foi possível carregar os memoriais:', error.message);
@@ -680,7 +733,7 @@ export function createLapides(scene) {
   /* ============ SUPABASE: lápides novas em tempo real ============ */
   // se outra pessoa criar uma homenagem enquanto o jardim está aberto aqui,
   // a lápide nasce na hora, sem precisar recarregar a página.
-  supabase
+  if(!semBanco) supabase
     .channel('memoriais-realtime')
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'memoriais' },
       payload => installFromRow(payload.new, true))

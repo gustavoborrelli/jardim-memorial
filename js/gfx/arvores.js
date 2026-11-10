@@ -95,6 +95,36 @@ function texturaFlorada(){
   return semFranja(c, 235);
 }
 
+/* salgueiro: fios pendurados de folhinhas estreitas, do alto do cartão até embaixo.
+   O cartão do salgueiro é alto e pendurado no ponto do tufo (ver CANTOS_PENDURADOS),
+   e a copa inteira vira uma cortina. */
+function texturaSalgueiro(){
+  const L = 128, A = 256;
+  const c = document.createElement('canvas'); c.width = L; c.height = A;
+  const x = c.getContext('2d');
+  const r = sorteador(13);
+  x.clearRect(0, 0, L, A);
+  for(let f=0;f<7;f++){
+    let px = 10 + r()*(L - 20), py = r()*18;
+    const fim = A*(0.62 + r()*0.36), curva = (r() - 0.5)*0.5;
+    while(py < fim){
+      const v = 180 + r()*75;
+      const comp = 7 + r()*4, larg = 1.9 + r()*0.7;
+      [-1, 1].forEach(lado => {
+        x.save();
+        x.translate(px + lado*2.2, py);
+        x.rotate(lado*(0.35 + r()*0.25) + curva*0.4);
+        x.fillStyle = `rgb(${v*(lado > 0 ? 1 : 0.82)},${v*(lado > 0 ? 1 : 0.82)},${v*(lado > 0 ? 1 : 0.82)})`;
+        x.beginPath(); x.ellipse(0, comp*0.5, larg, comp, 0, 0, Math.PI*2); x.fill();
+        x.restore();
+      });
+      py += 6 + r()*3;
+      px += curva*2 + (r() - 0.5)*0.8;
+    }
+  }
+  return semFranja(c, 205);
+}
+
 /* ---------- tronco: tubo de raio variável, com raiz alargada ---------- */
 function tubo(pontos, raioFn, segs = 10, lados = 8){
   const curva = new THREE.CatmullRomCurve3(pontos.map(p => new THREE.Vector3(...p)));
@@ -127,7 +157,7 @@ function tubo(pontos, raioFn, segs = 10, lados = 8){
 }
 
 /* ---------- copa: distribui tufos sobre volumes ---------- */
-function gerarCopa({ volumes, tufos, tamanho, paleta, r, base = 0, altura = 1, internos = 0.22, sombraBaixo = 0.45 }){
+function gerarCopa({ volumes, tufos, tamanho, paleta, r, base = 0, altura = 1, internos = 0.22, sombraBaixo = 0.45, cantos = null, giro = Math.PI*2 }){
   const pos = [], nor = [], cor = [], canto = [], info = [], uv = [], idx = [];
   const c = new THREE.Color(), n = new THREE.Vector3();
   const centro = new THREE.Vector3();
@@ -142,6 +172,7 @@ function gerarCopa({ volumes, tufos, tamanho, paleta, r, base = 0, altura = 1, i
     return volumes[0];
   };
   const CANTOS = [[-1,-1],[1,-1],[1,1],[-1,1]];
+  const formato = cantos || CANTOS;
   let k = 0;
   for(let i=0;i<tufos;i++){
     const v = pick();
@@ -171,14 +202,15 @@ function gerarCopa({ volumes, tufos, tamanho, paleta, r, base = 0, altura = 1, i
     c.multiplyScalar(luz);
 
     const tam = tamanho*(0.78 + r()*0.44)*(interno ? 1.15 : 1);
-    const rot = r()*Math.PI*2;
-    CANTOS.forEach(([cx, cy]) => {
+    const rot = giro >= Math.PI*2 ? r()*Math.PI*2 : (r() - 0.5)*giro;
+    CANTOS.forEach(([cx, cy], q) => {
       pos.push(x, y, z);
       nor.push(nx2*il, ny2*il, nz2*il);
       cor.push(c.r, c.g, c.b);
-      canto.push(cx, cy);
+      canto.push(formato[q][0], formato[q][1]);
       info.push(tam, rot);
-      uv.push(cx*0.5+0.5, cy*0.5+0.5);
+      // a textura não é virada (DataTexture): no cartão pendurado, o alto do desenho vai no alto
+      uv.push(cx*0.5+0.5, cantos ? 0.5 - cy*0.5 : cy*0.5+0.5);
     });
     idx.push(k, k+1, k+2, k, k+2, k+3);
     k += 4;
@@ -234,7 +266,11 @@ const GLSL_BILLBOARD = /* glsl */`
   gl_Position = projectionMatrix*mvPosition;
 `;
 
-function materialCopa(mapa, uTempo, luz, { contraluz = 0.55, roughness = 0.82, cobertura = true } = {}){
+/* abrePerto (uAlvo): os tufos a menos de ~2 m da câmera e os que ficam entre a
+   câmera e o cachorro se desfazem. No Jardim do Lago a trilha passa por baixo do
+   salgueiro e a câmera, atrás do cachorro, entrava na cortina de folhas (a tela
+   inteira ficava verde). uAlvo: o cachorro, já no espaço da câmera. */
+function materialCopa(mapa, uTempo, luz, { contraluz = 0.55, roughness = 0.82, cobertura = true, abrePerto = false, uAlvo = null } = {}){
   const m = new THREE.MeshStandardMaterial({
     map: mapa, vertexColors: true, roughness, metalness: 0,
     alphaTest: 0.42, alphaToCoverage: cobertura, side: THREE.DoubleSide, envMapIntensity: 1.85,
@@ -245,12 +281,23 @@ function materialCopa(mapa, uTempo, luz, { contraluz = 0.55, roughness = 0.82, c
     s.uniforms.uSolDir = luz.uSolDir;
     s.uniforms.uSolCor = luz.uSolCor;
     s.uniforms.uContraluz = k;
+    if(abrePerto) s.uniforms.uAlvo = uAlvo;
     s.vertexShader = s.vertexShader
       .replace('#include <common>', `#include <common>\n${GLSL_VENTO}`)
       .replace('#include <begin_vertex>', `#include <begin_vertex>\ntransformed += ventoTufo(transformed, clamp(transformed.y*0.28, 0.0, 1.3));`)
       .replace('#include <project_vertex>', GLSL_BILLBOARD);
     s.fragmentShader = s.fragmentShader
-      .replace('#include <common>', `#include <common>\nuniform vec3 uSolDir, uSolCor;\nuniform float uContraluz;`)
+      .replace('#include <common>', `#include <common>\nuniform vec3 uSolDir, uSolCor;\nuniform float uContraluz;${abrePerto ? '\nuniform vec3 uAlvo;' : ''}`)
+      .replace('#include <alphatest_fragment>', abrePerto ? /* glsl */`
+        {
+          vec3 p = -vViewPosition;
+          float abre = smoothstep(1.0, 2.6, length(p));
+          // na linha entre a câmera e o cachorro: um túnel que se estreita perto dele
+          float t = dot(p, uAlvo)/max(dot(uAlvo, uAlvo), 1e-3);
+          if(t > 0.0 && t < 0.92) abre *= smoothstep(0.55, 1.5 - t*0.6, length(p - uAlvo*t));
+          diffuseColor.a *= abre;
+        }
+        #include <alphatest_fragment>` : '#include <alphatest_fragment>')
       .replace('#include <normal_fragment_begin>', `vec3 normal = normalize(vNormal);\nvec3 nonPerturbedNormal = normal;`)
       .replace('#include <emissivemap_fragment>', /* glsl */`
         // luz atravessando as folhas: olhando contra o sol, a borda da copa acende
@@ -261,7 +308,7 @@ function materialCopa(mapa, uTempo, luz, { contraluz = 0.55, roughness = 0.82, c
         totalEmissiveRadiance += uSolCor*diffuseColor.rgb*contra*(0.25 + beira)*uContraluz;
       `);
   };
-  m.customProgramCacheKey = () => 'copa';
+  m.customProgramCacheKey = () => abrePerto ? 'copa-abre' : 'copa';
   return m;
 }
 function materialSombraCopa(mapa, uTempo){
@@ -282,6 +329,9 @@ const VERDES_CIPRESTE = [0x5a9e58, 0x69ad60, 0x529660, 0x76b866];
 const VERDES_FRONDOSA = [0x6fae4e, 0x82bd54, 0x97c95c, 0x5f9e4b, 0xa8d063];
 const VERDES_MOITA = [0x63a551, 0x76b65a, 0x57984f];
 const ROSAS = [0xffb0c8, 0xff9dbb, 0xffc4d6, 0xffd7e4, 0xff8cb0];
+const VERDES_SALGUEIRO = [0x9cc06a, 0x8ab35e, 0xaccb76, 0x7ea455];
+// o cartão do salgueiro: estreito e alto, preso pelo topo no ponto do tufo
+const CANTOS_PENDURADOS = [[-0.55, -2.2], [0.55, -2.2], [0.55, 0.2], [-0.55, 0.2]];
 
 function especificacao(tipo, r, folhagem){
   if(tipo === 'cipreste'){
@@ -340,6 +390,30 @@ function especificacao(tipo, r, folhagem){
       cascaCor: 0x4f3a36,
     };
   }
+  if(tipo === 'salgueiro'){
+    // cúpula larga e baixa e, em volta, a cortina caindo quase até o chão: anéis de
+    // volumes cada vez mais abertos, com cartões altos pendurados (ver texturaSalgueiro)
+    const vols = [[0, 3.9, 0, 1.6, 0.7], [0.5, 3.6, 0.4, 1.2, 0.7], [-0.6, 3.7, -0.3, 1.2, 0.7]];
+    [[3.5, 1.7, 9, 0.75], [2.9, 2.35, 11, 0.7], [2.25, 2.85, 12, 0.62]].forEach(([y, raio, n, vr], k) => {
+      for(let i=0;i<n;i++){
+        const a = i/n*Math.PI*2 + k*0.37 + (r() - 0.5)*0.3;
+        vols.push([Math.cos(a)*raio, y, Math.sin(a)*raio, vr, 0.8]);
+      }
+    });
+    return {
+      volumes: vols, tufos: Math.round(880*folhagem), tamanho: 0.5/Math.sqrt(folhagem), paleta: VERDES_SALGUEIRO,
+      base: 0.6, altura: 3.6, sombraBaixo: 0.4, mapa: 'salgueiro', contraluz: 0.75, internos: 0.12,
+      cantos: CANTOS_PENDURADOS, giro: 0.35,
+      tronco: { pts: [[0, 0, 0], [0.18, 0.9, 0.05], [0.12, 1.9, 0.1], [0, 2.8, 0]], r0: 0.36, r1: 0.14,
+        galhos: [
+          [[0.15, 1.9, 0.08], [0.9, 2.8, 0.3], [1.7, 3.3, 0.6]],
+          [[0.12, 2.0, 0.08], [-0.8, 2.9, -0.3], [-1.6, 3.4, -0.5]],
+          [[0.1, 2.2, 0.1], [0.3, 3.0, -0.9], [0.5, 3.5, -1.6]],
+          [[0.1, 2.2, 0.1], [-0.3, 3.0, 0.9], [-0.4, 3.5, 1.6]],
+        ] },
+      cascaCor: 0x5b4836,
+    };
+  }
   if(tipo === 'moita'){
     const vols = [[0, 0.02, 0, 0.5, 0.85], [0.26, -0.05, 0.1, 0.33, 0.85], [-0.24, -0.04, -0.12, 0.34, 0.85]];
     return { volumes: vols, tufos: Math.round(150*folhagem), tamanho: 0.15/Math.sqrt(folhagem), paleta: VERDES_MOITA, base: -0.3, altura: 0.8, sombraBaixo: 0.42, mapa: 'folhas' };
@@ -354,10 +428,12 @@ function especificacao(tipo, r, folhagem){
   lista: [{ x, z, escala, tipo, y? }]
   Devolve o que o mundo precisa atualizar a cada quadro.
 */
-export function criarArvores(scene, lista, { perfil, luz }){
+export function criarArvores(scene, lista, { perfil, luz, abrePerto = false }){
   const uTempo = { value: 0 };
+  const uAlvo = { value: new THREE.Vector3(0, 0, -1e4) };
   const texFolhas = texturaFolhas();
   const texFlores = texturaFlorada();
+  const texSalgueiro = lista.some(a => a.tipo === 'salgueiro') ? texturaSalgueiro() : null;
   const r = sorteador(1234);
 
   const porTipo = new Map();
@@ -372,8 +448,8 @@ export function criarArvores(scene, lista, { perfil, luz }){
     const longe = tipo === 'longe';
     const esp = especificacao(tipo, r, perfil.folhagem);
     const geoCopa = gerarCopa({ ...esp, r });
-    const mapa = esp.mapa === 'flores' ? texFlores : texFolhas;
-    const matCopa = materialCopa(mapa, uTempo, luz, { contraluz: esp.contraluz ?? 0.55, cobertura: perfil.msaa > 0 });
+    const mapa = esp.mapa === 'flores' ? texFlores : esp.mapa === 'salgueiro' ? texSalgueiro : texFolhas;
+    const matCopa = materialCopa(mapa, uTempo, luz, { contraluz: esp.contraluz ?? 0.55, cobertura: perfil.msaa > 0, abrePerto, uAlvo });
     const copa = new THREE.InstancedMesh(geoCopa, matCopa, itens.length);
     copa.castShadow = !longe;
     // cada tufo receber a sombra dos vizinhos só escurece a copa inteira; a forma
@@ -419,6 +495,13 @@ export function criarArvores(scene, lista, { perfil, luz }){
 
   return {
     meshes,
-    atualizar(elapsed){ uTempo.value = elapsed; },
+    // camera e alvo (o cachorro) só importam com abrePerto
+    atualizar(elapsed, camera = null, alvo = null){
+      uTempo.value = elapsed;
+      if(abrePerto && camera && alvo){
+        camera.updateMatrixWorld();
+        uAlvo.value.set(alvo.x, alvo.y + 0.5, alvo.z).applyMatrix4(camera.matrixWorldInverse);
+      }
+    },
   };
 }

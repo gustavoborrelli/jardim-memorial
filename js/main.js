@@ -19,6 +19,7 @@
 import { slugPedido, homenagemDoLink, htmlCartao, buscarRest } from './chegada.js';
 import { obterMapaUi } from './mapa.js';
 import { VAGAS, dadosDaLinha } from './planta.js';
+import { JARDIM } from './jardins/qual.js';
 
 function mostrarCartao(h){
   if(!h) return;
@@ -53,7 +54,18 @@ function fonteRapida(memoriais, velas){
   };
 }
 
-if(slugPedido){
+if(JARDIM === 'lago'){
+  /* Protótipo do Jardim do Lago (etapa 37): abre no menu de sempre, sem o mapa
+     (que ainda é o do Jardim Memorial) e sem ler o banco. */
+  document.body.classList.add('jardim-prototipo');
+  document.title = 'Jardim do Lago (protótipo)';
+  const titulo = document.querySelector('.title-block');
+  if(titulo){
+    titulo.querySelector('h1').textContent = 'Jardim do Lago';
+    titulo.querySelector('p').textContent = 'Protótipo: o segundo jardim, à beira d\'água. Passeie pela trilha do lago, suba até a Clareira do Alto e plante flores (nada fica salvo por enquanto).';
+  }
+  comecarJogo();
+} else if(slugPedido){
   const prazo = new Promise(r => setTimeout(() => r(null), 1500));
   Promise.race([homenagemDoLink, prazo]).then(h => { mostrarCartao(h); comecarJogo(); });
   homenagemDoLink.then(mostrarCartao); // banco mais lento que o prazo: o cartão entra quando der

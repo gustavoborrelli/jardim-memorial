@@ -132,7 +132,9 @@ function texturasPraca(tam){
   return { map, normal: normalDeAltura(alt, 2.6) };
 }
 
-export function criarMobilia(scene, { perfil, PLAZA, flores, bancos, lampadas, LUZES, cerca, portao, vasos }){
+/* Cada peça é opcional: o Jardim do Lago (etapa 37) não tem cerca, portão, praça,
+   vasos nem jardineiras. `y` em bancos e postes: a altura do chão ali (relevo). */
+export function criarMobilia(scene, { perfil, PLAZA = null, flores, bancos, lampadas, LUZES, cerca = [], portao = null, vasos = [], jardineiras = true }){
   const r = sorteador(321);
   const madeira = matMadeira(0xffffff, { vertexColors: true });
   const madeiraCerca = matMadeira(0x7d6048);
@@ -144,7 +146,7 @@ export function criarMobilia(scene, { perfil, PLAZA, flores, bancos, lampadas, L
     const im = new THREE.InstancedMesh(geoBanco(), madeira, bancos.length);
     const d = new THREE.Object3D();
     bancos.forEach((b, i) => {
-      d.position.set(b.x, 0, b.z);
+      d.position.set(b.x, b.y ?? 0, b.z);
       d.rotation.set(0, b.rot, 0);
       d.scale.setScalar(1);
       d.updateMatrix();
@@ -158,7 +160,7 @@ export function criarMobilia(scene, { perfil, PLAZA, flores, bancos, lampadas, L
 
   /* ---------- CERCA ---------- */
   const birdPerches = [];
-  {
+  if(cerca.length){
     const postos = [];
     const trilhos = [];
     const adicionar = (x1, z1, x2, z2) => {
@@ -207,7 +209,7 @@ export function criarMobilia(scene, { perfil, PLAZA, flores, bancos, lampadas, L
   }
 
   /* ---------- PORTÃO ---------- */
-  {
+  if(portao){
     const partes = [];
     const perfilPila = [
       [0, 0], [0.19, 0], [0.2, 0.08], [0.16, 0.14], [0.135, 0.24], [0.125, 1.9], [0.16, 1.96], [0.165, 2.02],
@@ -257,7 +259,7 @@ export function criarMobilia(scene, { perfil, PLAZA, flores, bancos, lampadas, L
     const postes = new THREE.InstancedMesh(geoPoste, ferro, lampadas.length);
     const d = new THREE.Object3D();
     lampadas.forEach((l, i) => {
-      d.position.set(l.x, 0, l.z);
+      d.position.set(l.x, l.y ?? 0, l.z);
       d.rotation.y = r()*6.28;
       d.updateMatrix();
       postes.setMatrixAt(i, d.matrix);
@@ -274,7 +276,7 @@ export function criarMobilia(scene, { perfil, PLAZA, flores, bancos, lampadas, L
     lampHeadMats.push(matGlobo);
     const globos = new THREE.InstancedMesh(geoGlobo, matGlobo, lampadas.length);
     lampadas.forEach((l, i) => {
-      d.position.set(l.x, 0, l.z); d.rotation.y = 0; d.updateMatrix();
+      d.position.set(l.x, l.y ?? 0, l.z); d.rotation.y = 0; d.updateMatrix();
       globos.setMatrixAt(i, d.matrix);
     });
     globos.computeBoundingSphere();
@@ -286,13 +288,13 @@ export function criarMobilia(scene, { perfil, PLAZA, flores, bancos, lampadas, L
         map: tex, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, color: 0xffc98d,
       }));
       s.scale.set(2.6, 2.6, 1);
-      s.position.set(l.x, 2.55, l.z);
+      s.position.set(l.x, 2.55 + (l.y ?? 0), l.z);
       s.userData.semAO = true;
       scene.add(s);
       lampGlows.push(s);
       if(LUZES){
         const luz = new THREE.PointLight(0xffb36b, 0, 11, 1.7);
-        luz.position.set(l.x, 2.4, l.z);
+        luz.position.set(l.x, 2.4 + (l.y ?? 0), l.z);
         scene.add(luz);
         lampLuzes.push(luz);
       }
@@ -306,7 +308,7 @@ export function criarMobilia(scene, { perfil, PLAZA, flores, bancos, lampadas, L
   const RUNS_EW = [[6.6,11.1],[12.9,17.1],[18.9,25.6]];
   const caixas = [];
   const florDeCanteiro = [];
-  {
+  if(jardineiras){
     const CORES = [0xe8446f, 0xf7cf1f, 0xfff8ee, 0xa74bd4, 0xff7f30, 0x5ea9ff];
     const addRun = (alongZ, sign, edge, a, b) => {
       const len = b-a;
@@ -381,7 +383,7 @@ export function criarMobilia(scene, { perfil, PLAZA, flores, bancos, lampadas, L
   }
 
   /* ---------- PISO DA PRAÇA ---------- */
-  {
+  if(PLAZA){
     const { map, normal } = texturasPraca(perfil.nome === 'baixo' ? 1024 : 2048);
     const piso = new THREE.Mesh(
       new THREE.CircleGeometry(PLAZA.r, 72),
@@ -404,7 +406,7 @@ export function criarMobilia(scene, { perfil, PLAZA, flores, bancos, lampadas, L
 
   /* ---------- VASOS DA PRAÇA ---------- */
   const moitas = [];
-  {
+  if(vasos.length){
     const geoVaso = torneado([
       [0, 0.0], [0.19, 0.0], [0.2, 0.03], [0.24, 0.18], [0.3, 0.36], [0.33, 0.39], [0.345, 0.43], [0.34, 0.47], [0.3, 0.47], [0.29, 0.42], [0, 0.42],
     ], 24);

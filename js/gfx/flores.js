@@ -239,7 +239,7 @@ export function criarFlores(scene, { perfil }){
 }
 
 /* margaridinhas rentes à grama: cor de longe, detalhe de perto */
-export function criarFloresDoGramado(scene, { perfil, livre, uTempo }){
+export function criarFloresDoGramado(scene, { perfil, livre, uTempo, altura = null }){
   const total = Math.round(1500*perfil.particulas);
   const pontal = [];
   const r = sorteador(55);
@@ -275,7 +275,7 @@ export function criarFloresDoGramado(scene, { perfil, livre, uTempo }){
   pontal.forEach((p, i) => {
     q.setFromAxisAngle(eixo, r()*6.283);
     const e = 0.85 + r()*0.55;
-    v.set(p.x, 0, p.z); s.set(e, e, e);
+    v.set(p.x, altura ? altura(p.x, p.z) : 0, p.z); s.set(e, e, e);
     mm.compose(v, q, s);
     im.setMatrixAt(i, mm);
     cor.set(p.tom < 0.74 ? 0xfdfbf2 : (p.tom < 0.88 ? 0xf7e36a : 0xd9c7ff));

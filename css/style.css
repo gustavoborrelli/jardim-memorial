@@ -915,3 +915,7 @@ canvas{display:block;outline:none;}
   background:#25d366; color:#0b2e17;
   font-size:14px; padding:13px 18px; margin:0 0 14px;
 }
+
+/* protótipo do Jardim do Lago (?jardim=lago, etapa 37): o mapa ainda é o do
+   Jardim Memorial, então os botões de mapa somem */
+.jardim-prototipo #btnMapToggle, .jardim-prototipo #btnMenuMapa{ display:none !important; }

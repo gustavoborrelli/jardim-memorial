@@ -768,6 +768,45 @@ flores/velas nas lápides dos outros (MVP family & friends).
     mapa continua aberto com a ficha nova, e o livro mostra "Editar" ao autor. Os
     testes das velas e da primeira tela continuam passando.
 
+37. 🔜 **Jardim do Lago, protótipo em 3D** (branch `jardim-lago`) — etapa 1 da expansão
+    em vários jardins ligados pela Ponte do Arco-Íris (esboço aprovado em 2026-11-09:
+    três jardins, ponte com travessia no 3D, mapa-múndi como primeira tela). Só
+    visual, sem banco: abre por `?jardim=lago`; sem o parâmetro o site é o Jardim
+    Memorial de sempre (conferido pixel a pixel contra a `main`, relógio congelado e
+    sorteio fixo: zero pixels de diferença em quatro vistas, de dia e de noite).
+    - Mesmas regras, desenho próprio: `js/jardins/lago.js` guarda só medidas e contas
+      do esboço (lago a oeste com margem irregular, prainha, deque, salgueiro, trilha a
+      3,4 da margem, ramais para a Clareira do Alto e para a chegada da ponte, as 13
+      vagas com o nome do lugar). `mundo.js` ganhou `desenhoDoMemorial()` (o código de
+      antes, na mesma ordem de sorteio) e `desenhoDoLago()`.
+    - Relevo: `definirRelevo()` em `gfx/chao.js` soma a bacia do lago e o morro da
+      clareira à altura de sempre, e uma textura meio-float (altura + areia) leva isso
+      à grama, ao chão e à água. O cachorro anda na altura do chão, para na beira
+      d'água e na borda do jardim, sobe no deque e no morro; a câmera não entra no
+      morro. As pedras olham para a trilha mais perto (`rot` na vaga).
+    - Água em shader (`gfx/agua.js`): transparente no raso, verde-escura no fundo,
+      espuma na margem, reflexo do céu e da mata da outra margem, rastro de sol no fim
+      de tarde e o reflexo dos lampiões à noite. Nenúfares com flor, juncos e taboas
+      balançando, deque de madeira.
+    - Salgueiro, tipo novo de árvore: cartões altos pendurados com fios de folhinhas.
+      No Lago, as copas se abrem perto da câmera e entre a câmera e o cachorro (a
+      trilha passa por baixo do salgueiro e a tela ficava toda verde).
+    - Mata além da borda, a pedido do Gustavo (a do Memorial fica como está): árvores
+      grandes logo depois do contorno natural e a mata funda ao longe, aberta só onde
+      a ponte vai chegar.
+    - No esboço, o ramal da clareira passava por cima da vaga de (12, -7,5): no 3D ele
+      entra entre as vagas do oeste.
+    - Sem banco no protótipo: quatro homenagens de exemplo só na tela (Pipoca, Luna,
+      Thor, Mel), flores e velas plantadas não são salvas, sem presença, e o site abre
+      no menu (o mapa ainda é o do Memorial). Os botões de mapa somem.
+    - Custo: no perfil de celular, ~15–20% acima do Memorial (5,3 contra 4,6 ms por
+      quadro no M5, mesma tela de iPhone); no perfil baixo, igual.
+    Fotos aprovadas pelo Gustavo em 2026-11-10 ("assim está legal"): lago do tamanho
+    do esboço, lampiões de ferro e a quantidade de árvores ficam como estão.
+    Próximo (etapa 2 do plano): coluna `jardim` em memoriais/velas/flores (default
+    'memorial', unique (jardim, plot_x, plot_z)), um jardim por vez, link e presença
+    por jardim.
+
 ## Ideias soltas (não decidido ainda)
 
 - A leva de dinamismo social planejada em conjunto está completa: (1)

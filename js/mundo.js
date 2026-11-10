@@ -10,26 +10,34 @@
   createWorld(scene, {renderer, perfil, pos}) monta tudo dentro da scene e
   devolve o "controle remoto" que os outros módulos usam: o chão (raycast de
   cliques), a praça (colisão do cachorro) e as funções de plantar.
+
+  Cada jardim tem o seu desenho (etapa 37): desenhoDoMemorial() é o jardim formal
+  de sempre; desenhoDoLago() é o protótipo do Jardim do Lago (?jardim=lago), com
+  relevo, água e sem banco de dados por enquanto. O resto (céu, luz, chão, grama,
+  flores, velas, relógio) é o mesmo para todos.
 */
 
 import * as THREE from 'three';
 import { supabase } from './supabaseClient.js';
 import { POSICOES_VAGA } from './lapides.js';
 import { criarCeu } from './gfx/ceu.js';
-import { criarChao, alturaTerreno } from './gfx/chao.js';
+import { criarChao, alturaTerreno, definirRelevo } from './gfx/chao.js';
 import { criarArvores } from './gfx/arvores.js';
 import { criarFlores, criarFloresDoGramado } from './gfx/flores.js';
 import { criarMobilia } from './gfx/mobilia.js';
 import { criarFonte } from './gfx/fonte.js';
 import { criarBorboletas, criarPassaros, criarPetalas, criarAr } from './gfx/vida.js';
 import { texturaBrilho, torneado } from './gfx/materiais.js';
+import { criarLago } from './gfx/agua.js';
 import { PLAZA, AVENUES } from './planta.js';
+import { JARDIM } from './jardins/qual.js';
+import * as PLANTA_LAGO from './jardins/lago.js';
 import { sorteador } from './gfx/ruido.js';
 
-export function createWorld(scene, { renderer, perfil, pos }) {
-  const sorte = sorteador(2024);
-
-  /* ============ O DESENHO DO JARDIM ============ */
+/* ============ O DESENHO DO JARDIM MEMORIAL ============
+   Praça com a fonte, quatro avenidas, quatro campos, cerca e portão. Mesmo código e
+   mesma ordem de sorteio de antes da etapa 37: o jardim sai idêntico. */
+function desenhoDoMemorial(sorte){
   // praça e avenidas moram em planta.js: o mapa de tesouro usa as mesmas
   const sdRetangulo = (x, z, cx, cz, hx, hz) => {
     const qx = Math.abs(x-cx)-hx, qz = Math.abs(z-cz)-hz;
@@ -99,6 +107,136 @@ export function createWorld(scene, { renderer, perfil, pos }) {
     ARVORES.push({ x, z, y: 0.28, escala: 1.0 + sorte()*0.9, tipo: 'moita' });
   }
 
+  const livreGramado = (x, z) => {
+    if(sdCaminho(x, z) < 0.9) return false;
+    for(const v of POSICOES_VAGA) if(Math.hypot(x-v.x, z-v.z) < 1.2) return false;
+    return Math.max(Math.abs(x), Math.abs(z)) < 26.6;
+  };
+  function isFreeSpot(x,z,plots){
+    if(Math.abs(x) < 2.8 || Math.abs(z) < 2.8) return false; // the four avenues
+    if(Math.hypot(x-PLAZA.x, z-PLAZA.z) < PLAZA.r + 0.5) return false; // central plaza
+    for(const plot of plots){
+      if(Math.hypot(x-plot.x, z-plot.z) < 1.5) return false;
+    }
+    return true;
+  }
+  return {
+    sdCaminho, CERCA, PORTAO, BLOSSOM_SPOTS, LAMPADAS, VASOS, BANCOS, ARVORES,
+    vagas: POSICOES_VAGA, livreGramado, isFreeSpot,
+  };
+}
+
+/* ============ O DESENHO DO JARDIM DO LAGO (protótipo, etapa 37) ============
+   As medidas moram em js/jardins/lago.js; aqui elas viram árvores e listas para o
+   chão. Nada de cerca: a terra termina num contorno natural, e depois dele vem a
+   mata (árvores grandes de margem e a mata funda ao longe, como a de fora da cerca
+   do Memorial), aberta só onde a Ponte do Arco-Íris vai chegar. */
+function desenhoDoLago(sorte, P){
+  const h = (x, z) => alturaTerreno(x, z);
+  const angPonte = Math.atan2(P.PONTE.z, P.PONTE.x);
+  const naAberturaDaPonte = (x, z, folga = 0.22) => {
+    let d = Math.atan2(z, x) - angPonte;
+    while(d > Math.PI) d -= Math.PI*2;
+    while(d < -Math.PI) d += Math.PI*2;
+    return Math.abs(d) < folga;
+  };
+  const longeDasVagas = (x, z, r) => P.VAGAS.every(v => Math.hypot(v.x - x, v.z - z) > r);
+  const ARVORES = [];
+
+  // dois salgueiros debruçados na água: o grande do esboço, ao norte, e um menor a oeste
+  ARVORES.push({ x: P.SALGUEIRO.x, z: P.SALGUEIRO.z, y: h(P.SALGUEIRO.x, P.SALGUEIRO.z) - 0.05, escala: 1.3, tipo: 'salgueiro' });
+  { const [x, z] = P.naMargem(3.55, 0.9); ARVORES.push({ x, z, y: h(x, z) - 0.05, escala: 1.0, tipo: 'salgueiro' }); }
+
+  // copas espalhadas longe da água, da trilha, das vagas e da clareira; as duas
+  // primeiras em chão plano viram cerejeiras (as pétalas caem no chão de verdade)
+  const BLOSSOM_SPOTS = [];
+  const livreParaArvore = (x, z) => {
+    if(P.sdLago(x, z) < 5.2) return false;
+    if(P.distTrilha(x, z) < 2.8) return false;
+    if(!longeDasVagas(x, z, 4.4)) return false;
+    if(Math.hypot(x - P.MORRO.x, z - P.MORRO.z) < 8.4) return false;
+    if(Math.hypot(x - P.SALGUEIRO.x, z - P.SALGUEIRO.z) < 6) return false;
+    if(Math.hypot(x, z) > P.raioBorda(x, z) - 3) return false;
+    return ARVORES.every(a => Math.hypot(a.x - x, a.z - z) > 6.5);
+  };
+  for(let i = 0, n = 0; i < 600 && n < 13; i++){
+    const x = (sorte() - 0.5)*52, z = (sorte() - 0.5)*52;
+    if(!livreParaArvore(x, z)) continue;
+    const y = h(x, z);
+    if(BLOSSOM_SPOTS.length < 2 && Math.abs(y) < 0.12){
+      BLOSSOM_SPOTS.push([x, z, 1.1]);
+      ARVORES.push({ x, z, y, escala: 1.1, tipo: 'cerejeira' });
+    } else ARVORES.push({ x, z, y: y - 0.05, escala: 0.85 + sorte()*0.3, tipo: 'frondosa' });
+    n++;
+  }
+
+  // a mata além da borda, no lugar da cerca: primeiro árvores grandes de margem...
+  for(let i = 0; i < 46; i++){
+    const a = i/46*Math.PI*2 + (sorte() - 0.5)*0.08;
+    const dx = Math.cos(a), dz = Math.sin(a);
+    const r = P.raioBorda(dx, dz) + 1.3 + sorte()*2.4;
+    const x = dx*r, z = dz*r;
+    if(naAberturaDaPonte(x, z)) continue;
+    if(!longeDasVagas(x, z, 4.2)) continue;
+    const tipo = i % 15 === 7 ? 'cerejeira' : 'frondosa';
+    ARVORES.push({ x, z, y: h(x, z) - 0.1, escala: 1.05 + sorte()*0.45, tipo });
+  }
+  // ...depois a mata funda, como a de fora da cerca do Memorial
+  for(let i = 0; i < 120; i++){
+    const a = sorte()*Math.PI*2;
+    const r = 33 + Math.pow(sorte(), 0.75)*42;
+    const x = Math.cos(a)*r, z = Math.sin(a)*r;
+    if(r < P.raioBorda(x, z) + 5.5) continue;
+    if(naAberturaDaPonte(x, z, 0.16) && r < 52) continue; // a vista para a ponte fica aberta
+    ARVORES.push({ x, z, y: h(x, z) - 0.15, escala: 1.0 + sorte()*0.75, tipo: 'longe' });
+  }
+  // arbustos na beira da terra e encostados nas copas grandes
+  for(let i = 0; i < 70; i++){
+    const a = sorteoAng(sorte);
+    const dx = Math.cos(a), dz = Math.sin(a);
+    const r = P.raioBorda(dx, dz) - 0.6 - sorte()*2.2;
+    const x = dx*r, z = dz*r;
+    if(P.distTrilha(x, z) < 1.8 || !longeDasVagas(x, z, 2.4) || naAberturaDaPonte(x, z, 0.12)) continue;
+    ARVORES.push({ x, z, y: h(x, z) + 0.28, escala: 1.0 + sorte()*0.9, tipo: 'moita' });
+  }
+  // umas moitas na encosta do morro e perto da água, fora da trilha
+  for(let i = 0, n = 0; i < 300 && n < 18; i++){
+    const x = (sorte() - 0.5)*48, z = (sorte() - 0.5)*48;
+    const s = P.sdLago(x, z);
+    if(s < 0.6 || P.distTrilha(x, z) < 1.7 || !longeDasVagas(x, z, 2.6) || P.noDeque(x, z, 1.2)) continue;
+    if(P.areia(x, z) > 0.05 || Math.hypot(x, z) > P.raioBorda(x, z) - 1) continue;
+    const pertoDaAgua = s < 2.6, naEncosta = Math.abs(Math.hypot(x - P.MORRO.x, z - P.MORRO.z) - 9) < 2;
+    if(!pertoDaAgua && !naEncosta) continue;
+    ARVORES.push({ x, z, y: h(x, z) + 0.28, escala: 0.8 + sorte()*0.7, tipo: 'moita' });
+    n++;
+  }
+
+  const LAMPADAS = P.LAMPADAS.map(l => ({ ...l, y: h(l.x, l.z) }));
+  const BANCOS = P.BANCOS.map(b => ({ ...b, y: b.y ?? h(b.x, b.z) }));
+  const dentroDaTerra = (x, z, folga) => Math.hypot(x, z) < P.raioBorda(x, z) - folga;
+  const livreGramado = (x, z) => {
+    if(P.sdCaminho(x, z) < 0.9 || !dentroDaTerra(x, z, 0.4)) return false;
+    if(P.areia(x, z) > 0.25 || h(x, z) < P.NIVEL_AGUA + 0.3 || P.noDeque(x, z, 0.4)) return false;
+    return longeDasVagas(x, z, 1.2);
+  };
+  function isFreeSpot(x, z, plots){
+    if(P.sdCaminho(x, z) < 0.15 || !dentroDaTerra(x, z, 1.2) || P.noDeque(x, z, 0.3)) return false;
+    if(h(x, z) < P.NIVEL_AGUA + 0.12) return false;
+    return plots.every(plot => Math.hypot(x - plot.x, z - plot.z) >= 1.5);
+  }
+  return { sdCaminho: P.sdCaminho, BLOSSOM_SPOTS, LAMPADAS, BANCOS, ARVORES, vagas: P.VAGAS, livreGramado, isFreeSpot };
+}
+const sorteoAng = (sorte) => sorte()*Math.PI*2;
+
+export function createWorld(scene, { renderer, perfil, pos }) {
+  const sorte = sorteador(2024);
+
+  /* ============ O DESENHO DO JARDIM ============ */
+  const noLago = JARDIM === 'lago';
+  if(noLago) definirRelevo(PLANTA_LAGO.relevo); // antes de tudo: as árvores e as vagas leem a altura
+  const desenho = noLago ? desenhoDoLago(sorte, PLANTA_LAGO) : desenhoDoMemorial(sorte);
+  const { sdCaminho, CERCA = [], PORTAO = null, BLOSSOM_SPOTS, LAMPADAS, VASOS = [], BANCOS, ARVORES, livreGramado, isFreeSpot } = desenho;
+
   /* máscara do chão: onde a grama não nasce e as sombras de contato */
   const semGrama = [];
   const manchas = [];
@@ -112,7 +250,7 @@ export function createWorld(scene, { renderer, perfil, pos }) {
   });
   LAMPADAS.forEach(l => { semGrama.push({ x: l.x, z: l.z, r: 0.34 }); manchas.push({ x: l.x, z: l.z, r: 0.45, forca: 0.4 }); });
   BANCOS.forEach(b => manchas.push({ x: b.x, z: b.z, r: 1.15, forca: 0.32 }));
-  POSICOES_VAGA.forEach(v => semGrama.push({ x: v.x, z: v.z, r: 1.05 }));
+  desenho.vagas.forEach(v => semGrama.push({ x: v.x, z: v.z, r: 1.05 }));
 
   /* ============ CÉU E LUZ ============ */
   scene.fog = new THREE.Fog(0xd8e8ea, 30, 290);
@@ -145,17 +283,22 @@ export function createWorld(scene, { renderer, perfil, pos }) {
   scene.add(sun);
 
   /* ============ CHÃO + GRAMA ============ */
-  const chao = criarChao(scene, { perfil, sdCaminho, semGrama, manchas });
+  const chao = criarChao(scene, {
+    perfil, sdCaminho, semGrama, manchas,
+    agua: noLago ? { nivel: PLANTA_LAGO.NIVEL_AGUA, areia: PLANTA_LAGO.areia } : null,
+  });
   chao.uGrama.uSolDir = luz.uSolDir;
   chao.uGrama.uSolCor = luz.uSolCor;
   const ground = chao.ground;
 
   /* ============ FLORES / MOBÍLIA / ÁRVORES / FONTE ============ */
   const flores = criarFlores(scene, { perfil });
-  const mobilia = criarMobilia(scene, {
-    perfil, PLAZA, flores, bancos: BANCOS, lampadas: LAMPADAS, LUZES: perfil.luzesLampada,
-    cerca: CERCA, portao: PORTAO, vasos: VASOS,
-  });
+  const mobilia = noLago
+    ? criarMobilia(scene, { perfil, flores, bancos: BANCOS, lampadas: LAMPADAS, LUZES: perfil.luzesLampada, jardineiras: false })
+    : criarMobilia(scene, {
+      perfil, PLAZA, flores, bancos: BANCOS, lampadas: LAMPADAS, LUZES: perfil.luzesLampada,
+      cerca: CERCA, portao: PORTAO, vasos: VASOS,
+    });
   mobilia.caixas.forEach(c => {
     const passos = Math.ceil(c.len/0.8);
     for(let i=0;i<=passos;i++){
@@ -163,16 +306,12 @@ export function createWorld(scene, { renderer, perfil, pos }) {
       manchas.push({ x: c.alongZ ? c.x : c.x+t, z: c.alongZ ? c.z+t : c.z, r: 0.75, forca: 0.3 });
     }
   });
-  const arvores = criarArvores(scene, [...ARVORES, ...mobilia.moitas], { perfil, luz });
-  const fonte = criarFonte(scene, { perfil, PLAZA, ceu, luz });
+  const arvores = criarArvores(scene, [...ARVORES, ...mobilia.moitas], { perfil, luz, abrePerto: noLago });
+  const fonte = noLago ? null : criarFonte(scene, { perfil, PLAZA, ceu, luz });
+  const lago = noLago ? criarLago(scene, { perfil, ceu, luz, chao, planta: PLANTA_LAGO, lampadas: LAMPADAS }) : null;
 
   const tempoFlores = { value: 0 };
-  const livreGramado = (x, z) => {
-    if(sdCaminho(x, z) < 0.9) return false;
-    for(const v of POSICOES_VAGA) if(Math.hypot(x-v.x, z-v.z) < 1.2) return false;
-    return Math.max(Math.abs(x), Math.abs(z)) < 26.6;
-  };
-  criarFloresDoGramado(scene, { perfil, livre: livreGramado, uTempo: tempoFlores });
+  criarFloresDoGramado(scene, { perfil, livre: livreGramado, uTempo: tempoFlores, altura: noLago ? alturaTerreno : null });
 
   /* pedrinhas soltas no gramado */
   {
@@ -192,7 +331,7 @@ export function createWorld(scene, { renderer, perfil, pos }) {
       const x = (sorte()-0.5)*50, z = (sorte()-0.5)*50;
       if(!livreGramado(x, z)) continue;
       const e = 0.05 + sorte()*sorte()*0.13;
-      d.position.set(x, e*0.14, z);
+      d.position.set(x, e*0.14 + alturaTerreno(x, z), z);
       d.rotation.set(0, sorte()*6.28, 0);
       d.scale.setScalar(e);
       d.updateMatrix();
@@ -217,6 +356,7 @@ export function createWorld(scene, { renderer, perfil, pos }) {
     const bloomColor = color != null ? color : flowerColors[Math.floor(Math.random()*flowerColors.length)];
     const { grupo: g, matFlor: bloomMat } = flores.florUnica(bloomColor);
     g.position.set(x + (Math.random()-0.5)*0.4, 0, z + (Math.random()-0.5)*0.4);
+    g.position.y = alturaTerreno(g.position.x, g.position.z);
     g.rotation.y = Math.random()*Math.PI*2;
     flowerGroup.add(g);
 
@@ -251,6 +391,7 @@ export function createWorld(scene, { renderer, perfil, pos }) {
     const color = flowerColors[Math.floor(Math.random()*flowerColors.length)];
     const lifespan = randomLifespan();
     plantFlower(x, z, false, color, lifespan);
+    if(noLago) return; // protótipo: a flor fica só nesta visita
     supabase.from('flores').insert({
       x, z, cor: color,
       murcha_em: new Date(lifespan.murchaEm).toISOString(),
@@ -261,6 +402,7 @@ export function createWorld(scene, { renderer, perfil, pos }) {
   }
 
   async function loadFlores(){
+    if(noLago) return; // protótipo sem banco: as flores salvas são do Jardim Memorial
     const { data: rows, error } = await supabase.from('flores').select('*');
     if(error){
       console.error('Não foi possível carregar as flores:', error.message);
@@ -274,14 +416,6 @@ export function createWorld(scene, { renderer, perfil, pos }) {
     });
   }
   loadFlores();
-  function isFreeSpot(x,z,plots){
-    if(Math.abs(x) < 2.8 || Math.abs(z) < 2.8) return false; // the four avenues
-    if(Math.hypot(x-PLAZA.x, z-PLAZA.z) < PLAZA.r + 0.5) return false; // central plaza
-    for(const plot of plots){
-      if(Math.hypot(x-plot.x, z-plot.z) < 1.5) return false;
-    }
-    return true;
-  }
   const BOUNDS_FOR_FLOWERS = 25;
   function scatterFlowers(count, plots){
     const pontos = [];
@@ -291,7 +425,7 @@ export function createWorld(scene, { renderer, perfil, pos }) {
       const x = (Math.random()-0.5)*2*BOUNDS_FOR_FLOWERS;
       const z = (Math.random()-0.5)*2*BOUNDS_FOR_FLOWERS;
       if(isFreeSpot(x,z,plots)){
-        pontos.push({ x, z, cor: flowerColors[Math.floor(Math.random()*flowerColors.length)] });
+        pontos.push({ x, z, y: alturaTerreno(x, z), cor: flowerColors[Math.floor(Math.random()*flowerColors.length)] });
       }
     }
     flores.instanciar(pontos, { semente: 7 });
@@ -345,6 +479,7 @@ export function createWorld(scene, { renderer, perfil, pos }) {
     g.add(glow);
 
     g.position.set(x + (Math.random()-0.5)*0.4, 0, z + (Math.random()-0.5)*0.4);
+    g.position.y = alturaTerreno(g.position.x, g.position.z);
     candleGroup.add(g);
 
     const flickerPhase = Math.random()*Math.PI*2;
@@ -392,6 +527,7 @@ export function createWorld(scene, { renderer, perfil, pos }) {
       expira_em: new Date(lifespan.expiraEm).toISOString(),
     };
     if(memorialId) linha.memorial_id = memorialId;
+    if(noLago) return Promise.resolve(true); // protótipo: a vela fica só nesta visita
     return supabase.from('velas').insert(linha).then(({ error })=>{
       if(error){
         console.error('Não foi possível salvar a vela:', error.message);
@@ -404,7 +540,8 @@ export function createWorld(scene, { renderer, perfil, pos }) {
 
   /* ============ VELAS DE UMA HOMENAGEM ============
      Acesa pela ficha do mapa ou pelo livro de mensagens: nasce na frente da pedra
-     (as pedras olham para +z), entre ela e quem visita, numa fileira que vai
+     (no Memorial as pedras olham para +z; no Lago, cada uma para a trilha, `plot.rot`),
+     entre ela e quem visita, numa fileira que vai
      preenchendo do meio para os lados. Não passa pelo isFreeSpot: ela pertence à
      pedra, é para ficar junto dela. */
   const velasDe = (memorialId) => candleGroup.children.filter(g => g.userData.memorialId === memorialId);
@@ -414,15 +551,18 @@ export function createWorld(scene, { renderer, perfil, pos }) {
   }
   function acenderVelaNaHomenagem(memorialId, plot){
     const ocupados = velasDe(memorialId).map(g => g.position);
+    const rot = plot.rot || 0, fx = Math.sin(rot), fz = Math.cos(rot);
+    const ponto = (lado, frente) => [plot.x + fz*lado + fx*frente, plot.z - fx*lado + fz*frente];
     const vagas = [];
-    for(const fileira of [1.0, 1.3, 1.6]) for(const lado of [0, -0.32, 0.32, -0.64, 0.64]) vagas.push([plot.x + lado, plot.z + fileira]);
+    for(const fileira of [1.0, 1.3, 1.6]) for(const lado of [0, -0.32, 0.32, -0.64, 0.64]) vagas.push(ponto(lado, fileira));
     const livre = vagas.find(([x, z]) => !ocupados.some(p => Math.hypot(p.x - x, p.z - z) < 0.2))
-      || [plot.x + (Math.random() - 0.5)*1.4, plot.z + 1 + Math.random()*0.7];
+      || ponto((Math.random() - 0.5)*1.4, 1 + Math.random()*0.7);
     const jitter = () => (Math.random() - 0.5)*0.06;
     return plantAndSaveVela(livre[0] + jitter(), livre[1] + jitter(), memorialId);
   }
 
   async function loadVelas(){
+    if(noLago) return; // protótipo sem banco
     const { data: rows, error } = await supabase.from('velas').select('*');
     if(error){
       console.error('Não foi possível carregar as velas:', error.message);
@@ -440,8 +580,10 @@ export function createWorld(scene, { renderer, perfil, pos }) {
   const velasCarregadas = loadVelas();
 
   /* ============ VIDA AMBIENTE ============ */
-  const borboletas = criarBorboletas(scene, { perfil });
-  const passaros = criarPassaros(scene, mobilia.birdPerches);
+  const borboletas = criarBorboletas(scene, { perfil, altura: noLago ? alturaTerreno : null });
+  // no Lago não há cerca: os sabiás pousam nos pilares do deque e nos lampiões
+  const poleiros = noLago ? [...lago.poleiros, ...LAMPADAS.map(l => ({ x: l.x, y: 2.93 + (l.y ?? 0), z: l.z }))] : mobilia.birdPerches;
+  const passaros = criarPassaros(scene, poleiros);
   const petalas = criarPetalas(scene, BLOSSOM_SPOTS.map(([x, z, escala]) => ({ x, z, escala })), { perfil, luz });
   const ar = criarAr(scene, { perfil, luz });
 
@@ -629,10 +771,11 @@ export function createWorld(scene, { renderer, perfil, pos }) {
 
     ceu.uniforms.uTempo.value = elapsed;
     if(camera) chao.atualizar(elapsed, camera, posCao);
-    arvores.atualizar(elapsed);
+    arvores.atualizar(elapsed, camera, posCao);
     flores.atualizar(elapsed);
     tempoFlores.value = elapsed;
-    fonte.atualizar(elapsed, alturaTela);
+    if(fonte) fonte.atualizar(elapsed, alturaTela);
+    if(lago) lago.atualizar(elapsed, mixNum('lampGlow')/PHASES.noite.lampGlow);
     borboletas.atualizar(elapsed, timeWeights.noite);
     passaros.atualizar(dt, elapsed);
     petalas.atualizar(elapsed);
@@ -648,7 +791,7 @@ export function createWorld(scene, { renderer, perfil, pos }) {
 
   // onde a câmera não deve parar (dentro de uma copa): a chegada pelo link de uma
   // homenagem escolhe o ângulo final com isto. Raio aproximado de cada copa.
-  const RAIO_COPA = { frondosa: 3.2, cerejeira: 3.4, cipreste: 1.5, moita: 1.0 };
+  const RAIO_COPA = { frondosa: 3.2, cerejeira: 3.4, cipreste: 1.5, moita: 1.0, salgueiro: 3.4 };
   const copas = ARVORES.filter(a => RAIO_COPA[a.tipo]).map(a => ({ x: a.x, z: a.z, r: RAIO_COPA[a.tipo]*a.escala }));
 
   return {
@@ -656,6 +799,15 @@ export function createWorld(scene, { renderer, perfil, pos }) {
     PLAZA,
     AVENUES,
     copas,
+    jardim: JARDIM,
+    // protótipo sem banco (etapa 37): sem homenagens salvas, presença nem mapa
+    prototipo: noLago,
+    // onde o cachorro pode pisar e em que altura (null: o de sempre, cerca e fonte)
+    terreno: noLago ? {
+      altura: alturaTerreno,
+      chao: (x, z) => PLANTA_LAGO.chao(x, z, alturaTerreno),
+      inicio: PLANTA_LAGO.INICIO,
+    } : null,
     plantAndSaveFlor,
     plantAndSaveVela,
     acenderVelaNaHomenagem,

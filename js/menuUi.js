@@ -843,6 +843,13 @@ export function createMenuUi({ camera, lapides, world, dogController, pausedStat
   function irParaCasa(){
     pausedState.value = true;
     dogController.resetKeys();
+    if(world.prototipo){
+      // protótipo do Lago: o mapa ainda é o do Jardim Memorial, então a casa é o menu
+      document.body.classList.remove('passeando');
+      showMenuPanel(menuHome);
+      menuScreen.classList.remove('hidden');
+      return;
+    }
     menuScreen.classList.add('hidden');
     mapaUi.openInicio();
   }
@@ -1007,7 +1014,8 @@ export function createMenuUi({ camera, lapides, world, dogController, pausedStat
     startGame();
     openModalFor(plot);
   }
-  {
+  // (no protótipo do Lago a vaga guardada é do Jardim Memorial: fica para lá)
+  if(!world.prototipo){
     const pendente = lerVagaPendente();
     if(pendente && !voltouDoLogin) esquecerVagaPendente();
     else if(pendente){
@@ -1088,14 +1096,14 @@ export function createMenuUi({ camera, lapides, world, dogController, pausedStat
     if(e.key.toLowerCase() === 'm'){
       const tag = e.target && e.target.tagName;
       if(tag === 'INPUT' || tag === 'TEXTAREA') return; // não intercepta enquanto digita
-      if(pausedState.value || !dogController.getDog()) return;
+      if(pausedState.value || !dogController.getDog() || world.prototipo) return;
       mapaUi.openMap();
     }
   });
 
   const btnMapToggle = document.getElementById('btnMapToggle');
   btnMapToggle.addEventListener('click', ()=>{
-    if(pausedState.value || !dogController.getDog()) return;
+    if(pausedState.value || !dogController.getDog() || world.prototipo) return;
     mapaUi.openMap();
   });
 
@@ -1124,6 +1132,7 @@ export function createMenuUi({ camera, lapides, world, dogController, pausedStat
   return {
     updateHints,
     chime,
+    avisar: showToast,
     openModalFor,
     requireAuth,
     openMessagesFor,

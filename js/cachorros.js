@@ -24,12 +24,15 @@ export function buildDog(breed){
   opts.isPaused(): função que diz se o jogo está pausado (menu aberto)
   opts.plaza: {x,z,r} da praça central, para o cachorro não atravessar a fonte
   opts.bounds: limite do terreno (o cachorro não passa da cerca)
+  opts.terreno (jardim com relevo e água, etapa 37): { altura(x,z), chao(x,z), inicio }
+    chao devolve a altura onde se pode pisar ou null (água, fora do jardim); sem
+    terreno, vale a cerca quadrada e a fonte do Jardim Memorial
 */
-export function createDogController(scene, renderer, { isPaused, plaza, bounds }){
+export function createDogController(scene, renderer, { isPaused, plaza, bounds, terreno = null }){
   let dog = null;
   let dogParts = null;
 
-  let dogYaw = Math.PI; // facing -z initially
+  let dogYaw = terreno && terreno.inicio ? terreno.inicio.yaw : Math.PI; // facing -z initially
   let camAzimuth = Math.PI; // behind the dog
   let camElevation = 0.35;
   let camDist = 5.2;
@@ -126,7 +129,8 @@ export function createDogController(scene, renderer, { isPaused, plaza, bounds }
   renderer.domElement.addEventListener('touchend', ()=> touchDragging=false);
 
   function selectDog(breed){
-    const prevPos = dog ? dog.position.clone() : new THREE.Vector3(0, 0, 14);
+    const inicio = terreno && terreno.inicio;
+    const prevPos = dog ? dog.position.clone() : (inicio ? new THREE.Vector3(inicio.x, terreno.chao(inicio.x, inicio.z) ?? 0, inicio.z) : new THREE.Vector3(0, 0, 14));
     const prevYaw = dog ? dogYaw : Math.PI;
     if(dog) scene.remove(dog);
     dogParts = buildDog(breed);
@@ -160,7 +164,7 @@ export function createDogController(scene, renderer, { isPaused, plaza, bounds }
   // coloca o cachorro num ponto, já virado (sem andar até lá)
   function posicionar(x, z, yaw){
     if(!dog) return;
-    dog.position.set(x, 0, z);
+    dog.position.set(x, terreno ? (terreno.chao(x, z) ?? terreno.altura(x, z)) : 0, z);
     dogYaw = yaw;
     dog.rotation.y = yaw;
   }
@@ -254,18 +258,28 @@ export function createDogController(scene, renderer, { isPaused, plaza, bounds }
 
       // gato anda um pouco mais devagar: o passo dele é mais curto e calmo
       const speed = (piloto ? 2.9 : 3.2)*(dogParts.velocidade || 1);
-      dog.position.x += worldX*speed*dt;
-      dog.position.z += worldZ*speed*dt;
-      dog.position.x = Math.max(-bounds, Math.min(bounds, dog.position.x));
-      dog.position.z = Math.max(-bounds, Math.min(bounds, dog.position.z));
+      if(terreno){
+        // anda se o próximo passo é chão; senão escorrega ao longo da beira (da
+        // água, do jardim), tentando só um dos eixos
+        const px = dog.position.x, pz = dog.position.z;
+        const nx = px + worldX*speed*dt, nz = pz + worldZ*speed*dt;
+        if(terreno.chao(nx, nz) !== null){ dog.position.x = nx; dog.position.z = nz; }
+        else if(terreno.chao(nx, pz) !== null) dog.position.x = nx;
+        else if(terreno.chao(px, nz) !== null) dog.position.z = nz;
+      } else {
+        dog.position.x += worldX*speed*dt;
+        dog.position.z += worldZ*speed*dt;
+        dog.position.x = Math.max(-bounds, Math.min(bounds, dog.position.x));
+        dog.position.z = Math.max(-bounds, Math.min(bounds, dog.position.z));
 
-      // fountain collision: gently push the dog out of the basin
-      const fdx = dog.position.x - plaza.x, fdz = dog.position.z - plaza.z;
-      const fdist = Math.hypot(fdx, fdz);
-      const FOUNTAIN_R = 2.15;
-      if(fdist < FOUNTAIN_R && fdist > 0.001){
-        dog.position.x = plaza.x + (fdx/fdist)*FOUNTAIN_R;
-        dog.position.z = plaza.z + (fdz/fdist)*FOUNTAIN_R;
+        // fountain collision: gently push the dog out of the basin
+        const fdx = dog.position.x - plaza.x, fdz = dog.position.z - plaza.z;
+        const fdist = Math.hypot(fdx, fdz);
+        const FOUNTAIN_R = 2.15;
+        if(fdist < FOUNTAIN_R && fdist > 0.001){
+          dog.position.x = plaza.x + (fdx/fdist)*FOUNTAIN_R;
+          dog.position.z = plaza.z + (fdz/fdist)*FOUNTAIN_R;
+        }
       }
 
       if(!firstPerson || piloto){
@@ -288,6 +302,10 @@ export function createDogController(scene, renderer, { isPaused, plaza, bounds }
         }
       }
 
+    }
+    if(terreno){
+      const y = terreno.chao(dog.position.x, dog.position.z);
+      if(y !== null) dog.position.y += (y - dog.position.y)*Math.min(1, dt*14);
     }
     animarCao(dogParts, dt, elapsed, moving);
   }
@@ -318,7 +336,7 @@ export function createDogController(scene, renderer, { isPaused, plaza, bounds }
 
       const px = tx + fwdX*dogParts.eyeForward + rightX*bobX;
       const pz = tz + fwdZ*dogParts.eyeForward + rightZ*bobX;
-      const eyeY = dogParts.eyeHeight + bobY;
+      const eyeY = dogParts.eyeHeight + bobY + dog.position.y;
       camera.position.set(px, eyeY, pz);
       camera.lookAt(px + fwdX, eyeY, pz + fwdZ);
       return;
@@ -326,7 +344,7 @@ export function createDogController(scene, renderer, { isPaused, plaza, bounds }
 
     // gato tem metade do tamanho: câmera mais perto e mais baixa, senão ele some na tela
     const gato = dogParts && dogParts.especie === 'gato';
-    const target = new THREE.Vector3(tx, gato ? 0.55 : 0.9, tz);
+    const target = new THREE.Vector3(tx, (gato ? 0.55 : 0.9) + (dog ? dog.position.y : 0), tz);
     if(foco && dog){
       target.x += (foco.x - tx)*focoPeso;
       target.z += (foco.z - tz)*focoPeso;
@@ -336,7 +354,9 @@ export function createDogController(scene, renderer, { isPaused, plaza, bounds }
     const dist = dog ? camDist*(gato ? 0.72 : 1) : 17;
     const cx = target.x + dist*Math.sin(camAzimuth)*Math.cos(camElevation);
     const cz = target.z + dist*Math.cos(camAzimuth)*Math.cos(camElevation);
-    const cy = dog ? target.y + dist*Math.sin(camElevation) + (gato ? 0.75 : 1.1) : 7.4;
+    let cy = dog ? target.y + dist*Math.sin(camElevation) + (gato ? 0.75 : 1.1) : 7.4;
+    // com relevo, a câmera nunca entra no morro atrás do cachorro
+    if(terreno) cy = Math.max(cy, terreno.altura(cx, cz) + 0.7);
     camera.position.set(cx,cy,cz);
     camera.lookAt(target.x, target.y+0.3, target.z);
   }

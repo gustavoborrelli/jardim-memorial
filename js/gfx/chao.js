@@ -19,7 +19,7 @@ const CERCA = 27;
 
 /* relevo: plano onde se anda; depois sobe em colinas suaves. Plano até d=44,
    de propósito: a diagonal da cerca chega em ~38 */
-export function alturaTerreno(x, z){
+function alturaColinas(x, z){
   const d = Math.hypot(x, z);
   const t = d - 44;
   if(t <= 0) return 0;
@@ -29,6 +29,40 @@ export function alturaTerreno(x, z){
   const crista = fbm(x*0.0062 + 3.1, z*0.0062 + 7.7, 3);
   const crista2 = fbm(x*0.021, z*0.021, 2);
   return sobe*(5 + crista*crista*52) + (crista2-0.5)*Math.min(t*0.05, 2.6);
+}
+/* Um jardim pode ter relevo próprio dentro da mata (o do Lago tem a bacia d'água e
+   o morro da clareira). Ele é somado às colinas de sempre; o Jardim Memorial não
+   tem nenhum e continua plano. Definido uma vez, antes de montar o mundo. */
+let relevoLocal = null;
+export function definirRelevo(fn){ relevoLocal = fn; }
+export function alturaTerreno(x, z){
+  const h = alturaColinas(x, z);
+  return relevoLocal ? h + relevoLocal(x, z) : h;
+}
+
+/* O relevo e a areia também moram numa textura, para a grama, o chão e a água
+   saberem a altura de cada ponto dentro do shader: R = altura do relevo próprio,
+   G = quanto é areia. Meio-float: a altura precisa de casas depois da vírgula. */
+function assarRelevo(tam, fn, areia){
+  const dados = new Uint16Array(tam*tam*4);
+  const lado = 2*MEIA_MASCARA/tam;
+  for(let j=0;j<tam;j++){
+    const z = -MEIA_MASCARA + (j+0.5)*lado;
+    for(let i=0;i<tam;i++){
+      const x = -MEIA_MASCARA + (i+0.5)*lado;
+      const k = (j*tam+i)*4;
+      dados[k] = THREE.DataUtils.toHalfFloat(fn(x, z));
+      dados[k+1] = THREE.DataUtils.toHalfFloat(areia ? areia(x, z) : 0);
+      dados[k+2] = 0;
+      dados[k+3] = THREE.DataUtils.toHalfFloat(1);
+    }
+  }
+  const t = new THREE.DataTexture(dados, tam, tam, THREE.RGBAFormat, THREE.HalfFloatType);
+  t.magFilter = THREE.LinearFilter;
+  t.minFilter = THREE.LinearFilter;
+  t.wrapS = t.wrapT = THREE.ClampToEdgeWrapping;
+  t.needsUpdate = true;
+  return t;
 }
 
 /* --- cascalho das avenidas: seixos desenhados um a um, com altura própria --- */
@@ -82,7 +116,7 @@ function texturaCascalho(tam){
 /* Assa a máscara. sdCaminho(x,z) devolve a distância até o caminho (negativa
    dentro); `semGrama` são círculos onde a grama não nasce; `manchas` são as
    sombras de contato já conhecidas (copas, bancos, canteiros). */
-function assarMascara({ tam, sdCaminho, semGrama, manchas }){
+function assarMascara({ tam, sdCaminho, semGrama, manchas, agua }){
   const dados = new Uint8Array(tam*tam*4);
   const lado = 2*MEIA_MASCARA/tam;
   for(let j=0;j<tam;j++){
@@ -99,6 +133,11 @@ function assarMascara({ tam, sdCaminho, semGrama, manchas }){
         caminho = 1 - suave(-0.2, 0.14, d);
         desgaste = 1 - suave(-0.1, 1.5, d);
         grama = suave(-0.05, 0.42, d);
+      }
+      if(agua){
+        // nada de grama na areia nem dentro d'água; a margem molhada fica rala
+        grama *= 1 - agua.areia(x, z);
+        if(grama > 0) grama *= suave(agua.nivel + 0.04, agua.nivel + 0.3, relevoLocal(x, z));
       }
       dados[ii] = caminho*255;
       dados[ii+1] = desgaste*255;
@@ -158,10 +197,14 @@ const GLSL_COR_GRAMA = /* glsl */`
   }
 `;
 
-export function criarChao(scene, { perfil, sdCaminho, semGrama, manchas }){
+/* `agua` (opcional, só com relevo próprio): { nivel, areia(x,z) } — a altura da
+   superfície d'água e onde é areia. Sem ela, o chão é o de sempre. */
+export function criarChao(scene, { perfil, sdCaminho, semGrama, manchas, agua = null }){
   const ruido = texturaRuido();
   const tamMascara = perfil.nome === 'baixo' ? 512 : 1024;
-  const mascara = assarMascara({ tam: tamMascara, sdCaminho, semGrama, manchas });
+  const comRelevo = !!relevoLocal;
+  const mascara = assarMascara({ tam: tamMascara, sdCaminho, semGrama, manchas, agua: comRelevo ? agua : null });
+  const texRelevo = comRelevo ? assarRelevo(perfil.nome === 'baixo' ? 192 : 320, relevoLocal, agua && agua.areia) : null;
   const cascalho = texturaCascalho(perfil.nome === 'baixo' ? 512 : 1024);
 
   const comum = {
@@ -173,7 +216,15 @@ export function criarChao(scene, { perfil, sdCaminho, semGrama, manchas }){
     uCam: { value: new THREE.Vector3() },
     uRaioGrama: { value: perfil.grama.longe.raio },
     uFloresta: { value: new THREE.Color(0x46784a) },
+    tRelevo: { value: texRelevo },
+    uNivelAgua: { value: agua ? agua.nivel : -99 },
   };
+  // relevo próprio no shader: leitura da textura de altura e areia
+  const GLSL_RELEVO = comRelevo ? /* glsl */`
+    uniform sampler2D tRelevo;
+    uniform float uNivelAgua;
+    vec4 lerRelevo(vec2 p){ return texture2D(tRelevo, clamp(p/${(2*MEIA_MASCARA).toFixed(1)} + 0.5, 0.0, 1.0)); }
+  ` : '';
 
   /* ---------- terreno ---------- */
   // no perfil baixo o chão e a grama cobrem a tela inteira com a conta de luz mais
@@ -197,6 +248,7 @@ export function criarChao(scene, { perfil, sdCaminho, semGrama, manchas }){
         uniform float uRaioGrama;
         uniform sampler2D tCascalho, tCascalhoN;
         ${GLSL_COR_GRAMA}
+        ${GLSL_RELEVO}
       `)
       .replace('#include <color_fragment>', `#include <color_fragment>
         vec2 pm = vWP.xz;
@@ -213,6 +265,20 @@ export function criarChao(scene, { perfil, sdCaminho, semGrama, manchas }){
 
         // colinas: manchas de mata conforme sobe, sem rocha nenhuma
         float alt = vWP.y;
+        ${comRelevo ? `
+        vec4 rel = lerRelevo(pm);
+        alt -= rel.r;
+        // areia da prainha, margem molhada e fundo do lago
+        // areia com marquinhas: um tom mais escuro em ondas finas, como a que a água deixa
+        float marcas = texture2D(tRuido, vec2(pm.x*0.9 + pm.y*0.35, pm.y*0.25)).g;
+        vec3 areia = vec3(0.7, 0.55, 0.35)*(0.86 + texture2D(tRuido, pm*0.37).r*0.22)*(0.94 + marcas*0.1);
+        grama = mix(grama, areia, rel.g);
+        float molhado = 1.0 - smoothstep(uNivelAgua - 0.04, uNivelAgua + 0.26, vWP.y);
+        vec3 lama = mix(vec3(0.33, 0.3, 0.2)*(0.85 + texture2D(tRuido, pm*0.5).g*0.3), areia*0.72, rel.g);
+        grama = mix(grama, lama, molhado*0.88);
+        float fundo = smoothstep(uNivelAgua - 0.1, uNivelAgua - 0.9, vWP.y);
+        grama = mix(grama, mix(vec3(0.24, 0.27, 0.17), areia*0.62, rel.g), fundo);
+        ` : ''}
         if(alt > 0.1){
           float mata = smoothstep(0.42, 0.56, texture2D(tRuido, pm*0.0058).r + texture2D(tRuido, pm*0.024).g*0.18);
           grama = mix(grama, uFloresta, mata*smoothstep(0.3, 4.0, alt)*0.8);
@@ -233,12 +299,18 @@ export function criarChao(scene, { perfil, sdCaminho, semGrama, manchas }){
       `);
   };
 
-  const segs = perfil.nome === 'baixo' ? 56 : 96;
+  const segs = comRelevo ? (perfil.nome === 'baixo' ? 120 : 180) : (perfil.nome === 'baixo' ? 56 : 96);
   const geoChao = new THREE.PlaneGeometry(140, 140, segs, segs);
   geoChao.rotateX(-Math.PI/2);
   {
     const pos = geoChao.attributes.position;
-    for(let i=0;i<pos.count;i++) pos.setY(i, alturaTerreno(pos.getX(i), pos.getZ(i)));
+    // com relevo, os vértices se juntam no meio (~0,25 entre eles) e se espalham
+    // para a borda, onde só há colina ao longe
+    const junta = (v) => { const u = v/70; return 70*(0.4*u + 0.6*u*u*u); };
+    for(let i=0;i<pos.count;i++){
+      if(comRelevo){ pos.setX(i, junta(pos.getX(i))); pos.setZ(i, junta(pos.getZ(i))); }
+      pos.setY(i, alturaTerreno(pos.getX(i), pos.getZ(i)));
+    }
     geoChao.computeVertexNormals();
   }
   const ground = new THREE.Mesh(geoChao, matTerreno);
@@ -331,6 +403,7 @@ export function criarChao(scene, { perfil, sdCaminho, semGrama, manchas }){
         varying float vBrilho;
         vec3 posLamina;
         ${GLSL_COR_GRAMA}
+        ${GLSL_RELEVO}
       `)
       .replace('#include <beginnormal_vertex>', /* glsl */`
         float t = position.y, lado = position.x;
@@ -375,6 +448,7 @@ export function criarChao(scene, { perfil, sdCaminho, semGrama, manchas }){
           t*alt*encolhe,
           w.y + eixo.y*lado*larg + desl.y
         );
+        ${comRelevo ? 'posLamina.y += lerRelevo(w).r;' : ''}
         vec3 objectNormal = normalize(vec3(-dobra.x*0.55, 1.0, -dobra.y*0.55) + vec3(eixo.y, 0.0, -eixo.x)*lado*0.22);
 
         vT = t;
@@ -426,7 +500,7 @@ export function criarChao(scene, { perfil, sdCaminho, semGrama, manchas }){
   addCamada(perfil.grama.longe, perfil.grama.perto ? perfil.grama.perto.raio : 0, 17);
 
   return {
-    ground, camadasGrama, uniforms: comum, uGrama, mascara,
+    ground, camadasGrama, uniforms: comum, uGrama, mascara, texRelevo,
     atualizar(elapsed, camera, posCao){
       comum.uCam.value.copy(camera.position);
       uGrama.uTempo.value = elapsed;

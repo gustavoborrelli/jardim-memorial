@@ -37,7 +37,7 @@ function texturaAsa(cor){
   return t;
 }
 
-export function criarBorboletas(scene, { perfil }){
+export function criarBorboletas(scene, { perfil, altura = null }){
   const grupo = new THREE.Group();
   scene.add(grupo);
   const r = sorteador(19);
@@ -92,7 +92,7 @@ export function criarBorboletas(scene, { perfil }){
         const nz = tz + Math.cos(elapsed*f.speed*0.8+f.phase)*1.4;
         f.mesh.position.x = nx;
         f.mesh.position.z = nz;
-        f.mesh.position.y = 0.55 + Math.sin(elapsed*1.3+f.phase)*0.32 + (0.5+0.5*Math.sin(elapsed*0.6+i));
+        f.mesh.position.y = 0.55 + Math.sin(elapsed*1.3+f.phase)*0.32 + (0.5+0.5*Math.sin(elapsed*0.6+i)) + (altura ? Math.max(0, altura(nx, nz)) : 0);
         // voa pra onde vai, não de lado
         if(Math.abs(nx-px)+Math.abs(nz-pz) > 1e-5) f.mesh.rotation.y = Math.atan2(nx-px, nz-pz);
         f.mesh.rotation.z = Math.sin(elapsed*1.7+f.phase)*0.2;
