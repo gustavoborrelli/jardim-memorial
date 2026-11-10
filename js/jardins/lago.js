@@ -258,19 +258,67 @@ export const JUNCOS = (() => {
   return lista;
 })();
 
-/* ============ SÓ DO PROTÓTIPO ============
-   Onde o cachorro chega (perto da ponte, olhando o lago) e três homenagens de
-   exemplo, só nesta tela e sem banco, para ver as pedras na paisagem. Somem
-   quando o jardim ganhar a coluna `jardim` no banco (etapa 2 do plano). */
-// já passado o arco de boas-vindas (a câmera, atrás, não fica presa nele), virado trilha abaixo
+/* ============ A REDE DE TRILHAS (caminhada automática) ============
+   Quem chega pelo link de uma homenagem caminha sozinho até ela. No Memorial a
+   rota segue as avenidas retas; aqui, a trilha: os pontos das três trilhas viram
+   um grafo (cada ponto ligado ao seguinte; os ramais ligados à volta do lago onde
+   saem dela) e a rota é o caminho mais curto até o ponto da trilha mais perto da
+   pedra, e dali em linha reta até a frente dela. */
+const NOS = [], ARESTAS = [];
+{
+  const indice = (p) => { NOS.push(p); ARESTAS.push([]); return NOS.length - 1; };
+  const ligar = (a, b) => { const d = Math.hypot(NOS[a][0] - NOS[b][0], NOS[a][1] - NOS[b][1]); ARESTAS[a].push([b, d]); ARESTAS[b].push([a, d]); };
+  const daVolta = [];
+  TRILHAS.volta.slice(0, -1).forEach((p, k) => { daVolta.push(indice(p)); if(k > 0) ligar(daVolta[k - 1], daVolta[k]); });
+  ligar(daVolta[daVolta.length - 1], daVolta[0]);
+  [TRILHAS.clareira, TRILHAS.ponte].forEach(linha => {
+    let ant = null;
+    linha.forEach((p, k) => {
+      const n = indice(p);
+      if(ant !== null) ligar(ant, n);
+      // a ponta que sai da volta do lago encosta no ponto da volta mais perto
+      if(k === 0){
+        let melhor = daVolta[0], dm = Infinity;
+        daVolta.forEach(v => { const d = Math.hypot(NOS[v][0] - p[0], NOS[v][1] - p[1]); if(d < dm){ dm = d; melhor = v; } });
+        ligar(n, melhor);
+      }
+      ant = n;
+    });
+  });
+}
+const noMaisPerto = (x, z) => {
+  let melhor = 0, dm = Infinity;
+  NOS.forEach((p, i) => { const d = Math.hypot(p[0] - x, p[1] - z); if(d < dm){ dm = d; melhor = i; } });
+  return melhor;
+};
+// pontos [x, z] da trilha, de perto de `de` até perto de `para`, terminando em `para`
+export function rotaAte(de, para){
+  const a = noMaisPerto(de[0], de[1]), b = noMaisPerto(para[0], para[1]);
+  const dist = new Array(NOS.length).fill(Infinity), veio = new Array(NOS.length).fill(-1), feito = new Array(NOS.length).fill(false);
+  dist[a] = 0;
+  for(;;){
+    let u = -1;
+    for(let i = 0; i < NOS.length; i++) if(!feito[i] && dist[i] < Infinity && (u < 0 || dist[i] < dist[u])) u = i;
+    if(u < 0 || u === b) break;
+    feito[u] = true;
+    for(const [v, d] of ARESTAS[u]) if(dist[u] + d < dist[v]){ dist[v] = dist[u] + d; veio[v] = u; }
+  }
+  const caminho = [];
+  for(let n = b; n >= 0; n = veio[n]){ caminho.push(NOS[n]); if(n === a) break; }
+  caminho.reverse();
+  // um ponto a cada ~1,5 m basta para o cachorro seguir a curva
+  const pontos = [];
+  caminho.forEach(p => { const u = pontos[pontos.length - 1]; if(!u || Math.hypot(p[0] - u[0], p[1] - u[1]) > 1.5) pontos.push(p); });
+  pontos.push(para);
+  return pontos;
+}
+// quanto falta até a borda do jardim (a câmera da chegada não para dentro da mata)
+export const folgaDaBorda = (x, z) => raioBorda(x, z) - 1.5 - Math.hypot(x, z);
+
+/* onde o cachorro chega (perto da ponte, já passado o arco de boas-vindas, virado
+   trilha abaixo); enquanto a ponte não existe, é por aqui que se entra */
 export const INICIO = (() => {
   const l = TRILHAS.ponte, i = Math.floor(0.68*(l.length - 1));
   const [x, z] = l[i], [ax, az] = l[i - 2];
   return { x, z, yaw: Math.atan2(ax - x, az - z) };
 })();
-export const EXEMPLOS = [
-  { vaga: 0, formato: 'estatua-dachshund', cor: '#c9a8e8', name: 'Pipoca', dates: '2015 – 2025', msg: 'Pequena no tamanho, enorme na coragem.' },
-  { vaga: 5, formato: 'estatua-golden', cor: '#ff9a8a', name: 'Luna', dates: '2013 – 2026', msg: 'Corria atrás das ondinhas da beira do lago.' },
-  { vaga: 6, formato: 'estatua-pastor', cor: '#8ecae6', name: 'Thor', dates: '2009 – 2021', msg: 'O melhor amigo que um menino pode ter.' },
-  { vaga: 10, formato: 'classica', cor: '#ffd166', name: 'Mel', dates: '2011 – 2024', msg: 'Dona do sofá e do nosso coração.' },
-];

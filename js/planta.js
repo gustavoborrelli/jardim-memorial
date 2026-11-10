@@ -38,6 +38,10 @@ SECTIONS.forEach(sec=>{
   });
 });
 
+// "no Recanto do Sol", "na Prainha": o artigo certo antes do nome de um lugar
+const LUGARES_FEMININOS = new Set(['Margem do Lago', 'Prainha', 'Clareira do Alto']);
+export const noLugar = (lugar) => `${LUGARES_FEMININOS.has(lugar) ? 'na' : 'no'} ${lugar}`;
+
 // a linha da tabela memoriais no formato que o jardim usa (lapides.js e o mapa)
 export function dadosDaLinha(row, photo = null){
   return {

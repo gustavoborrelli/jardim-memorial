@@ -12,9 +12,9 @@
   cliques), a praça (colisão do cachorro) e as funções de plantar.
 
   Cada jardim tem o seu desenho (etapa 37): desenhoDoMemorial() é o jardim formal
-  de sempre; desenhoDoLago() é o protótipo do Jardim do Lago (?jardim=lago), com
-  relevo, água e sem banco de dados por enquanto. O resto (céu, luz, chão, grama,
-  flores, velas, relógio) é o mesmo para todos.
+  de sempre; desenhoDoLago() é o Jardim do Lago (?jardim=lago), com relevo e água.
+  O resto (céu, luz, chão, grama, flores, velas, relógio) é o mesmo para todos, e
+  desde a etapa 38 as flores e velas de cada jardim moram na coluna `jardim`.
 */
 
 import * as THREE from 'three';
@@ -123,6 +123,7 @@ function desenhoDoMemorial(sorte){
   return {
     sdCaminho, CERCA, PORTAO, BLOSSOM_SPOTS, LAMPADAS, VASOS, BANCOS, ARVORES,
     vagas: POSICOES_VAGA, livreGramado, isFreeSpot,
+    folgaDaBorda: (x, z) => 26 - Math.max(Math.abs(x), Math.abs(z)), // cerca e arbustos
   };
 }
 
@@ -224,7 +225,7 @@ function desenhoDoLago(sorte, P){
     if(h(x, z) < P.NIVEL_AGUA + 0.12) return false;
     return plots.every(plot => Math.hypot(x - plot.x, z - plot.z) >= 1.5);
   }
-  return { sdCaminho: P.sdCaminho, BLOSSOM_SPOTS, LAMPADAS, BANCOS, ARVORES, vagas: P.VAGAS, livreGramado, isFreeSpot };
+  return { sdCaminho: P.sdCaminho, BLOSSOM_SPOTS, LAMPADAS, BANCOS, ARVORES, vagas: P.VAGAS, livreGramado, isFreeSpot, folgaDaBorda: P.folgaDaBorda };
 }
 const sorteoAng = (sorte) => sorte()*Math.PI*2;
 
@@ -391,9 +392,8 @@ export function createWorld(scene, { renderer, perfil, pos }) {
     const color = flowerColors[Math.floor(Math.random()*flowerColors.length)];
     const lifespan = randomLifespan();
     plantFlower(x, z, false, color, lifespan);
-    if(noLago) return; // protótipo: a flor fica só nesta visita
     supabase.from('flores').insert({
-      x, z, cor: color,
+      jardim: JARDIM, x, z, cor: color,
       murcha_em: new Date(lifespan.murchaEm).toISOString(),
       expira_em: new Date(lifespan.expiraEm).toISOString(),
     }).then(({ error })=>{
@@ -402,8 +402,7 @@ export function createWorld(scene, { renderer, perfil, pos }) {
   }
 
   async function loadFlores(){
-    if(noLago) return; // protótipo sem banco: as flores salvas são do Jardim Memorial
-    const { data: rows, error } = await supabase.from('flores').select('*');
+    const { data: rows, error } = await supabase.from('flores').select('*').eq('jardim', JARDIM);
     if(error){
       console.error('Não foi possível carregar as flores:', error.message);
       return;
@@ -522,12 +521,11 @@ export function createWorld(scene, { renderer, perfil, pos }) {
     const g = plantCandle(x, z, false, lifespan);
     g.userData.memorialId = memorialId;
     const linha = {
-      x, z,
+      jardim: JARDIM, x, z,
       apaga_em: new Date(lifespan.apagaEm).toISOString(),
       expira_em: new Date(lifespan.expiraEm).toISOString(),
     };
     if(memorialId) linha.memorial_id = memorialId;
-    if(noLago) return Promise.resolve(true); // protótipo: a vela fica só nesta visita
     return supabase.from('velas').insert(linha).then(({ error })=>{
       if(error){
         console.error('Não foi possível salvar a vela:', error.message);
@@ -562,8 +560,7 @@ export function createWorld(scene, { renderer, perfil, pos }) {
   }
 
   async function loadVelas(){
-    if(noLago) return; // protótipo sem banco
-    const { data: rows, error } = await supabase.from('velas').select('*');
+    const { data: rows, error } = await supabase.from('velas').select('*').eq('jardim', JARDIM);
     if(error){
       console.error('Não foi possível carregar as velas:', error.message);
       return;
@@ -800,8 +797,11 @@ export function createWorld(scene, { renderer, perfil, pos }) {
     AVENUES,
     copas,
     jardim: JARDIM,
-    // protótipo sem banco (etapa 37): sem homenagens salvas, presença nem mapa
-    prototipo: noLago,
+    // o mapa de tesouro ainda é só o do Jardim Memorial
+    temMapa: !noLago,
+    folgaDaBorda: desenho.folgaDaBorda,
+    // caminhada automática pela trilha (null: as avenidas do Memorial, em menuUi.js)
+    rotaAte: noLago ? PLANTA_LAGO.rotaAte : null,
     // onde o cachorro pode pisar e em que altura (null: o de sempre, cerca e fonte)
     terreno: noLago ? {
       altura: alturaTerreno,

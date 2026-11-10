@@ -916,6 +916,5 @@ canvas{display:block;outline:none;}
   font-size:14px; padding:13px 18px; margin:0 0 14px;
 }
 
-/* protótipo do Jardim do Lago (?jardim=lago, etapa 37): o mapa ainda é o do
-   Jardim Memorial, então os botões de mapa somem */
-.jardim-prototipo #btnMapToggle, .jardim-prototipo #btnMenuMapa{ display:none !important; }
+/* jardim sem mapa de tesouro (o Lago, por enquanto): os botões de mapa somem */
+.sem-mapa #btnMapToggle, .sem-mapa #btnMenuMapa, .sem-mapa .dica-mapa{ display:none !important; }

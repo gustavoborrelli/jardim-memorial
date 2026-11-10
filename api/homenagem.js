@@ -12,6 +12,10 @@
 const SITE = 'https://jardim-memorial.vercel.app';
 const PADRAO = `${SITE}/og-jardim.jpg`;
 
+// "no Recanto do Sol", "na Prainha" (a mesma lista de js/planta.js)
+const LUGARES_FEMININOS = new Set(['Margem do Lago', 'Prainha', 'Clareira do Alto']);
+const noLugar = (lugar) => `${LUGARES_FEMININOS.has(lugar) ? 'na' : 'no'} ${lugar}`;
+
 const escapar = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
 
 async function buscar(slug){
@@ -74,7 +78,7 @@ module.exports = async (req, res) => {
     return;
   }
   const nome = h.nome_pet;
-  const descricao = [h.datas, h.mensagem].filter(Boolean).join(' · ') || `Uma homenagem no ${h.setor}.`;
+  const descricao = [h.datas, h.mensagem].filter(Boolean).join(' · ') || `Uma homenagem ${noLugar(h.setor)}.`;
   // o WhatsApp guarda a prévia por um tempo; aqui o cache é curto para uma
   // homenagem recém-criada já sair certa
   res.setHeader('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=86400');

@@ -55,10 +55,9 @@ window.addEventListener('resize', ()=>{
 
 /* ============ MÓDULOS DO JOGO ============ */
 const world = createWorld(scene, { renderer, perfil, pos });
-// o protótipo do Jardim do Lago (?jardim=lago) traz as vagas e placas dele, sem banco
-const lapides = createLapides(scene, world.prototipo ? {
-  vagas: PLANTA_LAGO.VAGAS, placas: PLANTA_LAGO.PLACAS, altura: alturaTerreno,
-  semBanco: true, exemplos: PLANTA_LAGO.EXEMPLOS,
+// o Jardim do Lago traz as vagas e placas dele; cada jardim lê e cria só as suas homenagens
+const lapides = createLapides(scene, world.jardim === 'lago' ? {
+  vagas: PLANTA_LAGO.VAGAS, placas: PLANTA_LAGO.PLACAS, altura: alturaTerreno, jardim: 'lago',
 } : {});
 world.scatterFlowers(90, lapides.plots);
 
@@ -77,8 +76,12 @@ const auth = createAuth();
 const mapaUi = obterMapaUi();
 mapaUi.usarJogo({ lapides, world, dogController });
 const menuUi = createMenuUi({ camera, lapides, world, dogController, pausedState, auth, mapaUi });
-// no protótipo, ninguém aparece passeando: a presença é a do Jardim Memorial
-const presence = world.prototipo ? { update(){} } : createPresence({ scene, dogController, pausedState });
+// quem passeia no mesmo jardim se vê; cada jardim tem o seu canal
+const presence = createPresence({
+  scene, dogController, pausedState,
+  canal: world.jardim === 'memorial' ? 'jardim-presenca' : `jardim-presenca-${world.jardim}`,
+  chao: world.terreno ? world.terreno.chao : null,
+});
 
 /* ============ RAYCAST INTERACTION ============ */
 const raycaster = new THREE.Raycaster();
@@ -108,26 +111,22 @@ function onClick(e){
   // empty plot -> open modal
   const emptyPlot = lapides.pickEmptyPlot(raycaster);
   if(emptyPlot){
-    if(world.prototipo){ menuUi.avisar('Este jardim ainda é um protótipo: as homenagens dele chegam numa próxima etapa.'); return; }
     menuUi.openModalFor(emptyPlot);
     return;
   }
 
   // stone -> abre o modal de ler/deixar mensagens (card do hover continua só leitura)
   const stone = lapides.pickStone(raycaster);
-  if(stone){
-    if(world.prototipo){ menuUi.avisar('Homenagem de exemplo do protótipo.'); return; }
-    menuUi.openMessagesFor(stone); return;
-  }
+  if(stone){ menuUi.openMessagesFor(stone); return; }
 
   // ground -> plant flower or candle, conforme o botão de alternar (exige login, só na grama)
   const groundHits = raycaster.intersectObject(world.ground);
   if(groundHits.length){
     const p = groundHits[0].point;
-    const dentro = world.prototipo || (Math.abs(p.x)<BOUNDS && Math.abs(p.z)<BOUNDS);
+    // (no Lago, quem diz o que é dentro é o isFreeSpot dele: borda natural, água, deque)
+    const dentro = world.terreno || (Math.abs(p.x)<BOUNDS && Math.abs(p.z)<BOUNDS);
     if(dentro && world.isFreeSpot(p.x, p.z, lapides.plots)){
-      // protótipo: planta sem login e sem salvar, só para ver
-      (world.prototipo ? (fn => fn()) : menuUi.requireAuth)(()=>{
+      menuUi.requireAuth(()=>{
         if(menuUi.getPlantMode() === 'vela'){
           world.plantAndSaveVela(p.x, p.z);
           menuUi.chime(440, 0.06);

@@ -32,9 +32,11 @@ export const POSICOES_VAGA = [];
    vagas — [{x, z, section, rot?}] (rot: para onde a pedra olha; 0 = +z)
    placas — [{nome, tipo: 'arco'|'placa', x, z, rot}] no lugar dos arcos dos campos
    altura(x, z) — a altura do chão (jardim com relevo)
-   semBanco — protótipo: não lê nem escuta o banco de homenagens
-   exemplos — [{vaga, formato, cor, name, dates, msg}] pedras só desta tela */
-export function createLapides(scene, { vagas = VAGAS, placas = null, altura = null, semBanco = false, exemplos = [] } = {}) {
+   jardim — de que jardim são as homenagens lidas, escutadas e criadas (etapa 38) */
+export function createLapides(scene, { vagas = VAGAS, placas = null, altura = null, jardim = 'memorial' } = {}) {
+  const doJardim = (row) => (row.jardim || 'memorial') === jardim;
+  // as fotos de outro jardim ganham o nome dele na frente (no Memorial, como sempre foi)
+  const prefixo = jardim === 'memorial' ? '' : `${jardim}_`;
   const alturaEm = (x, z) => altura ? altura(x, z) : 0;
 
   const stoneGroup = new THREE.Group();
@@ -686,6 +688,7 @@ export function createLapides(scene, { vagas = VAGAS, placas = null, altura = nu
   /* ============ SUPABASE: carregar memoriais salvos ============ */
   // usada tanto pro carregamento inicial quanto pelos eventos em tempo real
   async function installFromRow(row, animate){
+    if(!doJardim(row)) return;
     const plot = plots.find(p=>
       Number(p.x) === Number(row.plot_x) && Number(p.z) === Number(row.plot_z)
     );
@@ -708,15 +711,7 @@ export function createLapides(scene, { vagas = VAGAS, placas = null, altura = nu
   }
 
   async function loadMemoriais(){
-    if(semBanco){
-      // protótipo: só as pedras de exemplo, sem foto
-      exemplos.forEach((ex, i) => {
-        const plot = plots[ex.vaga];
-        if(plot && !plot.occupied) installStone(plot, { id: `exemplo-${i}`, name: ex.name, dates: ex.dates, msg: ex.msg, photo: null, formato: ex.formato, cor: ex.cor }, false);
-      });
-      return;
-    }
-    const { data: rows, error } = await supabase.from('memoriais').select('*');
+    const { data: rows, error } = await supabase.from('memoriais').select('*').eq('jardim', jardim);
     if(error){
       console.error('Não foi possível carregar os memoriais:', error.message);
       return;
@@ -733,7 +728,8 @@ export function createLapides(scene, { vagas = VAGAS, placas = null, altura = nu
   /* ============ SUPABASE: lápides novas em tempo real ============ */
   // se outra pessoa criar uma homenagem enquanto o jardim está aberto aqui,
   // a lápide nasce na hora, sem precisar recarregar a página.
-  if(!semBanco) supabase
+  // (o evento chega de todos os jardins: installFromRow e o UPDATE ignoram os de outro)
+  supabase
     .channel('memoriais-realtime')
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'memoriais' },
       payload => installFromRow(payload.new, true))
@@ -742,6 +738,7 @@ export function createLapides(scene, { vagas = VAGAS, placas = null, altura = nu
     // quem tem o jardim aberto vê a edição de outra pessoa na hora (etapa 36)
     .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'memoriais' },
       async payload => {
+        if(!doJardim(payload.new)) return;
         const plot = plots.find(p => p.data && p.data.id === payload.new.id);
         if(!plot) return;
         // a própria edição volta por aqui também: se nada mudou na pedra, não refaz
@@ -762,14 +759,14 @@ export function createLapides(scene, { vagas = VAGAS, placas = null, altura = nu
     let fotoUrl = atual.photoUrl || null;
     if(photoFile){
       const ext = (photoFile.name.split('.').pop() || 'jpg').toLowerCase();
-      const path = `${plot.x}_${plot.z}_${Date.now()}.${ext}`;
+      const path = `${prefixo}${plot.x}_${plot.z}_${Date.now()}.${ext}`;
       const { error: uploadError } = await supabase.storage.from('fotos-memoriais').upload(path, photoFile);
       if(uploadError) throw uploadError;
       fotoUrl = supabase.storage.from('fotos-memoriais').getPublicUrl(path).data.publicUrl;
     }
     const mudancas = { nome_pet: name, datas: dates, mensagem: msg, foto_url: fotoUrl, formato: formato || 'classica', cor: cor || PALETTE[0].hex };
     if(cartao){
-      const path = `cartoes/${plot.x}_${plot.z}_${Date.now()}.jpg`;
+      const path = `cartoes/${prefixo}${plot.x}_${plot.z}_${Date.now()}.jpg`;
       const { error: erroCartao } = await supabase.storage.from('fotos-memoriais').upload(path, cartao, { contentType: 'image/jpeg' });
       if(erroCartao) console.warn('Cartão da prévia não subiu:', erroCartao.message);
       else mudancas.cartao_url = supabase.storage.from('fotos-memoriais').getPublicUrl(path).data.publicUrl;
@@ -791,7 +788,7 @@ export function createLapides(scene, { vagas = VAGAS, placas = null, altura = nu
     let fotoUrl = null;
     if(photoFile){
       const ext = (photoFile.name.split('.').pop() || 'jpg').toLowerCase();
-      const path = `${plot.x}_${plot.z}_${Date.now()}.${ext}`;
+      const path = `${prefixo}${plot.x}_${plot.z}_${Date.now()}.${ext}`;
       const { error: uploadError } = await supabase.storage
         .from('fotos-memoriais')
         .upload(path, photoFile);
@@ -801,7 +798,7 @@ export function createLapides(scene, { vagas = VAGAS, placas = null, altura = nu
     }
     let cartaoUrl = null;
     if(cartao){
-      const path = `cartoes/${plot.x}_${plot.z}_${Date.now()}.jpg`;
+      const path = `cartoes/${prefixo}${plot.x}_${plot.z}_${Date.now()}.jpg`;
       const { error: erroCartao } = await supabase.storage
         .from('fotos-memoriais')
         .upload(path, cartao, { contentType: 'image/jpeg' });
@@ -813,6 +810,7 @@ export function createLapides(scene, { vagas = VAGAS, placas = null, altura = nu
       datas: dates,
       mensagem: msg,
       setor: plot.section,
+      jardim,
       plot_x: plot.x,
       plot_z: plot.z,
       foto_url: fotoUrl,
@@ -834,6 +832,7 @@ export function createLapides(scene, { vagas = VAGAS, placas = null, altura = nu
         const { data: existing } = await supabase
           .from('memoriais')
           .select('*')
+          .eq('jardim', jardim)
           .eq('plot_x', plot.x)
           .eq('plot_z', plot.z)
           .maybeSingle();

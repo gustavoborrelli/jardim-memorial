@@ -17,12 +17,15 @@ import { supabase } from './supabaseClient.js';
 import { buildDog } from './cachorros.js';
 import { animarCao } from './gfx/caes.js';
 
-export function createPresence({ scene, dogController, pausedState }) {
+/* canal: cada jardim tem o seu (etapa 38); o do Memorial guarda o nome de sempre,
+   para quem ainda está com a versão antiga aberta continuar se vendo.
+   chao(x, z): a altura onde o companheiro de outra pessoa pisa (jardim com relevo) */
+export function createPresence({ scene, dogController, pausedState, canal = 'jardim-presenca', chao = null }) {
   const myId = Math.random().toString(36).slice(2);
   const peers = new Map(); // id -> { group, parts, target:{x,z,yaw}, lastSeen }
   let subscribed = false;
 
-  const channel = supabase.channel('jardim-presenca', {
+  const channel = supabase.channel(canal, {
     config: { presence: { key: myId } },
   });
 
@@ -111,6 +114,7 @@ export function createPresence({ scene, dogController, pausedState }) {
       const ease = Math.min(1, dt*8);
       p.group.position.x += (p.target.x - p.group.position.x) * ease;
       p.group.position.z += (p.target.z - p.group.position.z) * ease;
+      if(chao){ const y = chao(p.group.position.x, p.group.position.z); if(y !== null) p.group.position.y = y; }
       let diff = p.target.yaw - p.group.rotation.y;
       while(diff > Math.PI) diff -= Math.PI*2;
       while(diff < -Math.PI) diff += Math.PI*2;

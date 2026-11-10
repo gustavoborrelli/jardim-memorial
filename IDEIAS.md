@@ -807,6 +807,39 @@ flores/velas nas lápides dos outros (MVP family & friends).
     'memorial', unique (jardim, plot_x, plot_z)), um jardim por vez, link e presença
     por jardim.
 
+38. 🔜 **Cada jardim com as suas homenagens** (branch `jardim-lago`) — etapa 2 da
+    expansão. O Jardim do Lago deixa de ser protótipo: homenagens, velas e flores de
+    verdade, cada uma no seu jardim.
+    - Banco (`supabase/019_jardins.sql`, **rodar no Supabase antes do deploy**):
+      coluna `jardim` em memoriais, velas e flores (padrão 'memorial', valores
+      'memorial', 'lago', 'bosque'); a vaga passa a ser única dentro do jardim
+      (`unique (jardim, plot_x, plot_z)`). Aditiva: o site antigo continua
+      funcionando depois dela, e tudo o que existe fica no Memorial. O link (slug)
+      continua único no site inteiro.
+    - Um jardim por vez: o do endereço (`?jardim=lago`); senão o da homenagem do link
+      (/luna abre o Lago, se a Luna mora lá); senão, na volta do login com Google, o
+      da vaga guardada (o Google devolve sempre para a raiz); senão o Memorial.
+      `JARDIM` em `js/jardins/qual.js` virou ligação viva, trocada pelo `main.js`
+      antes de o jogo carregar.
+    - Tudo lido e gravado com o jardim: homenagens (e o evento em tempo real, que
+      chega de todos e é filtrado), velas, flores, a leitura rápida do mapa da
+      primeira tela e as fotos (prefixo `lago_` no armazenamento).
+    - Presença por jardim: o Memorial guarda o canal de sempre (`jardim-presenca`),
+      o Lago tem o seu; os companheiros de outras pessoas andam na altura do chão.
+    - Caminhada pelo link no Lago: a rede de trilhas virou um grafo
+      (`rotaAte` em `js/jardins/lago.js`), e o cachorro entra por onde a ponte vai
+      chegar e segue a trilha até a frente da pedra. A câmera da chegada usa a borda
+      de cada jardim.
+    - O Lago ainda não tem mapa de tesouro: abre no cartão do menu, ESC volta ao
+      menu, e os botões e a dica do mapa somem. "Na Prainha", "no Recanto do Sol":
+      o artigo certo antes do nome do lugar, no jogo e na prévia do link.
+    Testado com Playwright e um banco simulado em memória (filtros, vaga única por
+    jardim, usuário logado): o Lago lê só o que é dele e grava homenagem, flor e
+    vela com `jardim: 'lago'`; /luna abre o Lago e o cachorro caminha pela trilha até
+    a Luna; o Memorial lê só o dele e abre no mapa; a volta do login com uma vaga do
+    Lago guardada reabre o Lago com o formulário. O Memorial continua idêntico pixel
+    a pixel à `main`.
+
 ## Ideias soltas (não decidido ainda)
 
 - A leva de dinamismo social planejada em conjunto está completa: (1)

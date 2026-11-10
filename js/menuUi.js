@@ -15,6 +15,7 @@ import * as THREE from 'three';
 import { homenagemDoLink, slugPedido, htmlCartao, linkDaHomenagem, voltouDoLogin } from './chegada.js';
 import { GATOS } from './gfx/gatos.js';
 import { gerarCartao } from './cartao.js';
+import { noLugar } from './planta.js';
 
 export function createMenuUi({ camera, lapides, world, dogController, pausedState, auth, mapaUi }) {
 
@@ -496,7 +497,7 @@ export function createMenuUi({ camera, lapides, world, dogController, pausedStat
       // gather fireflies briefly
       world.gatherFireflies(plot.x, plot.z);
       chime(660, 0.14);
-      showToast(`"${name}" agora descansa no ${plot.section}.`);
+      showToast(`"${name}" agora descansa ${noLugar(plot.section)}.`);
       closeModal();
       // o link é o que leva a homenagem para a família: oferece na hora
       if(saved.slug) abrirCompartilhar({ nome: name, slug: saved.slug, titulo: 'Homenagem gravada' });
@@ -843,8 +844,8 @@ export function createMenuUi({ camera, lapides, world, dogController, pausedStat
   function irParaCasa(){
     pausedState.value = true;
     dogController.resetKeys();
-    if(world.prototipo){
-      // protótipo do Lago: o mapa ainda é o do Jardim Memorial, então a casa é o menu
+    if(!world.temMapa){
+      // o Jardim do Lago ainda não tem mapa de tesouro: a casa é o cartão do menu
       document.body.classList.remove('passeando');
       showMenuPanel(menuHome);
       menuScreen.classList.remove('hidden');
@@ -884,7 +885,7 @@ export function createMenuUi({ camera, lapides, world, dogController, pausedStat
     for(const desvio of [0, 0.4, -0.4, 0.8, -0.8, 1.15, -1.15]){
       const az = base + desvio;
       const cx = x + Math.sin(az)*distancia, cz = z + Math.cos(az)*distancia;
-      let folga = 26 - Math.max(Math.abs(cx), Math.abs(cz)); // cerca e arbustos
+      let folga = world.folgaDaBorda(cx, cz); // cerca e arbustos (no Lago, a mata da borda)
       for(const t of [1, 0.75, 0.5, 0.3]){
         const px = x + (cx - x)*t, pz = z + (cz - z)*t;
         for(const c of world.copas) folga = Math.min(folga, Math.hypot(px - c.x, pz - c.z) - c.r);
@@ -904,6 +905,7 @@ export function createMenuUi({ camera, lapides, world, dogController, pausedStat
     const raca = racaDaEstatua || racaGuardada() || dogController.getBreed() || 'golden';
     if(dogController.getBreed() !== raca) dogController.selectDog(raca);
     const alvo = { x: Number(h.plot_x), z: Number(h.plot_z) };
+    if(world.rotaAte){ visitarPelaTrilha(h, alvo); return; }
     const sx = Math.sign(alvo.x) || 1, sz = Math.sign(alvo.z) || 1;
     dogController.posicionar(0, sz*3.4, sz > 0 ? 0 : Math.PI);
     startGame();
@@ -914,6 +916,30 @@ export function createMenuUi({ camera, lapides, world, dogController, pausedStat
       olharPara: alvo,
       // a câmera mira o meio entre o cachorro e a pedra
       camera: cameraDaChegada(alvo.x, (frente + alvo.z)/2, Math.PI),
+      aoChegar: async ()=>{
+        await lapides.carregadas;
+        const pedra = lapides.acharLapide(h.id);
+        if(pedra && !pausedState.value) openMessagesFor(pedra);
+      },
+    });
+  }
+
+  /* No Jardim do Lago, quem chega pelo link entra por onde a ponte vai chegar e segue
+     a trilha (a rede de trilhas mora em js/jardins/lago.js) até a frente da pedra;
+     cada pedra olha para a trilha mais perto (`rot` da vaga). */
+  function frenteDaVaga(alvo, distancia = 2.3){
+    const plot = lapides.plots.find(p => Number(p.x) === alvo.x && Number(p.z) === alvo.z);
+    const rot = (plot && plot.rot) || 0;
+    return { x: alvo.x + Math.sin(rot)*distancia, z: alvo.z + Math.cos(rot)*distancia, rot };
+  }
+  function visitarPelaTrilha(h, alvo){
+    const inicio = world.terreno.inicio;
+    dogController.posicionar(inicio.x, inicio.z, inicio.yaw);
+    startGame();
+    const frente = frenteDaVaga(alvo);
+    dogController.caminharPor(world.rotaAte([inicio.x, inicio.z], [frente.x, frente.z]), {
+      olharPara: alvo,
+      camera: cameraDaChegada((frente.x + alvo.x)/2, (frente.z + alvo.z)/2, frente.rot + Math.PI),
       aoChegar: async ()=>{
         await lapides.carregadas;
         const pedra = lapides.acharLapide(h.id);
@@ -976,7 +1002,7 @@ export function createMenuUi({ camera, lapides, world, dogController, pausedStat
     if(!vagaParaLogin) return;
     try {
       localStorage.setItem(VAGA_PENDENTE, JSON.stringify({
-        tipo: vagaParaLogin.tipo, x: vagaParaLogin.plot.x, z: vagaParaLogin.plot.z,
+        tipo: vagaParaLogin.tipo, x: vagaParaLogin.plot.x, z: vagaParaLogin.plot.z, jardim: world.jardim,
         raca: dogController.getBreed() || racaGuardada(), quando: Date.now(),
       }));
     } catch(e){}
@@ -989,6 +1015,8 @@ export function createMenuUi({ camera, lapides, world, dogController, pausedStat
   async function retomarVagaPendente(p){
     esquecerVagaPendente();
     if(!p || Date.now() - p.quando > 20*60*1000) return;
+    // (o main.js já abriu o jardim da vaga; guardada antes da etapa 38, ela é do Memorial)
+    if((p.jardim || 'memorial') !== world.jardim) return;
     await lapides.carregadas;
     const plot = lapides.plots.find(pl => Number(pl.x) === Number(p.x) && Number(pl.z) === Number(p.z));
     if(!plot) return;
@@ -999,23 +1027,31 @@ export function createMenuUi({ camera, lapides, world, dogController, pausedStat
       if(!plot.occupied || !plot.data) return;
       startGame();
       await world.velasCarregadas;
-      mapaUi.abrirFichaDe(plot);
+      if(world.temMapa) mapaUi.abrirFichaDe(plot);
+      else {
+        // sem mapa (Lago): na frente da pedra, com o livro de mensagens aberto
+        const frente = frenteDaVaga({ x: Number(plot.x), z: Number(plot.z) });
+        dogController.posicionar(frente.x, frente.z, frente.rot + Math.PI);
+        if(plot.mesh) openMessagesFor(plot.mesh);
+      }
       acenderVela(plot);
       return;
     }
     if(plot.occupied){
       startGame();
-      showToast('Essa vaga foi ocupada enquanto você entrava. Escolha outra no mapa.');
-      mapaUi.openMap();
+      if(world.temMapa){
+        showToast('Essa vaga foi ocupada enquanto você entrava. Escolha outra no mapa.');
+        mapaUi.openMap();
+      } else showToast('Essa vaga foi ocupada enquanto você entrava. Escolha outra vaga livre.');
       return;
     }
-    // na frente da vaga e virado para ela (as pedras olham para +z)
-    dogController.posicionar(plot.x, plot.z + 2.3, Math.PI);
+    // na frente da vaga e virado para ela (no Memorial as pedras olham para +z)
+    const frente = frenteDaVaga({ x: Number(plot.x), z: Number(plot.z) });
+    dogController.posicionar(frente.x, frente.z, frente.rot + Math.PI);
     startGame();
     openModalFor(plot);
   }
-  // (no protótipo do Lago a vaga guardada é do Jardim Memorial: fica para lá)
-  if(!world.prototipo){
+  {
     const pendente = lerVagaPendente();
     if(pendente && !voltouDoLogin) esquecerVagaPendente();
     else if(pendente){
@@ -1096,14 +1132,14 @@ export function createMenuUi({ camera, lapides, world, dogController, pausedStat
     if(e.key.toLowerCase() === 'm'){
       const tag = e.target && e.target.tagName;
       if(tag === 'INPUT' || tag === 'TEXTAREA') return; // não intercepta enquanto digita
-      if(pausedState.value || !dogController.getDog() || world.prototipo) return;
+      if(pausedState.value || !dogController.getDog() || !world.temMapa) return;
       mapaUi.openMap();
     }
   });
 
   const btnMapToggle = document.getElementById('btnMapToggle');
   btnMapToggle.addEventListener('click', ()=>{
-    if(pausedState.value || !dogController.getDog() || world.prototipo) return;
+    if(pausedState.value || !dogController.getDog() || !world.temMapa) return;
     mapaUi.openMap();
   });
 
