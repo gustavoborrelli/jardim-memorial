@@ -894,6 +894,27 @@ flores/velas nas lápides dos outros (MVP family & friends).
     perfil de celular: ~5,5 ms por quadro no M5, como o Lago (o Memorial, ~4,5).
     A migração 019 já aceitava 'bosque'.
 
+41. 🔜 **Mapa-múndi como primeira tela, e mapa de tesouro do Lago e do Bosque**
+    (branch `jardim-lago`, EM ANDAMENTO) — etapa 5 da expansão, a última do plano.
+    - Feito: `js/mundi.js` (o vale com os três jardins, as pontes de arco-íris, a
+      névoa das "terras por descobrir", a contagem de homenagens e vagas de cada
+      jardim e o "você está aqui"); a raiz do site abre nele. Tocar num jardim abre
+      a ficha com "Ver as homenagens" e "Passear aqui"; para outro jardim, a página
+      atravessa a ponte (`js/atravessar.js`, modos 'mapa' e 'passeio'). `?jardim=…`
+      (e a volta do login) abre no mapa de tesouro do jardim. O mapa de tesouro
+      ganhou "← Os jardins". `js/mapaNatural.js` desenha o mapa do Lago e o do
+      Bosque das plantas deles (no Bosque, as clareiras se abrem no papel para os
+      medalhões caberem); `js/mapaDesenho.js` tem as peças comuns do esboço.
+      "Visitar no jardim" pelo mapa vai pela trilha nos jardins naturais.
+    - Testado com Playwright e banco simulado: a raiz abre no múndi com as contagens
+      certas; "Ver as homenagens" do Memorial abre o mapa dele; do múndi para o mapa
+      do Lago, coberto pelo céu; "Visitar no jardim" até a Luna pela trilha; do múndi
+      a passear no Bosque, descendo a ponte; o 🗺️ abre o mapa do Bosque.
+    - Falta: no mapa do Bosque, as faixas com o nome das clareiras foram para o lado
+      da entrada e agora se sobrepõem duas a duas (Recanto/Lua, Samambaias/Riacho):
+      escolher um lugar por clareira. Depois: conferir o celular, regressão do
+      Memorial contra a etapa 4 (o 3D não mudou), fotos, página e commit final.
+
 ## Ideias soltas (não decidido ainda)
 
 - A leva de dinamismo social planejada em conjunto está completa: (1)

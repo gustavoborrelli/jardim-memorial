@@ -323,6 +323,7 @@
   <div class="modal-back mt-fundo" id="mapModalBack">
     <div class="mt-quadro">
       <div class="mt-topo">
+        <button class="mt-voltar" id="btnMapMundi" type="button">← Os jardins</button>
         <input id="mapSearchInput" class="mt-busca" placeholder="Buscar pelo nome do companheiro" aria-label="Buscar homenagem pelo nome" autocomplete="off">
         <button class="mt-fechar" id="btnMapClose" type="button" aria-label="Fechar o mapa">×</button>
       </div>
@@ -334,6 +335,22 @@
         <button class="mt-btn mt-menu" id="btnMapaMenu" type="button" disabled>Menu</button>
       </div>
       <section class="mt-ficha" id="mapFicha" aria-live="polite"></section>
+    </div>
+  </div>
+
+  <!-- ===== O MAPA-MÚNDI (etapa 41): a primeira tela, os três jardins ===== -->
+  <div class="modal-back mt-fundo mm-fundo" id="mundiBack">
+    <div class="mt-quadro">
+      <div class="mt-topo mm-topo">
+        <p class="mm-etiqueta">Os Jardins do Arco-Íris</p>
+        <button class="mt-fechar" id="btnMundiFechar" type="button" aria-label="Fechar o mapa dos jardins">×</button>
+      </div>
+      <svg id="mundiSvg" class="mt-svg" viewBox="0 0 100 132" role="img" aria-label="Mapa dos jardins ligados pela Ponte do Arco-Íris"></svg>
+      <p class="mt-dica">Toque num jardim para ver as homenagens ou passear</p>
+      <div class="mt-inicio-barra">
+        <button class="mt-btn mt-menu mm-menu" id="btnMundiMenu" type="button" disabled>Menu</button>
+      </div>
+      <section class="mt-ficha" id="mundiFicha" aria-live="polite"></section>
     </div>
   </div>
 </div>

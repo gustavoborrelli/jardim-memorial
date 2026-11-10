@@ -14,9 +14,7 @@
   de onde, para onde, o companheiro e a hora. Vale por um minuto.
 */
 import { travessiaChegando, CHAVE_TRAVESSIA } from './chegada.js';
-
-const NOMES = { memorial: 'Jardim Memorial', lago: 'Jardim do Lago', bosque: 'Bosque dos Vaga-lumes' };
-const ENDERECO = { memorial: '/', lago: '/?jardim=lago', bosque: '/?jardim=bosque' };
+import { NOMES, atravessarPara } from './atravessar.js';
 
 export function createTravessia({ world, dogController, menuUi }){
   const ponte = world.ponte;
@@ -52,20 +50,13 @@ export function createTravessia({ world, dogController, menuUi }){
       altura: alturaNaPonte, livre: true, semCancelar: true, velocidade: 1.45,
     });
     destino.textContent = `para o ${NOMES[para]}`;
-    setTimeout(() => {
-      cortina.classList.add('aberta');
-      try {
-        sessionStorage.setItem(CHAVE_TRAVESSIA, JSON.stringify({
-          de: world.jardim, para, raca: dogController.getBreed(), quando: Date.now(),
-        }));
-      } catch(e){}
-    }, 2300);
-    // a cortina leva ~0,7 s para cobrir; depois disso, o outro jardim
-    setTimeout(() => location.assign(ENDERECO[para]), 3100);
+    // no alto da ponte, o céu cobre a tela (~0,7 s) e a página troca para o outro jardim
+    setTimeout(() => atravessarPara(para, { modo: 'passeio', raca: dogController.getBreed(), de: world.jardim, espera: 800 }), 2300);
   }
 
   /* ---------- a chegada, do outro lado ---------- */
-  if(travessiaChegando && travessiaChegando.para === world.jardim){
+  // (no modo 'mapa', vindo do mapa-múndi, a página abre no mapa de tesouro: main.js)
+  if(travessiaChegando && travessiaChegando.para === world.jardim && (travessiaChegando.modo || 'passeio') === 'passeio'){
     try { sessionStorage.removeItem(CHAVE_TRAVESSIA); } catch(e){}
     atravessando = true;
     document.body.classList.add('na-ponte');

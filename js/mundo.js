@@ -905,8 +905,8 @@ export function createWorld(scene, { renderer, perfil, pos }) {
     AVENUES,
     copas,
     jardim: JARDIM,
-    // o mapa de tesouro ainda é só o do Jardim Memorial
-    temMapa: !natural,
+    // todo jardim tem o seu mapa de tesouro desde a etapa 41
+    temMapa: true,
     planta,
     folgaDaBorda: desenho.folgaDaBorda,
     // a Ponte do Arco-Íris deste jardim: o patamar, para onde leva, e a altura do caminho

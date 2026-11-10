@@ -16,11 +16,14 @@ import { homenagemDoLink, slugPedido, htmlCartao, linkDaHomenagem, voltouDoLogin
 import { GATOS } from './gfx/gatos.js';
 import { gerarCartao } from './cartao.js';
 import { noLugar } from './planta.js';
+import { obterMundi } from './mundi.js';
+import { atravessarPara } from './atravessar.js';
 
 export function createMenuUi({ camera, lapides, world, dogController, pausedState, auth, mapaUi }) {
 
   const menuScreen = document.getElementById('menuScreen');
   const menuHome = document.getElementById('menuHome');
+  const mundi = obterMundi(); // o mapa-múndi (etapa 41), o mesmo do main.js
   const menuHow = document.getElementById('menuHow');
   const menuAbout = document.getElementById('menuAbout');
   const menuDogs = document.getElementById('menuDogs');
@@ -761,6 +764,7 @@ export function createMenuUi({ camera, lapides, world, dogController, pausedStat
   function startGame(){
     dogController.alinharCamera();
     mapaUi.closeMap(); // a primeira tela é o mapa: passear o fecha
+    mundi.fechar();
     document.body.classList.add('passeando');
     menuScreen.classList.add('hidden');
     pausedState.value = false;
@@ -844,13 +848,6 @@ export function createMenuUi({ camera, lapides, world, dogController, pausedStat
   function irParaCasa(){
     pausedState.value = true;
     dogController.resetKeys();
-    if(!world.temMapa){
-      // o Jardim do Lago ainda não tem mapa de tesouro: a casa é o cartão do menu
-      document.body.classList.remove('passeando');
-      showMenuPanel(menuHome);
-      menuScreen.classList.remove('hidden');
-      return;
-    }
     menuScreen.classList.add('hidden');
     mapaUi.openInicio();
   }
@@ -871,8 +868,24 @@ export function createMenuUi({ camera, lapides, world, dogController, pausedStat
   btnPassear.disabled = false; btnPassear.textContent = 'Passear no jardim';
   btnMapaMenu.disabled = false;
   // sem resposta rápida do banco, main.js não abriu o mapa: abre agora
-  // (quem chega pela ponte já entra passeando: js/travessia.js cuida disso)
-  if(!slugPedido && !travessiaChegando && !mapaUi.isOpen() && menuScreen.classList.contains('hidden')) irParaCasa();
+  // (quem chega pela ponte já entra passeando: js/travessia.js cuida disso; na raiz
+  // do site, o mapa-múndi já está na frente)
+  if(!slugPedido && !travessiaChegando && !mapaUi.isOpen() && !mundi.isOpen() && menuScreen.classList.contains('hidden')) irParaCasa();
+
+  /* ============ O MAPA-MÚNDI (etapa 41) ============
+     Com o jogo pronto, "Passear aqui" no jardim desta página entra no passeio (o
+     resto o main.js já ligou); o Menu do múndi abre o cartão de sempre por cima. */
+  mundi.ligar({
+    passear: (j) => {
+      if(j !== world.jardim){ atravessarPara(j, { modo: 'passeio', de: world.jardim, raca: dogController.getBreed() }); return; }
+      mundi.fechar();
+      passear();
+    },
+  });
+  mundi.pronto(true);
+  const btnMundiMenu = document.getElementById('btnMundiMenu');
+  btnMundiMenu.disabled = false;
+  btnMundiMenu.addEventListener('click', ()=>{ showMenuPanel(menuHome); menuScreen.classList.remove('hidden'); });
 
   /* Na frente da pedra o cachorro olha para ela, e a câmera ficaria atrás dele. Na
      fileira de fora, "atrás" é a cerca e as árvores grandes de sombra: a câmera
@@ -964,6 +977,19 @@ export function createMenuUi({ camera, lapides, world, dogController, pausedStat
     if(pausedState.value) startGame();
     const dog = dogController.getDog();
     const alvo = { x: plot.x, z: plot.z };
+    if(world.rotaAte){
+      // jardim natural: pela rede de trilhas, de onde o cachorro está até a frente da pedra
+      const f = frenteDaVaga({ x: Number(plot.x), z: Number(plot.z) });
+      dogController.caminharPor(world.rotaAte([dog.position.x, dog.position.z], [f.x, f.z]), {
+        olharPara: alvo,
+        camera: cameraDaChegada((f.x + alvo.x)/2, (f.z + alvo.z)/2, f.rot + Math.PI),
+        aoChegar: ()=>{
+          const pedra = lapides.acharLapide(plot.data.id);
+          if(pedra && !pausedState.value) openMessagesFor(pedra);
+        },
+      });
+      return;
+    }
     const sx = Math.sign(alvo.x) || 1, sz = Math.sign(alvo.z) || 1;
     const frente = alvo.z + 2.3;
     const { x, z } = dog.position;
@@ -1118,8 +1144,9 @@ export function createMenuUi({ camera, lapides, world, dogController, pausedStat
       if(shareModalBack.classList.contains('open')){ fecharCompartilhar(); return; }
       if(modalBack.classList.contains('open')){ closeModal(); return; }
       if(messagesModalBack.classList.contains('open')){ closeMessagesModal(); return; }
-      // o cartão do menu aberto por cima do mapa da primeira tela: volta ao mapa
-      if(!menuScreen.classList.contains('hidden') && mapaUi.isInicio()){ menuScreen.classList.add('hidden'); return; }
+      // o cartão do menu aberto por cima da primeira tela (mapa ou múndi): volta a ela
+      if(!menuScreen.classList.contains('hidden') && (mapaUi.isInicio() || mundi.isInicio())){ menuScreen.classList.add('hidden'); return; }
+      if(mundi.isOpen()){ mundi.fecharUmPasso(); return; }
       if(mapModalBack.classList.contains('open')){ mapaUi.fecharUmPasso(); return; }
       // passeando: ESC volta para o mapa da primeira tela
       if(!pausedState.value) irParaCasa();

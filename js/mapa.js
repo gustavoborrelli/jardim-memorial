@@ -14,6 +14,10 @@
   posição relativa é a mesma (campo, fileira, coluna): paraMapa() estica as
   distâncias por trechos, e a seta do cachorro passa pela mesma conta.
 
+  Cada jardim tem o seu mapa (etapa 41): o do Jardim Memorial é desenhado aqui; o
+  do Jardim do Lago e o do Bosque dos Vaga-lumes, das plantas deles, em
+  js/mapaNatural.js. O medalhão, a ficha, a busca e a legenda são os mesmos.
+
   As medidas saem de planta.js e as homenagens de uma "fonte" trocável: quando o
   site abre, o mapa é a primeira tela (etapa 35) e desenha com uma leitura rápida
   do banco feita por main.js, antes de o 3D existir; quando o jogo fica pronto,
@@ -28,6 +32,9 @@
 */
 
 import { PLAZA, AVENUES, BOUNDS } from './planta.js';
+import { JARDIM } from './jardins/qual.js';
+import { desenharNatural, NOMES_NATURAIS, MEIA_NATURAL } from './mapaNatural.js';
+import { cartucho } from './mapaDesenho.js';
 
 const NS = 'http://www.w3.org/2000/svg';
 const TINTA = '#4a3424', VERDE = '#3d6b45', MADEIRA = '#6b4e33';
@@ -59,7 +66,9 @@ function criarMapaUi(fonteInicial){
   const ficha = document.getElementById('mapFicha');
   const btnFechar = document.getElementById('btnMapClose');
 
-  const L = BOUNDS;
+  // o jardim é lido na primeira vez que o mapa desenha: o main.js decide qual antes
+  let natural = null; // o que o mapa de um jardim natural devolve (posições, faixas)
+  let L = BOUNDS;
   const AV = AVENUES[0].w/2;
   // trechos do esticamento: avenida igual, colunas de vagas (9 e 15) mais afastadas
   const REAL = [0, AV, 9, 15, L], MAPA = [0, AV, 9.5, 19, L];
@@ -74,6 +83,10 @@ function criarMapaUi(fonteInicial){
     return v;
   }
 
+  // onde um ponto do jardim cai no papel, e o tamanho dos medalhões
+  const posNoMapa = (x, z) => natural ? natural.posNoMapa(x, z) : [paraMapa(x), paraMapa(z)];
+  const escalaMedalhao = () => natural ? natural.escala : 1;
+
   let acoes = {};
   let camadaDinamica = null;
   let marcadores = []; // [{ plot, g }]
@@ -81,6 +94,7 @@ function criarMapaUi(fonteInicial){
 
   /* ---------- o que não muda: folha, gramado, avenidas, praça, cerca, árvores ---------- */
   function desenharFixo(){
+    if(JARDIM !== 'memorial') L = MEIA_NATURAL;
     svg.setAttribute('viewBox', `${-L - 5.5} ${-L - 6} ${2*L + 11} ${2*L + 20}`);
     const defs = el('defs', {}, svg);
     defs.innerHTML = `
@@ -108,6 +122,12 @@ function criarMapaUi(fonteInicial){
         <stop offset="100%" stop-color="#cfb17c"/>
       </radialGradient>
       <clipPath id="mt-recorte" clipPathUnits="objectBoundingBox"><circle cx=".5" cy=".5" r=".5"/></clipPath>
+      <filter id="mt-aquarelaArco" x="-10%" y="-10%" width="120%" height="120%">
+        <feTurbulence type="fractalNoise" baseFrequency="0.25" numOctaves="2" seed="9" result="n"/>
+        <feDisplacementMap in="SourceGraphic" in2="n" scale="0.3" xChannelSelector="R" yChannelSelector="G" result="d"/>
+        <feGaussianBlur in="d" stdDeviation="0.08"/>
+      </filter>
+      <radialGradient id="mt-agua" cx="40%" cy="35%" r="70%"><stop offset="0%" stop-color="#bfe0e6"/><stop offset="100%" stop-color="#7fb5c4"/></radialGradient>
       <symbol id="mt-pata" viewBox="-5 -5 10 10">
         <ellipse cx="0" cy="1.6" rx="2.3" ry="1.9"/>
         <ellipse cx="-2.6" cy="-1" rx="0.9" ry="1.2"/>
@@ -123,6 +143,15 @@ function criarMapaUi(fonteInicial){
     const aguadas = el('g', { filter: 'url(#mt-aquarela)' }, svg);
     const tinta = el('g', { filter: 'url(#mt-tinta)', fill: 'none', stroke: TINTA, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, svg);
     const enfeites = el('g', {}, svg);
+    if(JARDIM !== 'memorial'){
+      // o Lago e o Bosque: desenhados das plantas deles (js/mapaNatural.js)
+      el('clipPath', { id: 'mt-papel' }, defs).appendChild(el('rect', { x: F.x, y: F.y, width: F.w, height: F.h }));
+      natural = desenharNatural(svg, JARDIM, aguadas, tinta, enfeites, 'mt-papel');
+      cartucho(enfeites, 0, -L - 4.6, 30, NOMES_NATURAIS[JARDIM]);
+      rosaDosVentos(enfeites);
+      camadaDinamica = el('g', {}, svg);
+      return;
+    }
     const sorte = sorteador(19);
     const PRACA = PLAZA.r - .3;
 
@@ -206,7 +235,12 @@ function criarMapaUi(fonteInicial){
     el('path', { d: `M-12.2 ${yt + .6} L12.2 ${yt + .6} Q13.4 ${yt + 2} 12.2 ${yt + 3.4} L-12.2 ${yt + 3.4} Q-13.4 ${yt + 2} -12.2 ${yt + .6} Z`, fill: 'none', stroke: TINTA, 'stroke-width': .08 }, enfeites);
     el('text', { x: 0, y: yt + 2.85, 'text-anchor': 'middle', class: 'mt-titulo', 'font-size': 2.75, fill: TINTA, 'letter-spacing': .08 }, enfeites).textContent = 'Jardim Memorial';
 
-    // rosa dos ventos
+    rosaDosVentos(enfeites);
+
+    camadaDinamica = el('g', {}, svg);
+  }
+
+  function rosaDosVentos(enfeites){
     const rosa = el('g', { transform: `translate(${-L + 4} ${L + 8.5})` }, enfeites);
     const r = 3.4;
     el('circle', { r: r*.92, fill: 'none', stroke: TINTA, 'stroke-width': .1 }, rosa);
@@ -219,17 +253,17 @@ function criarMapaUi(fonteInicial){
     }
     el('circle', { r: r*.1, fill: '#f6ead0', stroke: TINTA, 'stroke-width': .08 }, rosa);
     el('text', { y: -r - .5, 'text-anchor': 'middle', class: 'mt-titulo', 'font-size': 1.7, fill: TINTA }, rosa).textContent = 'N';
-
-    camadaDinamica = el('g', {}, svg);
   }
 
   /* ---------- o que muda a cada abertura: faixas, vagas, legenda, cachorro ---------- */
   function desenharMedalhao(pai, plot){
     const d = plot.data;
-    const x = paraMapa(plot.x), y = paraMapa(plot.z);
-    const acima = y < 0; // campos do norte: nome em cima, a faixa do campo fica embaixo
+    const [x, y] = posNoMapa(Number(plot.x), Number(plot.z));
+    // campos do norte: nome em cima, a faixa do campo fica embaixo
+    const acima = natural && natural.nomeAcima ? natural.nomeAcima(plot) : y < 0;
     const nome = d ? d.name || 'Sem nome' : '';
-    const g = el('g', { class: 'mt-vaga', role: 'button', tabindex: 0, transform: `translate(${x} ${y})`,
+    const k = escalaMedalhao();
+    const g = el('g', { class: 'mt-vaga', role: 'button', tabindex: 0, transform: `translate(${x} ${y})${k !== 1 ? ` scale(${k})` : ''}`,
       'aria-label': d ? `${nome}, ${plot.section}` : `Vaga livre, ${plot.section}` }, pai);
     el('circle', { r: 4.1, fill: 'transparent' }, g); // área de toque maior que o desenho
     const corpo = el('g', { class: 'mt-corpo' }, g);
@@ -270,6 +304,7 @@ function criarMapaUi(fonteInicial){
   }
 
   function desenharFaixas(pai){
+    if(natural){ natural.faixas(pai); return; }
     const campos = new Map();
     fonte.plots.forEach(p => {
       if(!campos.has(p.section)) campos.set(p.section, { x: 0, z: 0, n: 0 });
@@ -325,7 +360,8 @@ function criarMapaUi(fonteInicial){
   function desenharCachorro(pai){
     const dog = fonte.getDog && fonte.getDog();
     if(!dog) return;
-    const g = el('g', { class: 'mt-voce', transform: `translate(${paraMapa(dog.position.x)} ${paraMapa(dog.position.z)}) rotate(${-dog.rotation.y*180/Math.PI})` }, pai);
+    const [x, y] = posNoMapa(dog.position.x, dog.position.z);
+    const g = el('g', { class: 'mt-voce', transform: `translate(${x} ${y}) rotate(${-dog.rotation.y*180/Math.PI})` }, pai);
     el('circle', { r: 1.5, fill: '#ffcf6b', opacity: .35 }, g);
     el('polygon', { points: '0,1.25 .85,-.75 -.85,-.75', fill: '#e39a32', stroke: TINTA, 'stroke-width': .14, 'stroke-linejoin': 'round' }, g);
   }

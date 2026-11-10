@@ -976,3 +976,23 @@ html.travessia-noite .travessia-texto{ color:#efe8ff; }
   .travessia-nuvens{ animation:none; }
   .travessia.aberta .travessia-arco path{ animation-duration:.01s; }
 }
+
+/* ===== O MAPA-MÚNDI (etapa 41) ===== */
+.mm-fundo{ z-index:38; } /* acima do mapa da primeira tela (35), abaixo do menu (40) */
+.mm-fundo.mt-modo-inicio{ z-index:38; }
+.mm-topo{ min-height:40px; }
+.mm-etiqueta{ flex:1; margin:0; text-align:center; font-family:'Caveat',cursive; font-size:20px; color:#ead9b6; }
+.mm-fundo .mt-inicio-barra{ justify-content:center; }
+.mm-menu{ min-width:140px; }
+.mm-alvo{ cursor:pointer; outline:none; }
+.mm-alvo .mm-corpo{ transition:transform .18s ease; transform-box:fill-box; transform-origin:center; }
+.mm-alvo:hover .mm-corpo, .mm-alvo.mm-ativo .mm-corpo{ transform:scale(1.05); }
+.mm-alvo:focus-visible .mm-corpo{ filter:drop-shadow(0 0 .8px #e39a32); }
+.mm-tracos{ display:flex; flex-wrap:wrap; gap:6px; margin:0 0 14px; padding:0; list-style:none; }
+.mm-tracos li{ font-size:12.5px; padding:4px 10px; border-radius:999px; border:1px solid rgba(74,52,36,.35); background:#f8eed8; color:#4a3424; }
+.mt-voltar{
+  flex:0 0 auto; border:1.5px solid #ead9b6; background:transparent; color:#f3e6c6;
+  font:600 13px 'Inter',sans-serif; border-radius:999px; padding:8px 12px; cursor:pointer; white-space:nowrap;
+}
+.mt-voltar:focus-visible{ outline:3px solid #e39a32; outline-offset:2px; }
+@media (prefers-reduced-motion: reduce){ .mm-alvo .mm-corpo{ transition:none; } }
