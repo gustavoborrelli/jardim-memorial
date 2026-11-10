@@ -312,6 +312,14 @@ export function rotaAte(de, para){
   pontos.push(para);
   return pontos;
 }
+// a Ponte do Arco-Íris (etapa 39): o patamar onde a trilha da ponte termina, e ela
+// sobe para sudeste, na direção da própria trilha, por cima da mata
+export const PE_DA_PONTE = (() => {
+  const dx = PONTE.x - 16, dz = PONTE.z - 18.5, l = Math.hypot(dx, dz);
+  // (virando para leste enquanto sobe, por fora do jardim)
+  return { x: PONTE.x, z: PONTE.z, rumo: [dx/l, dz/l], vira: -1, raio: 2.1, destino: 'memorial' };
+})();
+
 // quanto falta até a borda do jardim (a câmera da chegada não para dentro da mata)
 export const folgaDaBorda = (x, z) => raioBorda(x, z) - 1.5 - Math.hypot(x, z);
 

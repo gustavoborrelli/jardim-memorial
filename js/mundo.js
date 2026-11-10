@@ -29,7 +29,8 @@ import { criarFonte } from './gfx/fonte.js';
 import { criarBorboletas, criarPassaros, criarPetalas, criarAr } from './gfx/vida.js';
 import { texturaBrilho, torneado } from './gfx/materiais.js';
 import { criarLago } from './gfx/agua.js';
-import { PLAZA, AVENUES } from './planta.js';
+import { criarPonte } from './gfx/ponte.js';
+import { PLAZA, AVENUES, PE_DA_PONTE } from './planta.js';
 import { JARDIM } from './jardins/qual.js';
 import * as PLANTA_LAGO from './jardins/lago.js';
 import { sorteador } from './gfx/ruido.js';
@@ -43,9 +44,12 @@ function desenhoDoMemorial(sorte){
     const qx = Math.abs(x-cx)-hx, qz = Math.abs(z-cz)-hz;
     return Math.hypot(Math.max(qx, 0), Math.max(qz, 0)) + Math.min(Math.max(qx, qz), 0);
   };
+  const P = PE_DA_PONTE;
   const sdCaminho = (x, z) => {
     let d = Math.hypot(x-PLAZA.x, z-PLAZA.z) - (PLAZA.r + 0.1);
     for(const a of AVENUES) d = Math.min(d, sdRetangulo(x, z, a.x, a.z, a.w/2, a.l/2));
+    // do portão até o patamar da Ponte do Arco-Íris (etapa 39)
+    d = Math.min(d, sdRetangulo(x, z, P.x, (27 + P.z)/2, 1.5, (P.z - 27)/2), Math.hypot(x - P.x, z - P.z) - P.raio - 0.15);
     return d;
   };
 
@@ -124,6 +128,9 @@ function desenhoDoMemorial(sorte){
     sdCaminho, CERCA, PORTAO, BLOSSOM_SPOTS, LAMPADAS, VASOS, BANCOS, ARVORES,
     vagas: POSICOES_VAGA, livreGramado, isFreeSpot,
     folgaDaBorda: (x, z) => 26 - Math.max(Math.abs(x), Math.abs(z)), // cerca e arbustos
+    ponte: { ...P, y: 0 },
+    // além da cerca, só se anda pelo portão até o patamar da ponte
+    alemDaCerca: (x, z) => (Math.abs(x) < 1.9 && z > 24 && z < P.z) || Math.hypot(x - P.x, z - P.z) < P.raio - 0.35,
   };
 }
 
@@ -225,7 +232,10 @@ function desenhoDoLago(sorte, P){
     if(h(x, z) < P.NIVEL_AGUA + 0.12) return false;
     return plots.every(plot => Math.hypot(x - plot.x, z - plot.z) >= 1.5);
   }
-  return { sdCaminho: P.sdCaminho, BLOSSOM_SPOTS, LAMPADAS, BANCOS, ARVORES, vagas: P.VAGAS, livreGramado, isFreeSpot, folgaDaBorda: P.folgaDaBorda };
+  return {
+    sdCaminho: P.sdCaminho, BLOSSOM_SPOTS, LAMPADAS, BANCOS, ARVORES, vagas: P.VAGAS, livreGramado, isFreeSpot, folgaDaBorda: P.folgaDaBorda,
+    ponte: { ...P.PE_DA_PONTE, y: h(P.PE_DA_PONTE.x, P.PE_DA_PONTE.z) },
+  };
 }
 const sorteoAng = (sorte) => sorte()*Math.PI*2;
 
@@ -252,6 +262,9 @@ export function createWorld(scene, { renderer, perfil, pos }) {
   LAMPADAS.forEach(l => { semGrama.push({ x: l.x, z: l.z, r: 0.34 }); manchas.push({ x: l.x, z: l.z, r: 0.45, forca: 0.4 }); });
   BANCOS.forEach(b => manchas.push({ x: b.x, z: b.z, r: 1.15, forca: 0.32 }));
   desenho.vagas.forEach(v => semGrama.push({ x: v.x, z: v.z, r: 1.05 }));
+  // a Ponte do Arco-Íris (etapa 39); debaixo do começo dela, rente ao chão, sem grama
+  const ponte = criarPonte(scene, { pe: desenho.ponte, perfil });
+  ponte.semGrama().forEach(c => semGrama.push(c));
 
   /* ============ CÉU E LUZ ============ */
   scene.fog = new THREE.Fog(0xd8e8ea, 30, 290);
@@ -773,6 +786,7 @@ export function createWorld(scene, { renderer, perfil, pos }) {
     tempoFlores.value = elapsed;
     if(fonte) fonte.atualizar(elapsed, alturaTela);
     if(lago) lago.atualizar(elapsed, mixNum('lampGlow')/PHASES.noite.lampGlow);
+    ponte.atualizar(elapsed, timeWeights.noite);
     borboletas.atualizar(elapsed, timeWeights.noite);
     passaros.atualizar(dt, elapsed);
     petalas.atualizar(elapsed);
@@ -800,6 +814,9 @@ export function createWorld(scene, { renderer, perfil, pos }) {
     // o mapa de tesouro ainda é só o do Jardim Memorial
     temMapa: !noLago,
     folgaDaBorda: desenho.folgaDaBorda,
+    // a Ponte do Arco-Íris deste jardim: o patamar, para onde leva, e a altura do caminho
+    ponte: { ...desenho.ponte, alturaEm: ponte.alturaEm, pontos: ponte.pontos },
+    alemDaCerca: desenho.alemDaCerca || null,
     // caminhada automática pela trilha (null: as avenidas do Memorial, em menuUi.js)
     rotaAte: noLago ? PLANTA_LAGO.rotaAte : null,
     // onde o cachorro pode pisar e em que altura (null: o de sempre, cerca e fonte)

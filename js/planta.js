@@ -20,6 +20,11 @@ export const AVENUES = [
 // até onde o cachorro anda (a cerca)
 export const BOUNDS = 25.5;
 
+// a Ponte do Arco-Íris (etapa 39): o patamar logo depois do portão, e ela sobe
+// para o sul por cima da mata, pela abertura que já existe entre as árvores
+// (e vai virando para oeste enquanto sobe: de dentro do jardim se vê o arco de lado)
+export const PE_DA_PONTE = { x: 0, z: 31.2, rumo: [0, 1], vira: 1, raio: 2.3, destino: 'lago' };
+
 // os quatro campos, um por quadrante
 export const SECTIONS = [
   {name:'Recanto do Sol',          sx: 1, sz: -1},

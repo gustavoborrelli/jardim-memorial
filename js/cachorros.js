@@ -27,8 +27,10 @@ export function buildDog(breed){
   opts.terreno (jardim com relevo e água, etapa 37): { altura(x,z), chao(x,z), inicio }
     chao devolve a altura onde se pode pisar ou null (água, fora do jardim); sem
     terreno, vale a cerca quadrada e a fonte do Jardim Memorial
+  opts.alemDaCerca(x, z) (Memorial, etapa 39): onde se pode pisar fora da cerca (o
+    caminho do portão até a Ponte do Arco-Íris)
 */
-export function createDogController(scene, renderer, { isPaused, plaza, bounds, terreno = null }){
+export function createDogController(scene, renderer, { isPaused, plaza, bounds, terreno = null, alemDaCerca = null }){
   let dog = null;
   let dogParts = null;
 
@@ -135,6 +137,7 @@ export function createDogController(scene, renderer, { isPaused, plaza, bounds, 
     if(dog) scene.remove(dog);
     dogParts = buildDog(breed);
     dog = dogParts.group;
+    dog.rotation.order = 'YXZ'; // a inclinação na rampa da ponte é no eixo do próprio cachorro
     dog.position.copy(prevPos);
     dog.rotation.y = prevYaw;
     scene.add(dog);
@@ -154,8 +157,11 @@ export function createDogController(scene, renderer, { isPaused, plaza, bounds, 
   const distanciaChegada = () => (window.innerHeight > window.innerWidth ? 7.2 : 6.0);
   // `camera`: azimute em que a câmera termina (padrão: atrás do cachorro). Quem chama
   // escolhe um ângulo que não caia dentro de uma copa de árvore.
-  function caminharPor(pontos, { olharPara = null, aoChegar = null, camera = null } = {}){
-    rota = { pontos, i: 0, olharPara, aoChegar, camera, melhor: Infinity, parado: 0 };
+  // Na travessia da ponte (etapa 39): `altura(x, z)` dá a altura do caminho (null: o
+  // chão), `livre` anda fora do jardim, `semCancelar` ignora tecla e joystick, e
+  // `velocidade` multiplica o passo.
+  function caminharPor(pontos, { olharPara = null, aoChegar = null, camera = null, altura = null, livre = false, semCancelar = false, velocidade = 1 } = {}){
+    rota = { pontos, i: 0, olharPara, aoChegar, camera, melhor: Infinity, parado: 0, altura, livre, semCancelar, velocidade };
     virarPara = null; camAlvo = null;
   }
   function cancelarCaminhada(){ rota = null; virarPara = null; camAlvo = null; }
@@ -179,12 +185,15 @@ export function createDogController(scene, renderer, { isPaused, plaza, bounds, 
     if(keys['a']||keys['arrowleft']) moveX -= 1;
     if(keys['d']||keys['arrowright']) moveX += 1;
     if(Math.abs(joyX) > 0.08 || Math.abs(joyZ) > 0.08){ moveX = joyX; moveZ = joyZ; }
+    if(rota && rota.semCancelar){ moveX = 0; moveZ = 0; } // atravessando: só assiste
 
     const manual = (moveX!==0 || moveZ!==0);
     if(manual && (rota || virarPara !== null || camAlvo !== null)) cancelarCaminhada();
 
     // piloto: o rumo é o próximo ponto da rota
     let rumoX = 0, rumoZ = 0;
+    const rotaLivre = !!(rota && rota.livre), velRota = (rota && rota.velocidade) || 1;
+    const alturaRota = rota && rota.altura;
     if(!manual && rota){
       const [px, pz] = rota.pontos[rota.i];
       const dx = px - dog.position.x, dz = pz - dog.position.z;
@@ -257,8 +266,12 @@ export function createDogController(scene, renderer, { isPaused, plaza, bounds, 
       }
 
       // gato anda um pouco mais devagar: o passo dele é mais curto e calmo
-      const speed = (piloto ? 2.9 : 3.2)*(dogParts.velocidade || 1);
-      if(terreno){
+      const speed = (piloto ? 2.9*velRota : 3.2)*(dogParts.velocidade || 1);
+      if(piloto && rotaLivre){
+        // na ponte: o caminho é o da rota, sem cerca nem chão a conferir
+        dog.position.x += worldX*speed*dt;
+        dog.position.z += worldZ*speed*dt;
+      } else if(terreno){
         // anda se o próximo passo é chão; senão escorrega ao longo da beira (da
         // água, do jardim), tentando só um dos eixos
         const px = dog.position.x, pz = dog.position.z;
@@ -266,6 +279,19 @@ export function createDogController(scene, renderer, { isPaused, plaza, bounds, 
         if(terreno.chao(nx, nz) !== null){ dog.position.x = nx; dog.position.z = nz; }
         else if(terreno.chao(nx, pz) !== null) dog.position.x = nx;
         else if(terreno.chao(px, nz) !== null) dog.position.z = nz;
+      } else if(alemDaCerca && (Math.abs(dog.position.x + worldX*speed*dt) > bounds || Math.abs(dog.position.z + worldZ*speed*dt) > bounds || Math.abs(dog.position.x) > bounds || Math.abs(dog.position.z) > bounds)){
+        // pela fresta do portão: além da cerca só se anda até o patamar da ponte
+        const px = dog.position.x, pz = dog.position.z;
+        const nx = px + worldX*speed*dt, nz = pz + worldZ*speed*dt;
+        const pode = (a, b) => (Math.abs(a) <= bounds && Math.abs(b) <= bounds) || alemDaCerca(a, b);
+        const dentroAntes = Math.abs(px) <= bounds && Math.abs(pz) <= bounds;
+        if(pode(nx, nz)){ dog.position.x = nx; dog.position.z = nz; }
+        else if(dentroAntes){
+          dog.position.x = Math.max(-bounds, Math.min(bounds, nx));
+          dog.position.z = Math.max(-bounds, Math.min(bounds, nz));
+        }
+        else if(pode(nx, pz)) dog.position.x = nx;
+        else if(pode(px, nz)) dog.position.z = nz;
       } else {
         dog.position.x += worldX*speed*dt;
         dog.position.z += worldZ*speed*dt;
@@ -303,9 +329,24 @@ export function createDogController(scene, renderer, { isPaused, plaza, bounds, 
       }
 
     }
-    if(terreno){
-      const y = terreno.chao(dog.position.x, dog.position.z);
-      if(y !== null) dog.position.y += (y - dog.position.y)*Math.min(1, dt*14);
+    const naPonte = alturaRota ? alturaRota(dog.position.x, dog.position.z) : null;
+    if(naPonte !== null){
+      // em cima da ponte: a altura é a do caminho, e o corpo acompanha a rampa
+      dog.position.y = naPonte;
+      const fx = Math.sin(dogYaw)*0.5, fz = Math.cos(dogYaw)*0.5;
+      const adiante = alturaRota(dog.position.x + fx, dog.position.z + fz);
+      const alvo = adiante !== null ? Math.atan2(adiante - naPonte, 0.5) : 0;
+      dog.rotation.x += (-alvo - dog.rotation.x)*Math.min(1, dt*8);
+    } else {
+      if(dog.rotation.x !== 0) dog.rotation.x *= Math.max(0, 1 - dt*8);
+      if(terreno){
+        const y = terreno.chao(dog.position.x, dog.position.z);
+        if(y !== null) dog.position.y += (y - dog.position.y)*Math.min(1, dt*14);
+      } else if(dog.position.y !== 0){
+        // desceu da ponte no Memorial (que é plano): volta ao chão
+        dog.position.y *= Math.max(0, 1 - dt*12);
+        if(Math.abs(dog.position.y) < 1e-3) dog.position.y = 0;
+      }
     }
     animarCao(dogParts, dt, elapsed, moving);
   }
@@ -401,6 +442,8 @@ export function createDogController(scene, renderer, { isPaused, plaza, bounds, 
     distanciaChegada,
     caminhando,
     posicionar,
+    // posição exata (com altura): a chegada pela ponte começa lá no alto
+    posicionarNoAr(x, y, z, yaw){ if(!dog) return; dog.position.set(x, y, z); dogYaw = yaw; dog.rotation.y = yaw; camAzimuth = yaw + Math.PI; },
     getDog: () => dog,
     getBreed: () => dogParts && dogParts.breed,
     updateMovement,

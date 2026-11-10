@@ -15,6 +15,18 @@
 <meta property="og:type" content="website">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="stylesheet" href="/css/style.css">
+<script>
+  /* atravessando a Ponte do Arco-Íris (etapa 39): o céu da travessia cobre esta
+     página desde o primeiro quadro, enquanto o outro jardim carrega por baixo */
+  try {
+    var t = JSON.parse(sessionStorage.getItem('jardimTravessia') || 'null');
+    if(t && Date.now() - t.quando < 60000){
+      document.documentElement.classList.add('atravessando');
+      var h = new Date().getHours();
+      if(h >= 20 || h < 6) document.documentElement.classList.add('travessia-noite');
+    }
+  } catch(e){}
+</script>
 </head>
 <body>
 <div id="app">
@@ -142,6 +154,23 @@
   </div>
 
   <div class="toast" id="toast"></div>
+
+  <!-- a Ponte do Arco-Íris (etapa 39): o botão no patamar e o céu da travessia -->
+  <button class="btn-atravessar" id="btnAtravessar" type="button"></button>
+  <div class="travessia" id="travessia" aria-hidden="true">
+    <div class="travessia-nuvens n1"></div>
+    <div class="travessia-nuvens n2"></div>
+    <svg class="travessia-arco" viewBox="0 0 200 108">
+      <path pathLength="100" d="M10 104 A90 90 0 0 1 190 104" style="stroke:#e8706b"/>
+      <path pathLength="100" d="M16 104 A84 84 0 0 1 184 104" style="stroke:#f0a54f"/>
+      <path pathLength="100" d="M22 104 A78 78 0 0 1 178 104" style="stroke:#f3d36b"/>
+      <path pathLength="100" d="M28 104 A72 72 0 0 1 172 104" style="stroke:#8cc77d"/>
+      <path pathLength="100" d="M34 104 A66 66 0 0 1 166 104" style="stroke:#79b1dd"/>
+      <path pathLength="100" d="M40 104 A60 60 0 0 1 160 104" style="stroke:#a98ad4"/>
+    </svg>
+    <div class="travessia-nuvens n3"></div>
+    <p class="travessia-texto">atravessando a Ponte do Arco-Íris<span id="travessiaDestino"></span></p>
+  </div>
 
   <div class="hud controls-chip">
     <div><b>W A S D</b> ou setas — caminhar</div>

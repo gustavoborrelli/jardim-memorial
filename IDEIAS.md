@@ -840,6 +840,30 @@ flores/velas nas lápides dos outros (MVP family & friends).
     Lago guardada reabre o Lago com o formulário. O Memorial continua idêntico pixel
     a pixel à `main`.
 
+39. 🔜 **Ponte do Arco-Íris e a travessia** (branch `jardim-lago`) — etapa 3 da
+    expansão. No Memorial ela sai pelo portão (escolha do Gustavo: não mexe na cerca
+    nem nas árvores de fora); no Lago, do patamar a sudeste, atrás do arco "Jardim do
+    Lago".
+    - `js/gfx/ponte.js`: patamar de pedra com um anel claro e um caminho de seis
+      faixas (as cores do esboço) que sai reto e vai virando em arco enquanto sobe
+      (indo reto para longe, de dentro do jardim parecia uma torre), até sumir num
+      banco de nuvens. Brilho próprio mais forte à noite, um brilho correndo subindo,
+      e as nuvens ganham o azul das nuvens do céu de noite. Altura de uma conta só
+      (`alturaDaPonte`), a mesma que o cachorro pisa.
+    - No Memorial a avenida sul continua do portão até o patamar, e o cachorro pode
+      sair por ali (`alemDaCerca`); no resto da cerca nada muda.
+    - A travessia (`js/travessia.js`): no patamar aparece "Atravessar para o …"; o
+      cachorro sobe sozinho, inclinado na rampa, a tela vira céu (nuvens e o
+      arco-íris se desenhando) e a página do outro jardim abre já coberta por esse
+      céu (um script no `<head>` lê o `sessionStorage`), carregando por baixo. Pronto
+      o jardim, o céu se abre com o cachorro descendo a ponte de lá até o patamar,
+      com o mesmo companheiro. Um jardim por página: a travessia é a troca de página,
+      coberta. Sem mapa nem menu na chegada; ESC e ☰ não interrompem.
+    Testado com Playwright e banco simulado: ida e volta (botão, subida, céu desde o
+    primeiro quadro da página nova, descida, controle de volta, mesmo companheiro),
+    a pé pelo portão até o patamar e de volta, a cerca segurando no resto, e no
+    iPhone 14 pelo toque.
+
 ## Ideias soltas (não decidido ainda)
 
 - A leva de dinamismo social planejada em conjunto está completa: (1)

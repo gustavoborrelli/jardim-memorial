@@ -918,3 +918,58 @@ canvas{display:block;outline:none;}
 
 /* jardim sem mapa de tesouro (o Lago, por enquanto): os botões de mapa somem */
 .sem-mapa #btnMapToggle, .sem-mapa #btnMenuMapa, .sem-mapa .dica-mapa{ display:none !important; }
+
+/* ===== A PONTE DO ARCO-ÍRIS (etapa 39) ===== */
+.btn-atravessar{
+  position:absolute; left:50%; bottom:calc(118px + env(safe-area-inset-bottom, 0px)); z-index:12;
+  transform:translate(-50%, 16px); opacity:0; pointer-events:none;
+  transition:opacity .25s ease, transform .25s ease;
+  border:0; border-radius:999px; padding:13px 22px;
+  font:600 15px 'Inter', sans-serif; color:#3a2c14; cursor:pointer;
+  background:linear-gradient(90deg, #fbd0c8, #fde3b6, #fbf0b9, #d6eccc, #cfe3f3, #e2d6f1);
+  box-shadow:0 8px 24px rgba(40,24,60,.28);
+}
+.btn-atravessar.visivel{ opacity:1; transform:translate(-50%, 0); pointer-events:auto; }
+.btn-atravessar:focus-visible{ outline:3px solid #e8a23d; outline-offset:3px; }
+.na-ponte .joystick, .na-ponte .view-toggle, .na-ponte .plant-toggle, .na-ponte .map-toggle{ opacity:.35; pointer-events:none; }
+
+.travessia{
+  position:fixed; inset:0; z-index:80; overflow:hidden;
+  display:grid; place-items:center;
+  background:linear-gradient(180deg, #8cc4f0 0%, #cfe6f3 52%, #fbe7cf 100%);
+  opacity:0; visibility:hidden; pointer-events:none;
+  transition:opacity .7s ease, visibility 0s linear .7s;
+}
+.travessia.aberta, html.atravessando .travessia{
+  opacity:1; visibility:visible; pointer-events:auto; transition:opacity .7s ease;
+}
+html.travessia-noite .travessia{ background:linear-gradient(180deg, #151c44 0%, #2c346c 58%, #6e5c8e 100%); }
+.travessia-arco{ width:min(86vw, 640px); height:auto; position:relative; z-index:1; }
+.travessia-arco path{ fill:none; stroke-width:6.6; stroke-linecap:round; stroke-dasharray:100; stroke-dashoffset:100; }
+.travessia.aberta .travessia-arco path{ animation:desenharArco 1.3s cubic-bezier(.4,0,.2,1) forwards; }
+html.atravessando .travessia-arco path, .travessia.desenhado .travessia-arco path{ stroke-dashoffset:0; }
+@keyframes desenharArco{ to{ stroke-dashoffset:0; } }
+/* nuvens: faixas de bolhas macias passando devagar */
+.travessia-nuvens{
+  position:absolute; left:-50%; width:200%; height:34%; z-index:2; pointer-events:none;
+  background:
+    radial-gradient(closest-side, rgba(255,255,255,.95), rgba(255,255,255,0)) 0 60%/22% 90% repeat-x,
+    radial-gradient(closest-side, rgba(255,255,255,.85), rgba(255,255,255,0)) 9% 20%/16% 70% repeat-x;
+  animation:passarNuvens 16s linear infinite;
+}
+.travessia-nuvens.n1{ top:6%; opacity:.75; animation-duration:22s; }
+.travessia-nuvens.n2{ top:58%; opacity:.9; }
+.travessia-nuvens.n3{ bottom:-8%; height:42%; opacity:1; animation-duration:12s; z-index:3; }
+html.travessia-noite .travessia-nuvens{ opacity:.35; }
+@keyframes passarNuvens{ from{ transform:translateX(0); } to{ transform:translateX(25%); } }
+.travessia-texto{
+  position:absolute; left:0; right:0; bottom:16%; z-index:4; margin:0; text-align:center;
+  font:italic 500 clamp(20px, 3.4vw, 28px)/1.35 'Cormorant Garamond', serif; color:#4a3424;
+}
+.travessia-texto span{ display:block; font-style:normal; font-size:.8em; opacity:.8; }
+.travessia-texto span:empty{ display:none; }
+html.travessia-noite .travessia-texto{ color:#efe8ff; }
+@media (prefers-reduced-motion: reduce){
+  .travessia-nuvens{ animation:none; }
+  .travessia.aberta .travessia-arco path{ animation-duration:.01s; }
+}

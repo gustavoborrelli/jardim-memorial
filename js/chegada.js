@@ -39,6 +39,16 @@ export const homenagemDoLink = slugPedido
       .catch(() => null)
   : Promise.resolve(null);
 
+/* atravessando a Ponte do Arco-Íris (etapa 39): a página anterior deixou no
+   sessionStorage de onde, para onde e com qual companheiro; vale por um minuto */
+export const CHAVE_TRAVESSIA = 'jardimTravessia';
+export const travessiaChegando = (() => {
+  try {
+    const t = JSON.parse(sessionStorage.getItem(CHAVE_TRAVESSIA) || 'null');
+    return t && Date.now() - t.quando < 60000 ? { ...t, cobriuEm: performance.now() } : null;
+  } catch(e){ return null; }
+})();
+
 // leitura simples de uma tabela do banco, sem o cliente do Supabase (que mora no
 // pedaço pesado): é o que deixa o mapa da primeira tela aparecer antes do 3D
 export function buscarRest(caminho){

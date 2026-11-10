@@ -16,7 +16,7 @@
   demorar): começando junto, a montagem do jardim travava a página e o cartão só
   aparecia no fim, segundos depois.
 */
-import { slugPedido, homenagemDoLink, htmlCartao, buscarRest, voltouDoLogin } from './chegada.js';
+import { slugPedido, homenagemDoLink, htmlCartao, buscarRest, voltouDoLogin, travessiaChegando } from './chegada.js';
 import { obterMapaUi } from './mapa.js';
 import { VAGAS, dadosDaLinha } from './planta.js';
 import { JARDIM, JARDIM_DO_ENDERECO, definirJardim } from './jardins/qual.js';
@@ -78,7 +78,14 @@ function fonteRapida(memoriais, velas){
   };
 }
 
-if(slugPedido){
+if(travessiaChegando){
+  // chegando pela Ponte do Arco-Íris: o céu da travessia já cobre a tela (index.html);
+  // nada de mapa nem menu, o jogo carrega por baixo e js/travessia.js termina a chegada
+  if(!JARDIM_DO_ENDERECO) definirJardim(travessiaChegando.para);
+  document.getElementById('menuScreen').classList.add('hidden');
+  vestirJardim();
+  comecarJogo();
+} else if(slugPedido){
   const prazo = new Promise(r => setTimeout(() => r(null), 1500));
   Promise.race([homenagemDoLink, prazo]).then(mostrarCartao);
   homenagemDoLink.then(mostrarCartao); // banco mais lento que o prazo: o cartão entra quando der

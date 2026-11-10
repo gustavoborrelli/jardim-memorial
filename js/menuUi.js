@@ -12,7 +12,7 @@
   cada frame (updateHints) ou a cada clique (openModalFor, chime).
 */
 import * as THREE from 'three';
-import { homenagemDoLink, slugPedido, htmlCartao, linkDaHomenagem, voltouDoLogin } from './chegada.js';
+import { homenagemDoLink, slugPedido, htmlCartao, linkDaHomenagem, voltouDoLogin, travessiaChegando } from './chegada.js';
 import { GATOS } from './gfx/gatos.js';
 import { gerarCartao } from './cartao.js';
 import { noLugar } from './planta.js';
@@ -871,7 +871,8 @@ export function createMenuUi({ camera, lapides, world, dogController, pausedStat
   btnPassear.disabled = false; btnPassear.textContent = 'Passear no jardim';
   btnMapaMenu.disabled = false;
   // sem resposta rápida do banco, main.js não abriu o mapa: abre agora
-  if(!slugPedido && !mapaUi.isOpen() && menuScreen.classList.contains('hidden')) irParaCasa();
+  // (quem chega pela ponte já entra passeando: js/travessia.js cuida disso)
+  if(!slugPedido && !travessiaChegando && !mapaUi.isOpen() && menuScreen.classList.contains('hidden')) irParaCasa();
 
   /* Na frente da pedra o cachorro olha para ela, e a câmera ficaria atrás dele. Na
      fileira de fora, "atrás" é a cerca e as árvores grandes de sombra: a câmera
@@ -1105,12 +1106,13 @@ export function createMenuUi({ camera, lapides, world, dogController, pausedStat
 
   // no celular não existe ESC: é o botão ☰ que pausa e volta para o menu
   document.getElementById('btnMenuToggle').addEventListener('click', ()=>{
-    if(pausedState.value) return;
+    if(pausedState.value || document.body.classList.contains('na-ponte')) return;
     irParaCasa();
   });
 
   window.addEventListener('keydown', e=>{
     if(e.key === 'Escape'){
+      if(document.body.classList.contains('na-ponte')) return; // atravessando a ponte
       // if a modal is open, ESC closes it instead of opening the pause menu
       if(authModalBack.classList.contains('open')){ closeAuthModal(); return; }
       if(shareModalBack.classList.contains('open')){ fecharCompartilhar(); return; }
@@ -1169,6 +1171,7 @@ export function createMenuUi({ camera, lapides, world, dogController, pausedStat
     updateHints,
     chime,
     avisar: showToast,
+    startGame,
     openModalFor,
     requireAuth,
     openMessagesFor,

@@ -14,6 +14,7 @@ import { createDogController } from './cachorros.js';
 import { createMenuUi } from './menuUi.js';
 import { createAuth } from './auth.js';
 import { createPresence } from './presenca.js';
+import { createTravessia } from './travessia.js';
 import { obterMapaUi } from './mapa.js';
 import { escolherPerfil, criarGovernador, escalaDePixels } from './gfx/qualidade.js';
 import { BOUNDS } from './planta.js';
@@ -69,6 +70,7 @@ const dogController = createDogController(scene, renderer, {
   plaza: world.PLAZA,
   bounds: BOUNDS,
   terreno: world.terreno,
+  alemDaCerca: world.alemDaCerca,
 });
 
 const auth = createAuth();
@@ -77,6 +79,8 @@ const mapaUi = obterMapaUi();
 mapaUi.usarJogo({ lapides, world, dogController });
 const menuUi = createMenuUi({ camera, lapides, world, dogController, pausedState, auth, mapaUi });
 // quem passeia no mesmo jardim se vê; cada jardim tem o seu canal
+// a Ponte do Arco-Íris: o botão no patamar, a travessia e a chegada do outro lado
+const travessia = createTravessia({ world, dogController, menuUi });
 const presence = createPresence({
   scene, dogController, pausedState,
   canal: world.jardim === 'memorial' ? 'jardim-presenca' : `jardim-presenca-${world.jardim}`,
@@ -183,6 +187,7 @@ function animate(){
   world.update(dt, elapsed, camera, cao ? cao.position : null);
   presence.update(dt, elapsed);
   menuUi.updateHints(hoveredEmptyPlot, hoveredStone);
+  travessia.atualizar(pausedState.value || mapaUi.isOpen());
 
   if((quadroSombra++ & 1) === 0) renderer.shadowMap.needsUpdate = true;
   pos.render(elapsed);
