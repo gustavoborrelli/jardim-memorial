@@ -125,6 +125,39 @@ function texturaSalgueiro(){
   return semFranja(c, 205);
 }
 
+/* pinheiro: raminhos de agulhas (um galhinho com agulhas dos dois lados), vários
+   saindo do meio do cartão. Agulha solta, fina, some no teste de transparência e a
+   copa fica rala; o raminho cobre e ainda lê como pinheiro (etapa 40). */
+function texturaAgulhas(){
+  const T = 256;
+  const c = document.createElement('canvas'); c.width = c.height = T;
+  const x = c.getContext('2d');
+  const r = sorteador(17);
+  x.clearRect(0, 0, T, T);
+  x.lineCap = 'round';
+  const raminho = (cx, cy, ang, comp, v) => {
+    const dx = Math.cos(ang), dy = Math.sin(ang);
+    x.strokeStyle = `rgb(${v*0.7},${v*0.7},${v*0.7})`;
+    x.lineWidth = 3;
+    x.beginPath(); x.moveTo(cx, cy); x.lineTo(cx + dx*comp, cy + dy*comp); x.stroke();
+    for(let t = 6; t < comp; t += 3.2){
+      const px = cx + dx*t, py = cy + dy*t, n = 9 + (1 - t/comp)*9;
+      [-1, 1].forEach(lado => {
+        const a = ang + lado*(0.75 + r()*0.25);
+        const tom = v*(0.82 + r()*0.3);
+        x.strokeStyle = `rgb(${tom},${tom},${tom})`;
+        x.lineWidth = 2.6;
+        x.beginPath(); x.moveTo(px, py); x.lineTo(px + Math.cos(a)*n, py + Math.sin(a)*n); x.stroke();
+      });
+    }
+  };
+  for(let k = 0; k < 9; k++){
+    const ang = k/9*Math.PI*2 + r()*0.5;
+    raminho(T/2 + (r() - 0.5)*20, T/2 + (r() - 0.5)*20, ang, 70 + r()*34, 185 + r()*60);
+  }
+  return semFranja(c, 120);
+}
+
 /* ---------- tronco: tubo de raio variável, com raiz alargada ---------- */
 function tubo(pontos, raioFn, segs = 10, lados = 8){
   const curva = new THREE.CatmullRomCurve3(pontos.map(p => new THREE.Vector3(...p)));
@@ -330,6 +363,8 @@ const VERDES_FRONDOSA = [0x6fae4e, 0x82bd54, 0x97c95c, 0x5f9e4b, 0xa8d063];
 const VERDES_MOITA = [0x63a551, 0x76b65a, 0x57984f];
 const ROSAS = [0xffb0c8, 0xff9dbb, 0xffc4d6, 0xffd7e4, 0xff8cb0];
 const VERDES_SALGUEIRO = [0x9cc06a, 0x8ab35e, 0xaccb76, 0x7ea455];
+const VERDES_PINHEIRO = [0x2f6b3f, 0x3a7a46, 0x2a5f3a, 0x46874f, 0x356f41];
+const VERDES_SAMAMBAIA = [0x467f3a, 0x55913f, 0x3b7034, 0x5f9a46];
 // o cartão do salgueiro: estreito e alto, preso pelo topo no ponto do tufo
 const CANTOS_PENDURADOS = [[-0.55, -2.2], [0.55, -2.2], [0.55, 0.2], [-0.55, 0.2]];
 
@@ -414,6 +449,33 @@ function especificacao(tipo, r, folhagem){
       cascaCor: 0x5b4836,
     };
   }
+  if(tipo === 'pinheiro'){
+    // camadas achatadas em cone, largas embaixo e finas em cima, com a ponta fechada
+    const vols = [];
+    const n = 7;
+    for(let i=0;i<n;i++){
+      const t = i/(n-1);
+      vols.push([(r() - 0.5)*0.12, 1.2 + t*4.6, (r() - 0.5)*0.12, 2.15*(1 - t*0.82), 0.5]);
+    }
+    vols.push([0, 6.2, 0, 0.45, 1.2]);
+    return {
+      volumes: vols, tufos: Math.round(780*folhagem), tamanho: 0.5/Math.sqrt(folhagem), paleta: VERDES_PINHEIRO,
+      base: 1.0, altura: 5.4, sombraBaixo: 0.55, mapa: 'agulhas', contraluz: 0.35, internos: 0.4,
+      tronco: { pts: [[0, 0, 0], [0.02, 1.6, 0.01], [0, 4.2, 0]], r0: 0.25, r1: 0.07, galhos: [] },
+      cascaCor: 0x4b3424,
+    };
+  }
+  if(tipo === 'pinheiro-longe'){
+    // a mata funda de pinheiros: três camadas e poucos tufos grandes
+    const vols = [[0, 2.2, 0, 2.1, 0.55], [0, 4.0, 0, 1.45, 0.55], [0, 5.6, 0, 0.8, 0.7]];
+    return { volumes: vols, tufos: Math.round(130*Math.max(0.5, folhagem)), tamanho: 0.95, paleta: [0x2c5e3b, 0x376a42, 0x2a5638, 0x41744a], base: 1.0, altura: 5.2, sombraBaixo: 0.55, mapa: 'agulhas',
+      tronco: { pts: [[0, 0, 0], [0, 1.6, 0]], r0: 0.26, r1: 0.16, galhos: [] }, cascaCor: 0x45352a };
+  }
+  if(tipo === 'samambaia'){
+    // touceira baixa e aberta, rente ao chão do bosque
+    const vols = [[0, 0.12, 0, 0.6, 0.45], [0.34, 0.06, 0.12, 0.42, 0.45], [-0.32, 0.06, -0.14, 0.44, 0.45], [0.05, 0.08, -0.36, 0.38, 0.45]];
+    return { volumes: vols, tufos: Math.round(150*folhagem), tamanho: 0.22/Math.sqrt(folhagem), paleta: VERDES_SAMAMBAIA, base: -0.2, altura: 0.6, sombraBaixo: 0.5, mapa: 'agulhas' };
+  }
   if(tipo === 'moita'){
     const vols = [[0, 0.02, 0, 0.5, 0.85], [0.26, -0.05, 0.1, 0.33, 0.85], [-0.24, -0.04, -0.12, 0.34, 0.85]];
     return { volumes: vols, tufos: Math.round(150*folhagem), tamanho: 0.15/Math.sqrt(folhagem), paleta: VERDES_MOITA, base: -0.3, altura: 0.8, sombraBaixo: 0.42, mapa: 'folhas' };
@@ -434,6 +496,7 @@ export function criarArvores(scene, lista, { perfil, luz, abrePerto = false }){
   const texFolhas = texturaFolhas();
   const texFlores = texturaFlorada();
   const texSalgueiro = lista.some(a => a.tipo === 'salgueiro') ? texturaSalgueiro() : null;
+  const texAgulhas = lista.some(a => /pinheiro|samambaia/.test(a.tipo)) ? texturaAgulhas() : null;
   const r = sorteador(1234);
 
   const porTipo = new Map();
@@ -445,10 +508,10 @@ export function criarArvores(scene, lista, { perfil, luz, abrePerto = false }){
   const tinta = new THREE.Color();
 
   porTipo.forEach((itens, tipo) => {
-    const longe = tipo === 'longe';
+    const longe = tipo === 'longe' || tipo === 'pinheiro-longe';
     const esp = especificacao(tipo, r, perfil.folhagem);
     const geoCopa = gerarCopa({ ...esp, r });
-    const mapa = esp.mapa === 'flores' ? texFlores : esp.mapa === 'salgueiro' ? texSalgueiro : texFolhas;
+    const mapa = esp.mapa === 'flores' ? texFlores : esp.mapa === 'salgueiro' ? texSalgueiro : esp.mapa === 'agulhas' ? texAgulhas : texFolhas;
     const matCopa = materialCopa(mapa, uTempo, luz, { contraluz: esp.contraluz ?? 0.55, cobertura: perfil.msaa > 0, abrePerto, uAlvo });
     const copa = new THREE.InstancedMesh(geoCopa, matCopa, itens.length);
     copa.castShadow = !longe;

@@ -920,16 +920,19 @@ canvas{display:block;outline:none;}
 .sem-mapa #btnMapToggle, .sem-mapa #btnMenuMapa, .sem-mapa .dica-mapa{ display:none !important; }
 
 /* ===== A PONTE DO ARCO-ÍRIS (etapa 39) ===== */
-.btn-atravessar{
+.atravessar-opcoes{
   position:absolute; left:50%; bottom:calc(118px + env(safe-area-inset-bottom, 0px)); z-index:12;
+  display:flex; flex-direction:column; align-items:center; gap:10px; width:max-content; max-width:calc(100vw - 32px);
   transform:translate(-50%, 16px); opacity:0; pointer-events:none;
   transition:opacity .25s ease, transform .25s ease;
+}
+.atravessar-opcoes.visivel{ opacity:1; transform:translate(-50%, 0); pointer-events:auto; }
+.btn-atravessar{
   border:0; border-radius:999px; padding:13px 22px;
   font:600 15px 'Inter', sans-serif; color:#3a2c14; cursor:pointer;
   background:linear-gradient(90deg, #fbd0c8, #fde3b6, #fbf0b9, #d6eccc, #cfe3f3, #e2d6f1);
   box-shadow:0 8px 24px rgba(40,24,60,.28);
 }
-.btn-atravessar.visivel{ opacity:1; transform:translate(-50%, 0); pointer-events:auto; }
 .btn-atravessar:focus-visible{ outline:3px solid #e8a23d; outline-offset:3px; }
 .na-ponte .joystick, .na-ponte .view-toggle, .na-ponte .plant-toggle, .na-ponte .map-toggle{ opacity:.35; pointer-events:none; }
 

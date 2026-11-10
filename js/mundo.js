@@ -33,6 +33,11 @@ import { criarPonte } from './gfx/ponte.js';
 import { PLAZA, AVENUES, PE_DA_PONTE } from './planta.js';
 import { JARDIM } from './jardins/qual.js';
 import * as PLANTA_LAGO from './jardins/lago.js';
+import * as PLANTA_BOSQUE from './jardins/bosque.js';
+import { criarBosque } from './gfx/bosque.js';
+
+// as plantas dos jardins naturais (o Memorial mora em planta.js)
+export const PLANTAS = { lago: PLANTA_LAGO, bosque: PLANTA_BOSQUE };
 import { sorteador } from './gfx/ruido.js';
 
 /* ============ O DESENHO DO JARDIM MEMORIAL ============
@@ -239,23 +244,108 @@ function desenhoDoLago(sorte, P){
 }
 const sorteoAng = (sorte) => sorte()*Math.PI*2;
 
+/* ============ O DESENHO DO BOSQUE DOS VAGA-LUMES (etapa 40) ============
+   As medidas moram em js/jardins/bosque.js. Pinheiros por toda parte, menos nas
+   trilhas, nas clareiras e na beira do riacho; samambaias embaixo deles e na beira
+   d'água; umas copas redondas perto do riacho para variar; e a mata além da borda,
+   de pinheiros, aberta só onde a Ponte do Arco-Íris chega. */
+function desenhoDoBosque(sorte, P){
+  const h = (x, z) => alturaTerreno(x, z);
+  P.acertarPontePedra(h); // a ponte de pedra assenta no chão das duas margens
+  const angPonte = Math.atan2(P.PONTE.z, P.PONTE.x);
+  const naAberturaDaPonte = (x, z, folga = 0.22) => {
+    let d = Math.atan2(z, x) - angPonte;
+    while(d > Math.PI) d -= Math.PI*2;
+    while(d < -Math.PI) d += Math.PI*2;
+    return Math.abs(d) < folga;
+  };
+  const longeDasVagas = (x, z, r) => P.VAGAS.every(v => Math.hypot(v.x - x, v.z - z) > r);
+  const foraDasClareiras = (x, z, folga) => P.CLAREIRAS.every(c => Math.hypot(x - c.x, z - c.z) > c.r + folga);
+  const dentroDaTerra = (x, z, folga) => Math.hypot(x, z) < P.raioBorda(x, z) - folga;
+  const ARVORES = [];
+  const longeDasArvores = (x, z, d) => ARVORES.every(a => a.tipo === 'samambaia' || Math.hypot(a.x - x, a.z - z) > d);
+
+  // os pinheiros do bosque; perto do riacho, de vez em quando uma copa redonda
+  // (afastados da trilha e do riacho: a copa larga embaixo tapava a água e a câmera)
+  for(let i = 0, n = 0; i < 3000 && n < 46; i++){
+    const x = (sorte() - 0.5)*52, z = (sorte() - 0.5)*52;
+    if(!dentroDaTerra(x, z, 2.2) || P.distTrilha(x, z) < 3.4 || P.distRiacho(x, z) < 3.6) continue;
+    if(!foraDasClareiras(x, z, 1.4) || !longeDasVagas(x, z, 3.6)) continue;
+    if(Math.hypot(x - P.PONTE.x, z - P.PONTE.z) < 5.5 || !longeDasArvores(x, z, 5.0)) continue;
+    const pertoDaAgua = P.distRiacho(x, z) < 6.5;
+    const tipo = pertoDaAgua && sorte() < 0.35 ? 'frondosa' : 'pinheiro';
+    ARVORES.push({ x, z, y: h(x, z) - 0.06, escala: tipo === 'pinheiro' ? 0.72 + sorte()*0.36 : 0.78 + sorte()*0.22, tipo });
+    n++;
+  }
+  // samambaias: no pé dos pinheiros e na beira do riacho
+  for(let i = 0, n = 0; i < 1500 && n < 90; i++){
+    const x = (sorte() - 0.5)*52, z = (sorte() - 0.5)*52;
+    if(!dentroDaTerra(x, z, 0.8) || P.distTrilha(x, z) < 1.5 || !longeDasVagas(x, z, 2.0)) continue;
+    const dr = P.distRiacho(x, z);
+    if(dr < 1.9) continue;
+    const pertoDePinheiro = ARVORES.some(a => a.tipo === 'pinheiro' && Math.hypot(a.x - x, a.z - z) < 2.6);
+    const naBeira = dr < 3.4;
+    const naClareiraDasSamambaias = Math.hypot(x - P.CLAREIRAS[2].x, z - P.CLAREIRAS[2].z) < P.CLAREIRAS[2].r + 1.5 && Math.hypot(x - P.CLAREIRAS[2].x, z - P.CLAREIRAS[2].z) > 2.2;
+    if(!pertoDePinheiro && !naBeira && !naClareiraDasSamambaias) continue;
+    ARVORES.push({ x, z, y: h(x, z) + 0.05, escala: 0.8 + sorte()*0.7, tipo: 'samambaia' });
+    n++;
+  }
+  // a mata além da borda: pinheiros grandes logo depois do contorno...
+  for(let i = 0; i < 54; i++){
+    const a = i/54*Math.PI*2 + (sorte() - 0.5)*0.07;
+    const dx = Math.cos(a), dz = Math.sin(a);
+    const r = P.raioBorda(dx, dz) + 1.2 + sorte()*2.6;
+    const x = dx*r, z = dz*r;
+    if(naAberturaDaPonte(x, z) || P.distRiacho(x, z) < 3 || !longeDasVagas(x, z, 4)) continue;
+    ARVORES.push({ x, z, y: h(x, z) - 0.1, escala: 1.05 + sorte()*0.5, tipo: 'pinheiro' });
+  }
+  // ...e a mata funda, de pinheiros, ao longe
+  for(let i = 0; i < 150; i++){
+    const a = sorte()*Math.PI*2;
+    const r = 32 + Math.pow(sorte(), 0.75)*44;
+    const x = Math.cos(a)*r, z = Math.sin(a)*r;
+    if(r < P.raioBorda(x, z) + 5.5) continue;
+    if(naAberturaDaPonte(x, z, 0.16) && r < 52) continue;
+    if(P.distRiacho(x, z) < 3) continue;
+    ARVORES.push({ x, z, y: h(x, z) - 0.15, escala: 1.0 + sorte()*0.7, tipo: 'pinheiro-longe' });
+  }
+
+  const LAMPADAS = P.LAMPADAS.map(l => ({ ...l, y: h(l.x, l.z) }));
+  const livreGramado = (x, z) => {
+    if(P.sdCaminho(x, z) < 0.9 || !dentroDaTerra(x, z, 0.4)) return false;
+    if(h(x, z) < P.NIVEL_AGUA + 0.3) return false;
+    return longeDasVagas(x, z, 1.2);
+  };
+  function isFreeSpot(x, z, plots){
+    if(P.sdCaminho(x, z) < 0.15 || !dentroDaTerra(x, z, 1.2)) return false;
+    if(h(x, z) < P.NIVEL_AGUA + 0.12) return false;
+    return plots.every(plot => Math.hypot(x - plot.x, z - plot.z) >= 1.5);
+  }
+  return {
+    sdCaminho: P.sdCaminho, BLOSSOM_SPOTS: [], LAMPADAS, BANCOS: [], ARVORES, vagas: P.VAGAS, livreGramado, isFreeSpot, folgaDaBorda: P.folgaDaBorda,
+    ponte: { ...P.PE_DA_PONTE, y: h(P.PE_DA_PONTE.x, P.PE_DA_PONTE.z) },
+  };
+}
+
 export function createWorld(scene, { renderer, perfil, pos }) {
   const sorte = sorteador(2024);
 
   /* ============ O DESENHO DO JARDIM ============ */
-  const noLago = JARDIM === 'lago';
-  if(noLago) definirRelevo(PLANTA_LAGO.relevo); // antes de tudo: as árvores e as vagas leem a altura
-  const desenho = noLago ? desenhoDoLago(sorte, PLANTA_LAGO) : desenhoDoMemorial(sorte);
+  const noLago = JARDIM === 'lago', noBosque = JARDIM === 'bosque';
+  const planta = PLANTAS[JARDIM] || null;
+  const natural = !!planta; // os jardins de desenho natural: relevo, água, trilhas
+  if(natural) definirRelevo(planta.relevo); // antes de tudo: as árvores e as vagas leem a altura
+  const desenho = noLago ? desenhoDoLago(sorte, PLANTA_LAGO) : noBosque ? desenhoDoBosque(sorte, PLANTA_BOSQUE) : desenhoDoMemorial(sorte);
   const { sdCaminho, CERCA = [], PORTAO = null, BLOSSOM_SPOTS, LAMPADAS, VASOS = [], BANCOS, ARVORES, livreGramado, isFreeSpot } = desenho;
 
   /* máscara do chão: onde a grama não nasce e as sombras de contato */
   const semGrama = [];
   const manchas = [];
   ARVORES.forEach(a => {
-    if(a.tipo === 'longe') return;
-    if(a.tipo === 'moita'){ manchas.push({ x: a.x, z: a.z, r: 0.9*a.escala, forca: 0.5 }); return; }
+    if(a.tipo === 'longe' || a.tipo === 'pinheiro-longe') return;
+    if(a.tipo === 'moita' || a.tipo === 'samambaia'){ manchas.push({ x: a.x, z: a.z, r: 0.9*a.escala, forca: 0.5 }); return; }
     semGrama.push({ x: a.x, z: a.z, r: 0.5*a.escala });
-    const rc = a.tipo === 'cipreste' ? 1.3 : 3.6;
+    const rc = a.tipo === 'cipreste' ? 1.3 : a.tipo === 'pinheiro' ? 2.2 : 3.6;
     manchas.push({ x: a.x, z: a.z, r: rc*a.escala, forca: a.tipo === 'cipreste' ? 0.4 : 0.34 });
     manchas.push({ x: a.x, z: a.z, r: 0.62*a.escala, forca: 0.45 });
   });
@@ -299,7 +389,7 @@ export function createWorld(scene, { renderer, perfil, pos }) {
   /* ============ CHÃO + GRAMA ============ */
   const chao = criarChao(scene, {
     perfil, sdCaminho, semGrama, manchas,
-    agua: noLago ? { nivel: PLANTA_LAGO.NIVEL_AGUA, areia: PLANTA_LAGO.areia } : null,
+    agua: natural ? { nivel: planta.NIVEL_AGUA, areia: planta.areia || (() => 0) } : null,
   });
   chao.uGrama.uSolDir = luz.uSolDir;
   chao.uGrama.uSolCor = luz.uSolCor;
@@ -307,7 +397,7 @@ export function createWorld(scene, { renderer, perfil, pos }) {
 
   /* ============ FLORES / MOBÍLIA / ÁRVORES / FONTE ============ */
   const flores = criarFlores(scene, { perfil });
-  const mobilia = noLago
+  const mobilia = natural
     ? criarMobilia(scene, { perfil, flores, bancos: BANCOS, lampadas: LAMPADAS, LUZES: perfil.luzesLampada, jardineiras: false })
     : criarMobilia(scene, {
       perfil, PLAZA, flores, bancos: BANCOS, lampadas: LAMPADAS, LUZES: perfil.luzesLampada,
@@ -320,12 +410,13 @@ export function createWorld(scene, { renderer, perfil, pos }) {
       manchas.push({ x: c.alongZ ? c.x : c.x+t, z: c.alongZ ? c.z+t : c.z, r: 0.75, forca: 0.3 });
     }
   });
-  const arvores = criarArvores(scene, [...ARVORES, ...mobilia.moitas], { perfil, luz, abrePerto: noLago });
-  const fonte = noLago ? null : criarFonte(scene, { perfil, PLAZA, ceu, luz });
+  const arvores = criarArvores(scene, [...ARVORES, ...mobilia.moitas], { perfil, luz, abrePerto: natural });
+  const fonte = natural ? null : criarFonte(scene, { perfil, PLAZA, ceu, luz });
   const lago = noLago ? criarLago(scene, { perfil, ceu, luz, chao, planta: PLANTA_LAGO, lampadas: LAMPADAS }) : null;
+  const bosque = noBosque ? criarBosque(scene, { perfil, ceu, luz, chao, planta: PLANTA_BOSQUE, lampadas: LAMPADAS, altura: alturaTerreno }) : null;
 
   const tempoFlores = { value: 0 };
-  criarFloresDoGramado(scene, { perfil, livre: livreGramado, uTempo: tempoFlores, altura: noLago ? alturaTerreno : null });
+  criarFloresDoGramado(scene, { perfil, livre: livreGramado, uTempo: tempoFlores, altura: natural ? alturaTerreno : null });
 
   /* pedrinhas soltas no gramado */
   {
@@ -590,9 +681,10 @@ export function createWorld(scene, { renderer, perfil, pos }) {
   const velasCarregadas = loadVelas();
 
   /* ============ VIDA AMBIENTE ============ */
-  const borboletas = criarBorboletas(scene, { perfil, altura: noLago ? alturaTerreno : null });
+  const borboletas = criarBorboletas(scene, { perfil, altura: natural ? alturaTerreno : null });
   // no Lago não há cerca: os sabiás pousam nos pilares do deque e nos lampiões
-  const poleiros = noLago ? [...lago.poleiros, ...LAMPADAS.map(l => ({ x: l.x, y: 2.93 + (l.y ?? 0), z: l.z }))] : mobilia.birdPerches;
+  const topoDosPostes = LAMPADAS.map(l => ({ x: l.x, y: 2.93 + (l.y ?? 0), z: l.z }));
+  const poleiros = noLago ? [...lago.poleiros, ...topoDosPostes] : noBosque ? [...bosque.poleiros, ...topoDosPostes] : mobilia.birdPerches;
   const passaros = criarPassaros(scene, poleiros);
   const petalas = criarPetalas(scene, BLOSSOM_SPOTS.map(([x, z, escala]) => ({ x, z, escala })), { perfil, luz });
   const ar = criarAr(scene, { perfil, luz });
@@ -786,6 +878,8 @@ export function createWorld(scene, { renderer, perfil, pos }) {
     tempoFlores.value = elapsed;
     if(fonte) fonte.atualizar(elapsed, alturaTela);
     if(lago) lago.atualizar(elapsed, mixNum('lampGlow')/PHASES.noite.lampGlow);
+    // no Bosque os vaga-lumes acendem já no fim da tarde
+    if(bosque) bosque.atualizar(elapsed, mixNum('lampGlow')/PHASES.noite.lampGlow, timeWeights.dourado*0.8 + timeWeights.noite, alturaTela);
     ponte.atualizar(elapsed, timeWeights.noite);
     borboletas.atualizar(elapsed, timeWeights.noite);
     passaros.atualizar(dt, elapsed);
@@ -802,7 +896,7 @@ export function createWorld(scene, { renderer, perfil, pos }) {
 
   // onde a câmera não deve parar (dentro de uma copa): a chegada pelo link de uma
   // homenagem escolhe o ângulo final com isto. Raio aproximado de cada copa.
-  const RAIO_COPA = { frondosa: 3.2, cerejeira: 3.4, cipreste: 1.5, moita: 1.0, salgueiro: 3.4 };
+  const RAIO_COPA = { frondosa: 3.2, cerejeira: 3.4, cipreste: 1.5, moita: 1.0, salgueiro: 3.4, pinheiro: 1.9 };
   const copas = ARVORES.filter(a => RAIO_COPA[a.tipo]).map(a => ({ x: a.x, z: a.z, r: RAIO_COPA[a.tipo]*a.escala }));
 
   return {
@@ -812,18 +906,19 @@ export function createWorld(scene, { renderer, perfil, pos }) {
     copas,
     jardim: JARDIM,
     // o mapa de tesouro ainda é só o do Jardim Memorial
-    temMapa: !noLago,
+    temMapa: !natural,
+    planta,
     folgaDaBorda: desenho.folgaDaBorda,
     // a Ponte do Arco-Íris deste jardim: o patamar, para onde leva, e a altura do caminho
     ponte: { ...desenho.ponte, alturaEm: ponte.alturaEm, pontos: ponte.pontos },
     alemDaCerca: desenho.alemDaCerca || null,
     // caminhada automática pela trilha (null: as avenidas do Memorial, em menuUi.js)
-    rotaAte: noLago ? PLANTA_LAGO.rotaAte : null,
+    rotaAte: natural ? planta.rotaAte : null,
     // onde o cachorro pode pisar e em que altura (null: o de sempre, cerca e fonte)
-    terreno: noLago ? {
+    terreno: natural ? {
       altura: alturaTerreno,
-      chao: (x, z) => PLANTA_LAGO.chao(x, z, alturaTerreno),
-      inicio: PLANTA_LAGO.INICIO,
+      chao: (x, z) => planta.chao(x, z, alturaTerreno),
+      inicio: planta.INICIO,
     } : null,
     plantAndSaveFlor,
     plantAndSaveVela,

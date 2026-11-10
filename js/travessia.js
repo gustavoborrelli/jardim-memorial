@@ -2,7 +2,8 @@
 
 /*
   A TRAVESSIA DA PONTE DO ARCO-ÍRIS (etapa 39)
-  No patamar da ponte aparece "Atravessar para o …". O cachorro sobe a ponte
+  No patamar da ponte aparece um botão "Atravessar para o …" para cada um dos
+  outros jardins (a ponte sobe às nuvens e leva a qualquer um). O cachorro sobe a ponte
   sozinho, a tela vira céu (nuvens e o arco-íris se desenhando) e a página do outro
   jardim abre já coberta por esse céu: um script no <head> do index.html o mostra
   desde o primeiro quadro, enquanto o jardim novo carrega por baixo. Quando ele
@@ -14,15 +15,23 @@
 */
 import { travessiaChegando, CHAVE_TRAVESSIA } from './chegada.js';
 
-const NOMES = { memorial: 'Jardim Memorial', lago: 'Jardim do Lago' };
-const ENDERECO = { memorial: '/', lago: '/?jardim=lago' };
+const NOMES = { memorial: 'Jardim Memorial', lago: 'Jardim do Lago', bosque: 'Bosque dos Vaga-lumes' };
+const ENDERECO = { memorial: '/', lago: '/?jardim=lago', bosque: '/?jardim=bosque' };
 
 export function createTravessia({ world, dogController, menuUi }){
   const ponte = world.ponte;
-  const botao = document.getElementById('btnAtravessar');
+  const opcoes = document.getElementById('atravessarOpcoes');
   const cortina = document.getElementById('travessia');
   const destino = document.getElementById('travessiaDestino');
-  botao.textContent = `🌈 Atravessar para o ${NOMES[ponte.destino]}`;
+  ponte.destinos.forEach(para => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'btn-atravessar';
+    b.dataset.para = para;
+    b.textContent = `🌈 Atravessar para o ${NOMES[para]}`;
+    b.addEventListener('click', () => atravessar(para));
+    opcoes.appendChild(b);
+  });
   let atravessando = false;
 
   // a altura de quem está na ponte; fora dela (no patamar), o chão do jardim
@@ -33,28 +42,27 @@ export function createTravessia({ world, dogController, menuUi }){
     return dog && Math.hypot(dog.position.x - ponte.x, dog.position.z - ponte.z) < ponte.raio + 0.4;
   }
 
-  function atravessar(){
+  function atravessar(para){
     if(atravessando) return;
     atravessando = true;
-    botao.classList.remove('visivel');
+    opcoes.classList.remove('visivel');
     document.body.classList.add('na-ponte');
     // sobe a ponte, do meio do patamar
     dogController.caminharPor([[ponte.x, ponte.z], ...ponte.pontos(0.5, 16, 10)], {
       altura: alturaNaPonte, livre: true, semCancelar: true, velocidade: 1.45,
     });
-    destino.textContent = `para o ${NOMES[ponte.destino]}`;
+    destino.textContent = `para o ${NOMES[para]}`;
     setTimeout(() => {
       cortina.classList.add('aberta');
       try {
         sessionStorage.setItem(CHAVE_TRAVESSIA, JSON.stringify({
-          de: world.jardim, para: ponte.destino, raca: dogController.getBreed(), quando: Date.now(),
+          de: world.jardim, para, raca: dogController.getBreed(), quando: Date.now(),
         }));
       } catch(e){}
     }, 2300);
     // a cortina leva ~0,7 s para cobrir; depois disso, o outro jardim
-    setTimeout(() => location.assign(ENDERECO[ponte.destino]), 3100);
+    setTimeout(() => location.assign(ENDERECO[para]), 3100);
   }
-  botao.addEventListener('click', atravessar);
 
   /* ---------- a chegada, do outro lado ---------- */
   if(travessiaChegando && travessiaChegando.para === world.jardim){
@@ -88,7 +96,7 @@ export function createTravessia({ world, dogController, menuUi }){
     atravessando: () => atravessando,
     atualizar(pausado){
       const mostra = !pausado && !atravessando && !dogController.caminhando() && noPatamar();
-      botao.classList.toggle('visivel', !!mostra);
+      opcoes.classList.toggle('visivel', !!mostra);
     },
   };
 }

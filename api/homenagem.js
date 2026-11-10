@@ -13,7 +13,7 @@ const SITE = 'https://jardim-memorial.vercel.app';
 const PADRAO = `${SITE}/og-jardim.jpg`;
 
 // "no Recanto do Sol", "na Prainha" (a mesma lista de js/planta.js)
-const LUGARES_FEMININOS = new Set(['Margem do Lago', 'Prainha', 'Clareira do Alto']);
+const LUGARES_FEMININOS = new Set(['Margem do Lago', 'Prainha', 'Clareira do Alto', 'Clareira da Lua', 'Clareira do Riacho', 'Clareira das Samambaias']);
 const noLugar = (lugar) => `${LUGARES_FEMININOS.has(lugar) ? 'na' : 'no'} ${lugar}`;
 
 const escapar = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));

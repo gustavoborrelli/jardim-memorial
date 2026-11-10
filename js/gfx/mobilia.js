@@ -142,7 +142,7 @@ export function criarMobilia(scene, { perfil, PLAZA = null, flores, bancos, lamp
   const terracota = matPedra({ cor: 0xc98a68, escala: 5, relevo: 0.004, manchas: 0.42, rugosidade: 0.88 });
 
   /* ---------- BANCOS ---------- */
-  {
+  if(bancos.length){
     const im = new THREE.InstancedMesh(geoBanco(), madeira, bancos.length);
     const d = new THREE.Object3D();
     bancos.forEach((b, i) => {

@@ -20,7 +20,6 @@ import { escolherPerfil, criarGovernador, escalaDePixels } from './gfx/qualidade
 import { BOUNDS } from './planta.js';
 import { criarPos } from './gfx/pos.js';
 import { alturaTerreno } from './gfx/chao.js';
-import * as PLANTA_LAGO from './jardins/lago.js';
 
 /* ============ BASIC SETUP ============ */
 const appEl = document.getElementById('app');
@@ -56,9 +55,9 @@ window.addEventListener('resize', ()=>{
 
 /* ============ MÓDULOS DO JOGO ============ */
 const world = createWorld(scene, { renderer, perfil, pos });
-// o Jardim do Lago traz as vagas e placas dele; cada jardim lê e cria só as suas homenagens
-const lapides = createLapides(scene, world.jardim === 'lago' ? {
-  vagas: PLANTA_LAGO.VAGAS, placas: PLANTA_LAGO.PLACAS, altura: alturaTerreno, jardim: 'lago',
+// os jardins naturais trazem as vagas e placas deles; cada jardim lê e cria só as suas homenagens
+const lapides = createLapides(scene, world.planta ? {
+  vagas: world.planta.VAGAS, placas: world.planta.PLACAS, altura: alturaTerreno, jardim: world.jardim,
 } : {});
 world.scatterFlowers(90, lapides.plots);
 

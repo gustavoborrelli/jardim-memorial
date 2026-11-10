@@ -31,17 +31,22 @@ if(!JARDIM_DO_ENDERECO && voltouDoLogin){
     if(p && p.jardim) definirJardim(p.jardim);
   } catch(e){}
 }
-// título e cartaz do canto para o jardim que não é o Memorial (o Lago ainda sem mapa)
+// título e cartaz do canto para o jardim que não é o Memorial (os naturais ainda sem mapa)
+const VESTIDOS = {
+  lago: { titulo: 'Jardim do Lago', texto: 'Um jardim à beira d\'água. Passeie pela trilha do lago, suba até a Clareira do Alto, plante flores e, se quiser, deixe uma homenagem numa das vagas livres.' },
+  bosque: { titulo: 'Bosque dos Vaga-lumes', texto: 'Uma trilha entre pinheiros, um riacho com uma ponte de pedra e clareiras onde os vaga-lumes acendem ao entardecer. Plante flores e, se quiser, deixe uma homenagem numa das vagas livres.' },
+};
 function vestirJardim(){
-  if(JARDIM !== 'lago') return;
-  document.body.classList.add('jardim-lago', 'sem-mapa');
-  document.title = 'Jardim do Lago';
+  const v = VESTIDOS[JARDIM];
+  if(!v) return;
+  document.body.classList.add(`jardim-${JARDIM}`, 'sem-mapa');
+  document.title = v.titulo;
   const chip = document.getElementById('pauseChip');
   if(chip) chip.innerHTML = '<b>ESC</b> — menu / pausa';
   const titulo = document.querySelector('.title-block');
   if(titulo){
-    titulo.querySelector('h1').textContent = 'Jardim do Lago';
-    titulo.querySelector('p').textContent = 'Um jardim à beira d\'água. Passeie pela trilha do lago, suba até a Clareira do Alto, plante flores e, se quiser, deixe uma homenagem numa das vagas livres.';
+    titulo.querySelector('h1').textContent = v.titulo;
+    titulo.querySelector('p').textContent = v.texto;
   }
 }
 

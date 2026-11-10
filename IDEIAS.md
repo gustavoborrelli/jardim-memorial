@@ -864,6 +864,36 @@ flores/velas nas lápides dos outros (MVP family & friends).
     a pé pelo portão até o patamar e de volta, a cerca segurando no resto, e no
     iPhone 14 pelo toque.
 
+40. 🔜 **Bosque dos Vaga-lumes** (branch `jardim-lago`) — etapa 4 da expansão, o
+    terceiro jardim, da descrição aprovada: trilha sinuosa entre pinheiros, clareiras
+    de três ou quatro vagas, um riacho com uma pontezinha de pedra e vaga-lumes ao
+    entardecer. Abre por `?jardim=bosque` ou pela Ponte do Arco-Íris.
+    - Planta em `js/jardins/bosque.js`: o riacho atravessa na diagonal (noroeste →
+      sudeste); a trilha sai do patamar da ponte, a sudoeste, cruza o riacho pela
+      ponte de pedra e termina na Clareira da Lua, ao norte; ramais para a Clareira
+      do Riacho, a Clareira das Samambaias e o Recanto dos Vaga-lumes. 14 vagas, em
+      arco em volta do meio de cada clareira, com a entrada livre.
+    - O que os jardins naturais têm em comum saiu do Lago para `js/jardins/comum.js`
+      (contornos, curvas, medidor de distância em grade, rede de trilhas). O Lago
+      ficou idêntico: distâncias, rotas, vagas, placas e lampiões conferidos ponto
+      a ponto antes e depois.
+    - 3D em `js/gfx/bosque.js`: o riacho é a mesma água do lago numa faixa ao longo
+      do leito, com as ondinhas descendo a correnteza; ponte de pedra em arco com
+      muretas e musgo; troncos caídos nas clareiras; um enxame de vaga-lumes nas
+      clareiras e na beira d'água que acende já no fim da tarde.
+    - Árvores novas em `gfx/arvores.js`: pinheiro (camadas em cone, cartões de
+      raminhos com agulhas: agulha solta some no teste de transparência e a copa
+      fica rala), pinheiro de mata funda e samambaia. Mata além da borda de
+      pinheiros, aberta só onde a ponte chega.
+    - A ponte agora leva a qualquer jardim: no patamar, um botão por destino.
+    Testado com Playwright e banco simulado: o Bosque lê e grava só o que é dele;
+    o cachorro atravessa o riacho pela ponte de pedra e para na beira fora dela; o
+    link /nina abre o Bosque e o cachorro vai pela trilha e pela ponte até a pedra;
+    a travessia do Memorial ao Bosque mostra os dois destinos e chega com o mesmo
+    companheiro. O Memorial continua idêntico pixel a pixel ao da etapa 3. Custo no
+    perfil de celular: ~5,5 ms por quadro no M5, como o Lago (o Memorial, ~4,5).
+    A migração 019 já aceitava 'bosque'.
+
 ## Ideias soltas (não decidido ainda)
 
 - A leva de dinamismo social planejada em conjunto está completa: (1)

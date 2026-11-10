@@ -23,7 +23,7 @@ export const BOUNDS = 25.5;
 // a Ponte do Arco-Íris (etapa 39): o patamar logo depois do portão, e ela sobe
 // para o sul por cima da mata, pela abertura que já existe entre as árvores
 // (e vai virando para oeste enquanto sobe: de dentro do jardim se vê o arco de lado)
-export const PE_DA_PONTE = { x: 0, z: 31.2, rumo: [0, 1], vira: 1, raio: 2.3, destino: 'lago' };
+export const PE_DA_PONTE = { x: 0, z: 31.2, rumo: [0, 1], vira: 1, raio: 2.3, destinos: ['lago', 'bosque'] };
 
 // os quatro campos, um por quadrante
 export const SECTIONS = [
@@ -44,7 +44,7 @@ SECTIONS.forEach(sec=>{
 });
 
 // "no Recanto do Sol", "na Prainha": o artigo certo antes do nome de um lugar
-const LUGARES_FEMININOS = new Set(['Margem do Lago', 'Prainha', 'Clareira do Alto']);
+const LUGARES_FEMININOS = new Set(['Margem do Lago', 'Prainha', 'Clareira do Alto', 'Clareira da Lua', 'Clareira do Riacho', 'Clareira das Samambaias']);
 export const noLugar = (lugar) => `${LUGARES_FEMININOS.has(lugar) ? 'na' : 'no'} ${lugar}`;
 
 // a linha da tabela memoriais no formato que o jardim usa (lapides.js e o mapa)

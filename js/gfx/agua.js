@@ -30,6 +30,7 @@ const VERT = /* glsl */`
 const FRAG = /* glsl */`
   varying vec3 vWP;
   uniform float uTempo, uNivel;
+  uniform vec2 uFluxo;
   uniform vec3 uSolDir, uSolCor, uZenite, uMeio, uHorizonte;
   uniform sampler2D tRuido, tRelevo;
   uniform vec3 uLampadas[8];
@@ -38,8 +39,9 @@ const FRAG = /* glsl */`
   #include <fog_pars_fragment>
 
   float onda(vec2 p){
-    float a = texture2D(tRuido, p*0.07 + uTempo*vec2(0.011, 0.006)).g;
-    float b = texture2D(tRuido, p*0.19 - uTempo*vec2(0.008, 0.014)).r;
+    // (no riacho as ondinhas descem com a correnteza: uFluxo; no lago, zero)
+    float a = texture2D(tRuido, p*0.07 + uTempo*vec2(0.011, 0.006) - uFluxo*uTempo*0.05).g;
+    float b = texture2D(tRuido, p*0.19 - uTempo*vec2(0.008, 0.014) - uFluxo*uTempo*0.11).r;
     float c = texture2D(tRuido, p*0.53 + uTempo*vec2(-0.017, 0.012)).b;
     return a*0.5 + b*0.33 + c*0.17;
   }
@@ -75,7 +77,7 @@ const FRAG = /* glsl */`
 
     // o corpo d'água: o fundo aparece no raso, verde-escuro no fundo
     vec3 raso = mix(vec3(0.27, 0.38, 0.28), vec3(0.46, 0.42, 0.29), rel.g);
-    vec3 fundo = vec3(0.05, 0.13, 0.12);
+    vec3 fundo = vec3(0.04, 0.11, 0.1);
     vec3 corpo = mix(raso, fundo, smoothstep(0.0, 1.0, prof))*(0.3 + 0.7*luz);
 
     vec3 cor = mix(corpo, reflexo, fresnel);
@@ -111,6 +113,27 @@ const FRAG = /* glsl */`
 `;
 
 /* planta: o módulo js/jardins/lago.js; chao: o retorno de criarChao (textura de relevo) */
+/* O material da água, para o lago e para o riacho do Bosque (etapa 40). A
+   profundidade vem da textura de relevo do chão; `fluxo` é para onde a água corre. */
+export function materialAgua({ ceu, luz, chao, nivel, lampadas = [], uTempo, uBrilhoLampadas, fluxo = [0, 0] }){
+  const u = ceu.uniforms;
+  const mat = new THREE.ShaderMaterial({
+    uniforms: THREE.UniformsUtils.merge([THREE.UniformsLib.fog, {}]),
+    vertexShader: VERT, fragmentShader: FRAG,
+    transparent: true, depthWrite: false, fog: true,
+  });
+  Object.assign(mat.uniforms, {
+    uTempo, uNivel: { value: nivel }, uFluxo: { value: new THREE.Vector2(fluxo[0], fluxo[1]) },
+    uSolDir: luz.uSolDir, uSolCor: luz.uSolCor,
+    uZenite: u.uZenite, uMeio: u.uMeio, uHorizonte: u.uHorizonte,
+    tRuido: chao.uniforms.tRuido, tRelevo: { value: chao.texRelevo },
+    uLampadas: { value: Array.from({ length: 8 }, (_, i) => lampadas[i] ? new THREE.Vector3(lampadas[i].x, 2.55 + (lampadas[i].y ?? 0), lampadas[i].z) : new THREE.Vector3()) },
+    uNLampadas: { value: Math.min(8, lampadas.length) },
+    uBrilhoLampadas,
+  });
+  return mat;
+}
+
 /* lampadas: [{x, y, z}] os postes (y = chão), para o reflexo deles à noite */
 export function criarLago(scene, { perfil, ceu, luz, chao, planta, lampadas = [] }){
   const { LAGO, NIVEL_AGUA, naMargem, DEQUE, doDeque, NENUFARES, JUNCOS } = planta;
@@ -130,21 +153,7 @@ export function criarLago(scene, { perfil, ceu, luz, chao, planta, lampadas = []
     }
     const geo = new THREE.ShapeGeometry(forma, 4);
     geo.rotateX(-Math.PI/2);
-    const u = ceu.uniforms;
-    const mat = new THREE.ShaderMaterial({
-      uniforms: THREE.UniformsUtils.merge([THREE.UniformsLib.fog, {}]),
-      vertexShader: VERT, fragmentShader: FRAG,
-      transparent: true, depthWrite: false, fog: true,
-    });
-    Object.assign(mat.uniforms, {
-      uTempo, uNivel: { value: NIVEL_AGUA },
-      uSolDir: luz.uSolDir, uSolCor: luz.uSolCor,
-      uZenite: u.uZenite, uMeio: u.uMeio, uHorizonte: u.uHorizonte,
-      tRuido: chao.uniforms.tRuido, tRelevo: { value: chao.texRelevo },
-      uLampadas: { value: Array.from({ length: 8 }, (_, i) => lampadas[i] ? new THREE.Vector3(lampadas[i].x, 2.55 + (lampadas[i].y ?? 0), lampadas[i].z) : new THREE.Vector3()) },
-      uNLampadas: { value: Math.min(8, lampadas.length) },
-      uBrilhoLampadas,
-    });
+    const mat = materialAgua({ ceu, luz, chao, nivel: NIVEL_AGUA, lampadas, uTempo, uBrilhoLampadas });
     const agua = new THREE.Mesh(geo, mat);
     agua.position.y = NIVEL_AGUA;
     agua.renderOrder = 2;
