@@ -225,7 +225,7 @@ function desenhoDoLago(sorte, P){
   }
 
   const LAMPADAS = P.LAMPADAS.map(l => ({ ...l, y: h(l.x, l.z) }));
-  const BANCOS = P.BANCOS.map(b => ({ ...b, y: b.y ?? h(b.x, b.z) }));
+  const BANCOS = []; // os jardins naturais não têm bancos (pedido de 2026-11-10)
   const dentroDaTerra = (x, z, folga) => Math.hypot(x, z) < P.raioBorda(x, z) - folga;
   const livreGramado = (x, z) => {
     if(P.sdCaminho(x, z) < 0.9 || !dentroDaTerra(x, z, 0.4)) return false;
@@ -905,6 +905,8 @@ export function createWorld(scene, { renderer, perfil, pos }) {
     AVENUES,
     copas,
     jardim: JARDIM,
+    // quanto é dia, fim de tarde e noite agora (o som muda junto: js/som.js)
+    momento: () => timeWeights,
     // todo jardim tem o seu mapa de tesouro desde a etapa 41
     temMapa: true,
     planta,

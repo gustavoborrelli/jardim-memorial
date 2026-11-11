@@ -181,6 +181,7 @@ function animate(){
     dogController.orbitIdle(dt);
   }
   dogController.updateCamera(camera, elapsed);
+  menuUi.atualizarSom();
 
   const cao = dogController.getDog();
   world.update(dt, elapsed, camera, cao ? cao.position : null);

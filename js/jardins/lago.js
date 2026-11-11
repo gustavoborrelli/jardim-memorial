@@ -140,12 +140,14 @@ function deFrenteParaFora(a, extra){
    Dentro da terra do jardim, mais a trilha que sai até a ponte; fora d'água,
    menos no deque. Devolve a altura do chão ali, ou null. */
 export function chao(x, z, alturaTerreno){
-  // no deque: longe da beirada e parando antes do banco da ponta
+  // no deque: longe da beirada e da ponta. Na faixa da beirada não se pisa sobre a
+  // água (a conta da água logo abaixo já recusa); sobre a terra, no começo do deque,
+  // pisa-se no chão. Recusar a faixa toda deixava o deque bloqueado: entre a terra e
+  // as tábuas sobrava uma tira onde não era nem um nem outro.
   if(noDeque(x, z, -0.2)){
     const u = (x - DEQUE.x)*DEQUE.dir[0] + (z - DEQUE.z)*DEQUE.dir[1];
-    if(u < DEQUE.u1 - 1.25) return DEQUE.y;
+    if(u < DEQUE.u1 - 0.35) return DEQUE.y;
   }
-  if(noDeque(x, z)) return null;
   const dentro = Math.hypot(x, z) < raioBorda(x, z) - 1.2 || distTrilha(x, z) < 1.1 || Math.hypot(x - PONTE.x, z - PONTE.z) < 2.2;
   if(!dentro) return null;
   const h = alturaTerreno(x, z);
@@ -154,20 +156,8 @@ export function chao(x, z, alturaTerreno){
 
 /* ============ O QUE CRESCE ============ */
 export const SALGUEIRO = (() => { const [x, z] = naMargem(-1.25, 0.6); return { x, z }; })();
-export const BANCOS = (() => {
-  const rumo = (x, z, ax, az) => Math.atan2(ax - x, az - z);
-  // entre a trilha e a água, de frente para o lago
-  const naBeira = (a) => { const [x, z] = naMargem(a, 1.7); return { x, z, rot: rumo(x, z, LAGO.x, LAGO.z) }; };
-  const [bx, bz] = doDeque(4.3, 0);
-  return [
-    // na roda da clareira, olhando o lago lá embaixo
-    { x: MORRO.x - 1.9, z: MORRO.z + 0.6, rot: rumo(MORRO.x - 1.9, MORRO.z + 0.6, LAGO.x, LAGO.z) },
-    // na ponta do deque, de frente para a água
-    { x: bx, z: bz, rot: Math.atan2(DEQUE.dir[0], DEQUE.dir[1]), y: DEQUE.y },
-    // na prainha e debaixo do salgueiro
-    naBeira(0.5), naBeira(-1.02),
-  ];
-})();
+// (sem bancos: num jardim de cachorros eles não faziam sentido e alguns ficavam mal
+// postos — pedido do Gustavo em 2026-11-10)
 // lampiões na beira da trilha: acendem no fim da tarde
 export const LAMPADAS = [
   ladoDa(TRILHAS.ponte, 0.97, 1.9), ladoDa(TRILHAS.ponte, 0.97, -1.9),

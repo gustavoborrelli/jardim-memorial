@@ -163,13 +163,6 @@ function desenharBosque(svg, aguadas, tinta, enfeites, clipId){
     el('rect', { x: -B.meio, y: -B.meiaLargura, width: 2*B.meio, height: 2*B.meiaLargura, rx: .5, fill: '#d6cdbb', stroke: TINTA, 'stroke-width': .14 }, g);
     [-1, 1].forEach(s => el('line', { x1: -B.meio + .4, y1: s*(B.meiaLargura - .25), x2: B.meio - .4, y2: s*(B.meiaLargura - .25), stroke: '#9e9584', 'stroke-width': .2 }, g));
   }
-  // os troncos caídos
-  P.TRONCOS.forEach(t => {
-    const [x, y] = posNoMapa(t.x, t.z), ang = t.rot*180/Math.PI;
-    const g = el('g', { transform: `translate(${x} ${y}) rotate(${ang})` }, enfeites);
-    el('rect', { x: -t.comp*.75, y: -.38, width: t.comp*1.5, height: .76, rx: .38, fill: '#8a6a48', stroke: TINTA, 'stroke-width': .1 }, g);
-    el('ellipse', { cx: t.comp*.75 - .1, cy: 0, rx: .2, ry: .36, fill: '#d8b98c', stroke: TINTA, 'stroke-width': .06 }, g);
-  });
   // pinheiros, e umas copas redondas perto da água
   const livre = (x, y) => {
     if(Math.hypot(x, y) > P.raioBorda(x, y) - 2.2) return false;

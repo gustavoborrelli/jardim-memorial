@@ -916,6 +916,51 @@ flores/velas nas lápides dos outros (MVP family & friends).
     Bosque; no iPhone 14. Os testes das etapas 38 a 40 continuam passando (o da 38
     agora espera o múndi na raiz), e o 3D do Memorial está idêntico ao da etapa 4.
 
+42. 🔜 **Ajustes do primeiro teste no celular** (branch `jardim-lago`) — pedidos do
+    Gustavo em 2026-11-10, depois de testar pela rede de casa.
+    - A Ponte do Arco-Íris mais natural: virou uma faixa de luz, não uma tábua
+      pintada (as cores passam uma na outra pela largura, as beiradas se desfazem,
+      luz própria, um pouco transparente e sem sombra no chão), nascendo do patamar.
+      Duas tentativas de nuvem foram testadas e abortadas por ele: nuvenzinhas
+      desenhadas embaixo e dos lados ao longo da ponte ("não ficou bom") e um monte
+      de algodão em 3D no pé, para ela nascer de dentro dele ("não gostei, vamos
+      abortar a ideia por enquanto"). Fica só o banco de nuvens lá no alto, onde ela
+      some, como desde a etapa 39. As nuvens do alto são desenhadas antes da faixa
+      (que não escreve profundidade): escrevendo, a beirada quase transparente as
+      cortava em linhas retas.
+    - Sem bancos no Jardim do Lago e sem os troncos caídos para sentar no Bosque:
+      num jardim de cachorros não faziam sentido, e alguns ficavam mal postos. O
+      Jardim Memorial continua com os dele.
+    - O deque estava bloqueado: a faixa da beirada era recusada inteira, e no começo
+      do deque sobrava uma tira entre a terra e as tábuas onde não se pisava nem num
+      nem noutro. Agora a beirada só não deixa pisar sobre a água, e o deque vai até
+      perto da ponta (sem o banco que ficava lá). O teste antigo não pegava isso
+      porque punha o cachorro já em cima do deque; o novo sai da terra firme.
+
+43. 🔜 **Som de verdade nos jardins** (branch `jardim-lago`) — pedido do Gustavo em
+    2026-11-10 ("temos algum áudio bacana e melhor?"). O vento e os pios sintetizados
+    saíram; entram gravações de domínio público (CC0, do Freesound), escolhidas por
+    ele numa página de escuta (22 candidatas, trechos de 40 s com o volume igualado).
+    - Ficaram: quatro gravações de pássaros (uma de fazenda em Goiás e uma da Mata
+      Atlântica entre elas), duas fontes, duas águas de lago, um coro de sapos da
+      Serrinha do Alambari (SP), dois riachos e um de grilos. Vento, nenhum. Onde
+      sobrou mais de uma, cada visita sorteia uma.
+    - `js/som.js`: pássaros de dia e grilos à noite nos três jardins, pela hora do
+      relógio do jardim; a fonte no Memorial, saindo da praça; no Lago, a água e os
+      sapos (do fim da tarde em diante) saindo do ponto da margem mais perto do
+      cachorro; no Bosque, o riacho do mesmo jeito. Quem ouve é a câmera (o som muda
+      de lado ao girar). Só carrega depois que o passeio começa, cada jardim os seus
+      (~2 MB); chegando pela ponte, o áudio espera o primeiro toque.
+    - Os arquivos (`public/sons/`, AAC, mono para os sons de lugar, ~6,7 MB no total)
+      são laços de ~60 s que repetem sem emenda: cruzamento de 4 s em potência
+      constante, folga em cada ponta (a própria continuação do laço, contra o atraso
+      do codificador) e tudo em blocos inteiros de 1024 amostras, para as duas pontas
+      saírem do codificador iguais (9 dos 12 saem idênticos amostra a amostra; nos
+      outros, o degrau na volta fica no normal da gravação). Feitos com `afconvert`
+      (não há ffmpeg nesta máquina) e o módulo `wave` do Python.
+    Testado no Chromium do Playwright e no Google Chrome: cada jardim baixa só os seus
+    sons, decodifica e toca em laço; os testes das etapas anteriores continuam passando.
+
 ## Ideias soltas (não decidido ainda)
 
 - A leva de dinamismo social planejada em conjunto está completa: (1)

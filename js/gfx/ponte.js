@@ -37,17 +37,25 @@ function texturaNuvem(semente){
   const c = document.createElement('canvas'); c.width = c.height = T;
   const x = c.getContext('2d');
   const r = sorteador(semente);
-  for(let i = 0; i < 26; i++){
+  for(let i = 0; i < 34; i++){
     // bolhas maiores no meio e em cima, menores nas pontas: cara de cúmulo
     const k = r(), px = T*(0.14 + k*0.72), meio = 1 - Math.abs(k - 0.5)*2;
     const raio = T*(0.06 + r()*0.1 + meio*0.09), py = T*0.62 - raio*(0.4 + r()*0.9);
     const g = x.createRadialGradient(px, py - raio*0.2, raio*0.1, px, py, raio);
-    g.addColorStop(0, 'rgba(255,255,255,0.95)');
-    g.addColorStop(0.6, 'rgba(250,250,252,0.6)');
+    g.addColorStop(0, 'rgba(255,255,255,1)');
+    g.addColorStop(0.72, 'rgba(250,251,253,0.92)');
+    g.addColorStop(0.9, 'rgba(244,246,250,0.55)');
     g.addColorStop(1, 'rgba(240,242,248,0)');
     x.fillStyle = g;
     x.beginPath(); x.arc(px, py, raio, 0, Math.PI*2); x.fill();
   }
+  // a parte de baixo mais azulada e sombreada: é o que dá volume de nuvem de verdade
+  x.globalCompositeOperation = 'source-atop';
+  const sombra = x.createLinearGradient(0, T*0.28, 0, T*0.66);
+  sombra.addColorStop(0, 'rgba(255,255,255,0)');
+  sombra.addColorStop(1, 'rgba(172,184,208,0.62)');
+  x.fillStyle = sombra;
+  x.fillRect(0, 0, T, T);
   const t = new THREE.CanvasTexture(c);
   t.colorSpace = THREE.SRGBColorSpace;
   return t;
@@ -87,91 +95,100 @@ export function criarPonte(scene, { pe, perfil }){
     grupo.add(anel);
   }
 
-  /* ---------- o caminho de arco-íris ---------- */
+  /* ---------- o caminho de arco-íris ----------
+     Uma faixa de luz, não uma tábua pintada: as cores passam uma na outra pela
+     largura (do vermelho, por fora, ao violeta), as beiradas se desfazem, ela tem
+     luz própria e deixa ver um pouco do céu através; mais alto, fica mais clara e
+     some. Não faz sombra no chão: é luz. */
   {
-    const N = 140, COLS = 13, L = FORMA_DA_PONTE.largura, ESP = 0.14;
+    const N = 160, COLS = 31, L = FORMA_DA_PONTE.largura;
     const comprimento = FORMA_DA_PONTE.alcance*0.78;
-    const pos = [], cor = [], aT = [], idx = [];
-    const corDaColuna = (j) => {
-      // 0..1 na largura → as seis faixas, com uma passagem macia entre elas
-      const f = j/(COLS - 1)*(CORES.length - 1);
-      const a = Math.floor(f), b = Math.min(CORES.length - 1, a + 1), k = THREE.MathUtils.smoothstep(f - a, 0.35, 0.65);
-      return CORES[a].clone().lerp(CORES[b], k);
+    const pos = [], cor = [], aT = [], aW = [], idx = [];
+    const espectro = (f) => {
+      const x = f*(CORES.length - 1), a = Math.floor(x), b = Math.min(CORES.length - 1, a + 1);
+      return CORES[a].clone().lerp(CORES[b], x - a);
     };
-    // duas camadas (em cima e embaixo) + as beiradas
     for(let i = 0; i <= N; i++){
       const d = i/N*comprimento, y = base + alturaDaPonte(d) - 0.03;
       const [px, pz] = noCaminho(d), [ox, oz] = paraFora(d);
-      for(const lado of [0, 1]){ // 0: em cima; 1: embaixo
-        for(let j = 0; j < COLS; j++){
-          const w = (j/(COLS - 1) - 0.5)*L;
-          pos.push(px + ox*w, y - lado*ESP, pz + oz*w);
-          const c = corDaColuna(j).multiplyScalar(lado ? 0.72 : 1);
-          cor.push(c.r, c.g, c.b);
-          aT.push(d/comprimento);
-        }
+      for(let j = 0; j < COLS; j++){
+        const f = j/(COLS - 1), w = (f - 0.5)*L;
+        // um leve abaulado: o meio um tiquinho acima das beiradas
+        pos.push(px + ox*w, y + 0.05*(1 - (2*f - 1)*(2*f - 1)), pz + oz*w);
+        const c = espectro(f);
+        cor.push(c.r, c.g, c.b);
+        aT.push(d/comprimento);
+        aW.push(2*f - 1);
       }
     }
-    const v = (i, lado, j) => (i*2 + lado)*COLS + j;
-    for(let i = 0; i < N; i++){
-      for(let j = 0; j < COLS - 1; j++){
-        idx.push(v(i, 0, j), v(i + 1, 0, j), v(i, 0, j + 1), v(i, 0, j + 1), v(i + 1, 0, j), v(i + 1, 0, j + 1));
-        idx.push(v(i, 1, j), v(i, 1, j + 1), v(i + 1, 1, j), v(i, 1, j + 1), v(i + 1, 1, j + 1), v(i + 1, 1, j));
-      }
-      for(const j of [0, COLS - 1]){
-        idx.push(v(i, 0, j), v(i, 1, j), v(i + 1, 0, j), v(i + 1, 0, j), v(i, 1, j), v(i + 1, 1, j));
-      }
+    for(let i = 0; i < N; i++) for(let j = 0; j < COLS - 1; j++){
+      const a = i*COLS + j, b = a + COLS;
+      idx.push(a, b, a + 1, a + 1, b, b + 1);
     }
     const geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
     geo.setAttribute('color', new THREE.Float32BufferAttribute(cor, 3));
     geo.setAttribute('aT', new THREE.Float32BufferAttribute(aT, 1));
+    geo.setAttribute('aW', new THREE.Float32BufferAttribute(aW, 1));
     geo.setIndex(idx);
     geo.computeVertexNormals();
-    const mat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.38, metalness: 0, transparent: true, side: THREE.DoubleSide });
+    // sem escrever profundidade: as nuvens são desenhadas antes e a faixa de luz passa
+    // por cima delas; escrevendo, a beirada quase transparente cortava as nuvens de trás
+    const mat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.92, metalness: 0, transparent: true, depthWrite: false, side: THREE.DoubleSide });
     mat.onBeforeCompile = (s) => {
       s.uniforms.uTempo = uTempo;
       s.uniforms.uBrilho = uBrilho;
       s.vertexShader = s.vertexShader
-        .replace('#include <common>', '#include <common>\nattribute float aT;\nvarying float vT;')
-        .replace('#include <begin_vertex>', '#include <begin_vertex>\nvT = aT;');
+        .replace('#include <common>', '#include <common>\nattribute float aT, aW;\nvarying float vT, vW;')
+        .replace('#include <begin_vertex>', '#include <begin_vertex>\nvT = aT; vW = aW;');
       s.fragmentShader = s.fragmentShader
-        .replace('#include <common>', '#include <common>\nuniform float uTempo, uBrilho;\nvarying float vT;')
+        .replace('#include <common>', '#include <common>\nuniform float uTempo, uBrilho;\nvarying float vT, vW;')
         .replace('#include <color_fragment>', `#include <color_fragment>
-          // some nas nuvens, lá no alto
-          diffuseColor.a *= 1.0 - smoothstep(0.48, 0.84, vT);`)
+          // as beiradas se desfazem; o meio tem um véu claro, como a luz de um arco-íris
+          float beira = 1.0 - smoothstep(0.55, 1.0, abs(vW));
+          diffuseColor.rgb = mix(diffuseColor.rgb, vec3(1.0), 0.06*(1.0 - abs(vW)));
+          diffuseColor.a *= beira*mix(0.96, 0.72, smoothstep(0.12, 0.55, vT))*(1.0 - smoothstep(0.48, 0.84, vT));`)
         .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
-          // a luz própria do arco-íris (mais forte à noite) e um brilho que corre subindo
-          float corre = pow(max(sin(vT*46.0 - uTempo*2.4), 0.0), 18.0);
-          totalEmissiveRadiance += diffuseColor.rgb*(uBrilho + corre*0.55);`);
+          // luz própria (mais forte à noite) e um brilho fino que corre subindo
+          float corre = pow(max(sin(vT*38.0 - uTempo*1.8), 0.0), 24.0);
+          totalEmissiveRadiance += diffuseColor.rgb*(0.45 + uBrilho + corre*0.3);`);
     };
     const malha = new THREE.Mesh(geo, mat);
-    malha.castShadow = perfil.nome !== 'baixo';
+    malha.castShadow = false;
     malha.receiveShadow = true;
+    malha.renderOrder = 1;
     malha.userData.semAO = true;
     grupo.add(malha);
   }
 
-  /* ---------- as nuvens onde ela some ---------- */
+  /* ---------- as nuvens onde ela some, lá no alto ---------- */
   const nuvens = [];
   {
     const r = sorteador(77);
-    const texturas = [texturaNuvem(3), texturaNuvem(9), texturaNuvem(21)];
-    const comprimento = FORMA_DA_PONTE.alcance*0.78;
+    const texturas = [texturaNuvem(3), texturaNuvem(9), texturaNuvem(21), texturaNuvem(33)];
+    const comprimento = FORMA_DA_PONTE.alcance*0.78, L = FORMA_DA_PONTE.largura;
+    const ponto = (d, w) => {
+      const dd = Math.min(d, FORMA_DA_PONTE.alcance);
+      const [px, pz] = noCaminho(dd), [ox, oz] = paraFora(dd);
+      return [px + ox*w, base + alturaDaPonte(dd), pz + oz*w];
+    };
+    const nuvem = (x, y, z, largura, altura, op = 0.9) => {
+      const m = new THREE.SpriteMaterial({ map: texturas[nuvens.length % texturas.length], transparent: true, depthWrite: false, opacity: op, fog: true });
+      const sp = new THREE.Sprite(m);
+      sp.scale.set(largura, altura, 1);
+      sp.position.set(x, y, z);
+      sp.renderOrder = 0; // antes da faixa de arco-íris (1)
+      sp.userData.semAO = true;
+      grupo.add(sp);
+      nuvens.push(sp);
+    };
+    // o banco onde ela some, e umas soltas em volta
     for(let i = 0; i < 24; i++){
-      // um banco de nuvens bem em cima de onde a ponte some, e umas soltas em volta
       const solta = i >= 15;
       const d = solta ? FORMA_DA_PONTE.alcance*(0.5 + r()*0.4) : comprimento*(0.56 + r()*0.4);
-      const w = (r() - 0.5)*(solta ? 24 : 4.5), y = base + alturaDaPonte(d) + (r() - 0.45)*(solta ? 5 : 2.2);
-      const [px, pz] = noCaminho(Math.min(d, FORMA_DA_PONTE.alcance)), [ox, oz] = paraFora(Math.min(d, FORMA_DA_PONTE.alcance));
-      const m = new THREE.SpriteMaterial({ map: texturas[i % 3], transparent: true, depthWrite: false, opacity: 0.88, fog: true });
-      const s = new THREE.Sprite(m);
+      const [x, y, z] = ponto(d, (r() - 0.5)*(solta ? 24 : 4.5));
       const e = 4.5 + r()*7;
-      s.scale.set(e*1.7, e, 1);
-      s.position.set(px + ox*w, y, pz + oz*w);
-      s.userData.semAO = true;
-      grupo.add(s);
-      nuvens.push(s);
+      nuvem(x, y + (r() - 0.45)*(solta ? 5 : 2.2), z, e*1.7, e, 0.9);
     }
   }
 

@@ -135,7 +135,7 @@ export function acertarPontePedra(alturaTerreno){
 }
 PONTE_PEDRA.base = 0;
 
-/* ============ PLACAS, LAMPIÕES, TRONCOS ============
+/* ============ PLACAS E LAMPIÕES ============
    Na entrada de cada clareira, uma placa de um lado da trilha e um lampião do
    outro: os lugares ao lado da entrada são testados e ficam os livres da trilha. */
 const ladosDaEntrada = CLAREIRAS.map(c => {
@@ -159,11 +159,8 @@ export const LAMPADAS = [
   // o lampião fica do lado oposto ao da placa, se der
   ...ladosDaEntrada.map(l => l.find(q => q.lado !== l[0].lado) || l[1]),
 ];
-// um tronco caído em cada clareira, para sentar, atravessado do lado das vagas
-export const TRONCOS = CLAREIRAS.map(c => ({
-  x: c.x + Math.cos(c.entrada + Math.PI)*1.9, z: c.z + Math.sin(c.entrada + Math.PI)*1.9,
-  rot: c.entrada + Math.PI/2, comp: 2.2,
-}));
+// (os troncos caídos para sentar saíram, como os bancos do Lago: pedido do Gustavo
+// em 2026-11-10)
 
 /* ============ A PONTE DO ARCO-ÍRIS E A CHEGADA ============ */
 export const PE_DA_PONTE = (() => {

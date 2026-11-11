@@ -18,6 +18,7 @@ import { gerarCartao } from './cartao.js';
 import { noLugar } from './planta.js';
 import { obterMundi } from './mundi.js';
 import { atravessarPara } from './atravessar.js';
+import { criarSom } from './som.js';
 
 export function createMenuUi({ camera, lapides, world, dogController, pausedState, auth, mapaUi }) {
 
@@ -265,67 +266,14 @@ export function createMenuUi({ camera, lapides, world, dogController, pausedStat
     }catch(e){}
   }
 
-  /* ============ SOM AMBIENTE (vento + pássaros, sintetizado em loop) ============ */
+  /* ============ SOM AMBIENTE (gravações de verdade: js/som.js, etapa 43) ============
+     Começa com o passeio (um toque ou tecla libera o áudio no navegador). O botão
+     "Som ambiente" do menu liga e desliga tudo pelo volume geral. */
   const btnAmbientToggle = document.getElementById('btnAmbientToggle');
   let ambientMuted = localStorage.getItem('jardimAmbientMuted') === '1';
   let ambientStarted = false;
   let ambientMasterGain = null;
-
-  function startWind(ctx, destination){
-    const bufferSize = 2 * ctx.sampleRate;
-    const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
-    const data = buffer.getChannelData(0);
-    for(let i=0; i<bufferSize; i++) data[i] = Math.random()*2-1;
-
-    const noise = ctx.createBufferSource();
-    noise.buffer = buffer;
-    noise.loop = true;
-
-    const filter = ctx.createBiquadFilter();
-    filter.type = 'bandpass';
-    filter.frequency.value = 500;
-    filter.Q.value = 0.6;
-
-    const gain = ctx.createGain();
-    gain.gain.value = 0.02;
-
-    noise.connect(filter); filter.connect(gain); gain.connect(destination);
-    noise.start();
-
-    // vento "respira": o volume sobe e desce devagar, como rajadas
-    (function swell(){
-      const target = 0.012 + Math.random()*0.022;
-      const dur = 3 + Math.random()*4;
-      gain.gain.linearRampToValueAtTime(target, ctx.currentTime+dur);
-      setTimeout(swell, dur*1000);
-    })();
-  }
-
-  function startBirds(ctx, destination){
-    function chirpOnce(){
-      const now = ctx.currentTime;
-      const baseFreq = 1800 + Math.random()*1400;
-      const notes = 2 + Math.floor(Math.random()*3);
-      for(let i=0; i<notes; i++){
-        const t = now + i*0.12;
-        const osc = ctx.createOscillator();
-        const g = ctx.createGain();
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(baseFreq*(0.9+Math.random()*0.3), t);
-        osc.frequency.exponentialRampToValueAtTime(baseFreq*(1.2+Math.random()*0.4), t+0.08);
-        g.gain.value = 0;
-        osc.connect(g); g.connect(destination);
-        g.gain.linearRampToValueAtTime(0.045, t+0.01);
-        g.gain.exponentialRampToValueAtTime(0.001, t+0.1);
-        osc.start(t);
-        osc.stop(t+0.12);
-      }
-    }
-    (function scheduleNext(){
-      const delay = 2500 + Math.random()*6000;
-      setTimeout(()=>{ chirpOnce(); scheduleNext(); }, delay);
-    })();
-  }
+  let som = null;
 
   function startAmbient(){
     if(ambientStarted) return;
@@ -334,8 +282,17 @@ export function createMenuUi({ camera, lapides, world, dogController, pausedStat
     ambientMasterGain = ctx.createGain();
     ambientMasterGain.gain.value = ambientMuted ? 0 : 1;
     ambientMasterGain.connect(ctx.destination);
-    startWind(ctx, ambientMasterGain);
-    startBirds(ctx, ambientMasterGain);
+    som = criarSom(ctx, ambientMasterGain, { jardim: world.jardim, planta: world.planta });
+    // chegando pela ponte, o passeio começa sem um toque: o áudio espera o primeiro
+    const liberar = ()=>{ ensureAudioCtx(); window.removeEventListener('pointerdown', liberar, true); window.removeEventListener('keydown', liberar, true); };
+    window.addEventListener('pointerdown', liberar, true);
+    window.addEventListener('keydown', liberar, true);
+  }
+  // a cada quadro (jogo.js): quem ouve é a câmera; a água segue o cachorro; a hora muda os sons
+  function atualizarSom(){
+    if(!som) return;
+    const dog = dogController.getDog();
+    som.atualizar(camera, dog ? dog.position : null, world.momento ? world.momento() : null);
   }
 
   function refreshAmbientButton(){
@@ -1199,6 +1156,7 @@ export function createMenuUi({ camera, lapides, world, dogController, pausedStat
     chime,
     avisar: showToast,
     startGame,
+    atualizarSom,
     openModalFor,
     requireAuth,
     openMessagesFor,

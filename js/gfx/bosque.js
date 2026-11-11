@@ -2,17 +2,17 @@
   O BOSQUE DOS VAGA-LUMES (etapa 40)
   O que o Bosque tem e os outros jardins não: o riacho (a mesma água do lago, numa
   faixa ao longo do leito, com as ondinhas descendo a correnteza), a pontezinha de
-  pedra em arco, os troncos caídos das clareiras e o enxame de vaga-lumes, que no
+  pedra em arco e o enxame de vaga-lumes, que no
   Bosque acende já no entardecer e se junta nas clareiras e na beira d'água.
 */
 import * as THREE from 'three';
 import { sorteador } from './ruido.js';
-import { matPedra, matMadeira } from './materiais.js';
+import { matPedra } from './materiais.js';
 import { materialAgua } from './agua.js';
 
 /* planta: js/jardins/bosque.js; chao: o retorno de criarChao (textura de relevo) */
 export function criarBosque(scene, { perfil, ceu, luz, chao, planta, lampadas = [], altura }){
-  const { RIACHO, NIVEL_AGUA, FLUXO, PONTE_PEDRA: P, TRONCOS, CLAREIRAS, distRiacho, distTrilha, raioBorda } = planta;
+  const { RIACHO, NIVEL_AGUA, FLUXO, PONTE_PEDRA: P, CLAREIRAS, distRiacho, distTrilha, raioBorda } = planta;
   const r = sorteador(4040);
   const uTempo = { value: 0 }, uBrilhoLampadas = { value: 0 }, uVagaLumes = { value: 0 };
   const grupo = new THREE.Group();
@@ -82,33 +82,7 @@ export function criarBosque(scene, { perfil, ceu, luz, chao, planta, lampadas = 
     grupo.add(ponte);
   }
 
-  /* ---------- os troncos caídos das clareiras ---------- */
-  const poleiros = [];
-  {
-    const casca = matPedra({ cor: 0x5a4430, escala: 3.4, relevo: 0.03, manchas: 0.5, musgo: 0.4, alturaMusgo: 0.1, rugosidade: 0.95 });
-    const miolo = matMadeira(0xc7a27a);
-    TRONCOS.forEach(t => {
-      const g = new THREE.Group();
-      const raio = 0.24 + r()*0.05;
-      const geo = new THREE.CylinderGeometry(raio, raio*1.08, t.comp, 14, 1, true);
-      const tronco = new THREE.Mesh(geo, casca);
-      tronco.rotation.z = Math.PI/2;
-      tronco.castShadow = tronco.receiveShadow = true;
-      g.add(tronco);
-      // as pontas cortadas, com os anéis da madeira
-      [-1, 1].forEach(lado => {
-        const tampa = new THREE.Mesh(new THREE.CircleGeometry(raio*(lado > 0 ? 1.08 : 1), 14), miolo);
-        tampa.rotation.y = lado*Math.PI/2;
-        tampa.position.x = lado*t.comp/2;
-        g.add(tampa);
-      });
-      const y = altura(t.x, t.z);
-      g.position.set(t.x, y + raio*0.8, t.z);
-      g.rotation.y = -t.rot;
-      grupo.add(g);
-      poleiros.push({ x: t.x, y: y + raio*1.8, z: t.z });
-    });
-  }
+  const poleiros = []; // sem troncos: os sabiás ficam nos lampiões
 
   /* ---------- o enxame de vaga-lumes ---------- */
   {
