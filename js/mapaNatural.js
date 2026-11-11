@@ -192,9 +192,11 @@ function desenharBosque(svg, aguadas, tinta, enfeites, clipId){
   // vaga-lumes nas clareiras
   P.CLAREIRAS.forEach(c => { for(let k = 0; k < 5; k++){ const a = sorte()*Math.PI*2, d = 1.4 + sorte()*3; el('circle', { cx: c.x + Math.cos(a)*d*ABRE, cy: c.z + Math.sin(a)*d*ABRE, r: .2, fill: '#f6e27a' }, enfeites); } });
   ponte(P, enfeites, tinta, clipId);
-  // o nome de cada clareira do lado da entrada, onde não há vagas (elas ficam em arco
-  // do lado oposto); a faixa passa por cima da trilha que chega
-  const ondeFaixa = (c) => [c.x + Math.cos(c.entrada)*7.2, c.z + Math.sin(c.entrada)*7.2 + .4];
+  // o nome de cada clareira num lugar livre de vagas e das outras faixas: a Lua e as
+  // Samambaias do lado da entrada; o Recanto acima da vaga do norte; o Riacho abaixo
+  // da vaga do sul (do lado da entrada, as faixas vizinhas se encavalavam)
+  const LUGAR_DA_FAIXA = { 'Clareira da Lua': [3, -9.9], 'Recanto dos Vaga-lumes': [-20.5, -21.5], 'Clareira das Samambaias': [-7.9, 8.7], 'Clareira do Riacho': [12.5, 21.5] };
+  const ondeFaixa = (c) => LUGAR_DA_FAIXA[c.nome];
   return {
     posNoMapa,
     escala: .8,

@@ -895,25 +895,26 @@ flores/velas nas lápides dos outros (MVP family & friends).
     A migração 019 já aceitava 'bosque'.
 
 41. 🔜 **Mapa-múndi como primeira tela, e mapa de tesouro do Lago e do Bosque**
-    (branch `jardim-lago`, EM ANDAMENTO) — etapa 5 da expansão, a última do plano.
-    - Feito: `js/mundi.js` (o vale com os três jardins, as pontes de arco-íris, a
-      névoa das "terras por descobrir", a contagem de homenagens e vagas de cada
-      jardim e o "você está aqui"); a raiz do site abre nele. Tocar num jardim abre
-      a ficha com "Ver as homenagens" e "Passear aqui"; para outro jardim, a página
-      atravessa a ponte (`js/atravessar.js`, modos 'mapa' e 'passeio'). `?jardim=…`
-      (e a volta do login) abre no mapa de tesouro do jardim. O mapa de tesouro
-      ganhou "← Os jardins". `js/mapaNatural.js` desenha o mapa do Lago e o do
-      Bosque das plantas deles (no Bosque, as clareiras se abrem no papel para os
-      medalhões caberem); `js/mapaDesenho.js` tem as peças comuns do esboço.
-      "Visitar no jardim" pelo mapa vai pela trilha nos jardins naturais.
-    - Testado com Playwright e banco simulado: a raiz abre no múndi com as contagens
-      certas; "Ver as homenagens" do Memorial abre o mapa dele; do múndi para o mapa
-      do Lago, coberto pelo céu; "Visitar no jardim" até a Luna pela trilha; do múndi
-      a passear no Bosque, descendo a ponte; o 🗺️ abre o mapa do Bosque.
-    - Falta: no mapa do Bosque, as faixas com o nome das clareiras foram para o lado
-      da entrada e agora se sobrepõem duas a duas (Recanto/Lua, Samambaias/Riacho):
-      escolher um lugar por clareira. Depois: conferir o celular, regressão do
-      Memorial contra a etapa 4 (o 3D não mudou), fotos, página e commit final.
+    (branch `jardim-lago`) — etapa 5 da expansão, a última do plano.
+    - `js/mundi.js`: o vale com os três jardins, as pontes de arco-íris, a névoa das
+      "terras por descobrir", a contagem de homenagens e vagas de cada jardim e o
+      "você está aqui". A raiz do site abre nele. Tocar num jardim abre a ficha com
+      "Ver as homenagens" e "Passear aqui"; para outro jardim, a página atravessa a
+      ponte (`js/atravessar.js`, modos 'mapa' e 'passeio'). `?jardim=…` (e a volta
+      do login) abre no mapa de tesouro do jardim. O mapa de tesouro ganhou
+      "← Os jardins".
+    - `js/mapaNatural.js` desenha o mapa do Lago e o do Bosque das plantas deles; no
+      Bosque, as clareiras se abrem no papel (um campo contínuo, que estica no miolo
+      e volta ao normal aos poucos) para os medalhões caberem, e as faixas das
+      clareiras têm lugar fixo (do lado da entrada, as vizinhas se encavalavam).
+      `js/mapaDesenho.js` tem as peças comuns do esboço. "Visitar no jardim" pelo
+      mapa vai pela trilha nos jardins naturais.
+    Testado com Playwright e banco simulado: a raiz abre no múndi com as contagens
+    certas; "Ver as homenagens" do Memorial abre o mapa dele e "← Os jardins" volta;
+    do múndi para o mapa do Lago, coberto pelo céu; "Visitar no jardim" até a Luna
+    pela trilha; do múndi a passear no Bosque, descendo a ponte; o 🗺️ abre o mapa do
+    Bosque; no iPhone 14. Os testes das etapas 38 a 40 continuam passando (o da 38
+    agora espera o múndi na raiz), e o 3D do Memorial está idêntico ao da etapa 4.
 
 ## Ideias soltas (não decidido ainda)
 
