@@ -729,6 +729,7 @@ canvas{display:block;outline:none;}
   letter-spacing:0.5px;
 }
 .menu-card .tagline{
+  text-wrap:balance; /* linhas de tamanho parecido em qualquer largura, sem quebra forçada */
   font-size:13.5px;
   color:#7a6559;
   margin:0 0 26px 0;
@@ -833,7 +834,20 @@ canvas{display:block;outline:none;}
 }
 .dog-swatch{
   display:flex; gap:4px;
+  height:84px; align-items:center; /* a altura do retrato: o cartão não pula quando ele chega */
 }
+/* o retrato 3D de cada raça (js/retratos.js) entra no lugar das bolinhas de cor */
+.dog-retrato{
+  width:84px; height:84px;
+  border-radius:50%;
+  background:radial-gradient(circle at 50% 38%, #fbf3e2 0%, #ecdcc0 68%, #dcc7a4 100%);
+  box-shadow:0 2px 8px rgba(74,58,53,0.18), inset 0 0 0 2px rgba(255,255,255,0.7);
+  object-fit:cover;
+  animation:retratoChega 0.35s ease both;
+}
+@keyframes retratoChega{ from{ opacity:0; transform:scale(0.92); } to{ opacity:1; transform:none; } }
+.dog-card:last-child:nth-child(odd) .dog-swatch,
+.dog-card:last-child:nth-child(odd) .dog-retrato{ flex:none; }
 .dog-swatch i{
   width:22px; height:22px;
   border-radius:50%;
@@ -996,3 +1010,8 @@ html.travessia-noite .travessia-texto{ color:#efe8ff; }
 }
 .mt-voltar:focus-visible{ outline:3px solid #e39a32; outline-offset:2px; }
 @media (prefers-reduced-motion: reduce){ .mm-alvo .mm-corpo{ transition:none; } }
+
+/* com o menu aberto por cima de um mapa, a dica e os botões do mapa não ficam
+   sobrando embaixo do cartão do menu */
+.menu-screen:not(.hidden) ~ .mt-fundo .mt-inicio-barra,
+.menu-screen:not(.hidden) ~ .mt-fundo .mt-dica{ visibility:hidden; }

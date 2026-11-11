@@ -761,6 +761,7 @@ export function createWorld(scene, { renderer, perfil, pos }) {
     );
   }
 
+  const HEMI_DIA = { ceu: C(0xfff1dc), chao: C(0xc2c98c) }, HEMI_NOITE = { ceu: C(0x5d6fc0), chao: C(0x27304f) };
   const quente = new THREE.Vector3();
   const luaDir = new THREE.Vector3(...PHASES.noite.solDir).normalize();
   let horaForcada = null; // pro futuro botão "ver ao entardecer" e pros testes
@@ -800,9 +801,16 @@ export function createWorld(scene, { renderer, perfil, pos }) {
     scene.environmentIntensity = mixNum('ambiente');
     // sem o céu como luz ambiente (perfil baixo), a hemisférica faz o trabalho das duas
     hemi.intensity = mixNum('hemiInt') + (perfil.nome === 'baixo' ? mixNum('ambiente')*1.15 : 0);
+    if(perfil.nome === 'baixo'){
+      // ...e à noite ela tem de escurecer e azular junto com o céu: com a cor e a
+      // força do dia, o jardim ficava claro como meio-dia debaixo das estrelas
+      hemi.color.copy(HEMI_DIA.ceu).lerp(HEMI_NOITE.ceu, w.noite);
+      hemi.groundColor.copy(HEMI_DIA.chao).lerp(HEMI_NOITE.chao, w.noite);
+      hemi.intensity *= 1 - 0.38*w.noite;
+    }
 
     mobilia.lampHeadMats.forEach(m => { m.emissiveIntensity = mixNum('lampEmissive'); });
-    mobilia.lampGlows.forEach(s => { s.material.opacity = mixNum('lampGlow'); });
+    mobilia.lampGlows.forEach(s => { s.material.opacity = Math.min(1, mixNum('lampGlow')*(s.userData.fator || 1)); });
     mobilia.lampLuzes.forEach(l => { l.intensity = mixNum('lampLuz'); });
     ar.uPolen.value = mixNum('polen');
     ar.uNoite.value = w.noite;

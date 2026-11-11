@@ -283,6 +283,8 @@ export function criarMobilia(scene, { perfil, PLAZA = null, flores, bancos, lamp
     scene.add(globos);
 
     const tex = texturaBrilho();
+    const geoPoca = new THREE.PlaneGeometry(9, 9);
+    geoPoca.rotateX(-Math.PI/2);
     lampadas.forEach(l => {
       const s = new THREE.Sprite(new THREE.SpriteMaterial({
         map: tex, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, color: 0xffc98d,
@@ -292,6 +294,21 @@ export function criarMobilia(scene, { perfil, PLAZA = null, flores, bancos, lamp
       s.userData.semAO = true;
       scene.add(s);
       lampGlows.push(s);
+      if(!LUZES){
+        // sem luz de verdade nem bloom (perfil baixo): o halo cresce e uma poça de
+        // luz pintada no chão faz o papel da lâmpada. Custa dois retângulos.
+        s.scale.set(3.6, 3.6, 1);
+        s.userData.fator = 2.1;
+        const poca = new THREE.Mesh(geoPoca, new THREE.MeshBasicMaterial({
+          map: tex, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, color: 0xffb877, fog: false,
+        }));
+        poca.position.set(l.x, (l.y ?? 0) + 0.07, l.z);
+        poca.userData.semAO = true;
+        poca.userData.fator = 1.5;
+        poca.renderOrder = 1;
+        scene.add(poca);
+        lampGlows.push(poca);
+      }
       if(LUZES){
         const luz = new THREE.PointLight(0xffb36b, 0, 11, 1.7);
         luz.position.set(l.x, 2.4 + (l.y ?? 0), l.z);

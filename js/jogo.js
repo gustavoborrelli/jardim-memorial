@@ -20,6 +20,7 @@ import { escolherPerfil, criarGovernador, escalaDePixels } from './gfx/qualidade
 import { BOUNDS } from './planta.js';
 import { criarPos } from './gfx/pos.js';
 import { alturaTerreno } from './gfx/chao.js';
+import { criarRetratos } from './retratos.js';
 
 /* ============ BASIC SETUP ============ */
 const appEl = document.getElementById('app');
@@ -76,7 +77,7 @@ const auth = createAuth();
 // o mesmo mapa da primeira tela (main.js), agora com as homenagens vivas do jardim
 const mapaUi = obterMapaUi();
 mapaUi.usarJogo({ lapides, world, dogController });
-const menuUi = createMenuUi({ camera, lapides, world, dogController, pausedState, auth, mapaUi });
+const menuUi = createMenuUi({ camera, lapides, world, dogController, pausedState, auth, mapaUi, retratos: criarRetratos(renderer, scene) });
 // quem passeia no mesmo jardim se vê; cada jardim tem o seu canal
 // a Ponte do Arco-Íris: o botão no patamar, a travessia e a chegada do outro lado
 const travessia = createTravessia({ world, dogController, menuUi });

@@ -961,6 +961,34 @@ flores/velas nas lápides dos outros (MVP family & friends).
     Testado no Chromium do Playwright e no Google Chrome: cada jardim baixa só os seus
     sons, decodifica e toca em laço; os testes das etapas anteriores continuam passando.
 
+44. 🔜 **Revisão geral dos gráficos** (branch `melhorias-gerais`) — pedido
+    do Gustavo em 2026-11-11 ("analise o jardim e melhore tudo o que dá pra melhorar,
+    incluindo gráficos"). Os três jardins foram fotografados de dia, no fim da tarde
+    e à noite, nos três perfis; o que saiu fraco nas fotos foi refeito.
+    - **Água do lago e do riacho** (`js/gfx/agua.js`): parecia escama. A inclinação
+      das ondinhas vinha da textura de ruído, que tem 8 bits (degraus) e um canal
+      celular. Agora é uma soma de seis ondas calculadas na conta, entortadas por um
+      ruído largo; a água ficou lisa, reflete o céu e a mata, e o sol deixa um rastro.
+      O grão fino ficou só no brilho. Também ficou mais barata (2 leituras de textura
+      no lugar de 9). O reflexo dos lampiões foi contido (virava mancha branca).
+    - **Noite no perfil baixo** (a maioria dos celulares): o jardim ficava claro como
+      meio-dia debaixo das estrelas, porque a luz hemisférica mantinha a cor e a
+      força do dia. Agora ela azula e escurece com a noite, e cada poste ganha um halo
+      maior e uma poça de luz pintada no chão (sem luz de verdade nem bloom).
+    - **Ponte de pedra do Bosque**: alvenaria (fiadas de blocos, junta afundada, tom
+      por bloco) em `matPedra({ blocos })`, no lugar da pedra lisa granulada.
+    - **Pinheiros** um degrau mais claros (de dia a copa virava um vulto quase preto).
+    - **Lua** com mares e borda mais apagada (era um disco branco estourado).
+    - **Escolha do companheiro**: o retrato 3D de cada raça no lugar das duas bolinhas
+      de cor (`js/retratos.js`; resto do item 9 das sugestões). Tirado pelo próprio
+      renderizador na primeira vez que a tela abre, uma raça por quadro (~0,5–1,4 s
+      no total); se falhar, as bolinhas ficam.
+    - Miúdos: a frase do menu sem quebra forçada (`text-wrap: balance`); a dica e o
+      botão do mapa não sobram mais embaixo do cartão do menu; favicon (o navegador
+      levava um 404 a cada visita) e `theme-color`.
+    Conferido: `npm run build` e os três jardins nos perfis alto, médio e baixo, sem
+    erro no console. Falta o teste dele no celular.
+
 ## Ideias soltas (não decidido ainda)
 
 - A leva de dinamismo social planejada em conjunto está completa: (1)

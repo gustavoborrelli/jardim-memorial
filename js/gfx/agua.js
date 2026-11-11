@@ -38,12 +38,22 @@ const FRAG = /* glsl */`
   uniform float uBrilhoLampadas;
   #include <fog_pars_fragment>
 
-  float onda(vec2 p){
-    // (no riacho as ondinhas descem com a correnteza: uFluxo; no lago, zero)
-    float a = texture2D(tRuido, p*0.07 + uTempo*vec2(0.011, 0.006) - uFluxo*uTempo*0.05).g;
-    float b = texture2D(tRuido, p*0.19 - uTempo*vec2(0.008, 0.014) - uFluxo*uTempo*0.11).r;
-    float c = texture2D(tRuido, p*0.53 + uTempo*vec2(-0.017, 0.012)).b;
-    return a*0.5 + b*0.33 + c*0.17;
+  /* As ondinhas são uma soma de ondas calculadas na conta, não lidas da textura de
+     ruído: a textura tem 8 bits, e a inclinação tirada dela saía em degraus (a água
+     ficava com cara de escama). O ruído só entorta o caminho das ondas, para elas
+     não desfilarem em fila. No riacho (uFluxo) tudo desce com a correnteza. */
+  vec2 inclinacao(vec2 p, float t){
+    vec2 q = p - uFluxo*t*0.55;
+    q += (texture2D(tRuido, q*0.017 + t*0.0021).rg - 0.5)*4.2;
+    vec2 s = vec2(0.0);
+    float f;
+    f = dot(q, vec2( 0.80,  0.60))*0.85 + t*0.62; s += vec2( 0.80,  0.60)*cos(f)*0.030;
+    f = dot(q, vec2(-0.55,  0.83))*1.37 + t*0.81; s += vec2(-0.55,  0.83)*cos(f)*0.027;
+    f = dot(q, vec2( 0.31, -0.95))*2.15 + t*1.07; s += vec2( 0.31, -0.95)*cos(f)*0.024;
+    f = dot(q, vec2(-0.93, -0.36))*3.31 + t*1.42; s += vec2(-0.93, -0.36)*cos(f)*0.020;
+    f = dot(q, vec2( 0.62, -0.78))*5.30 + t*1.95; s += vec2( 0.62, -0.78)*cos(f)*0.019;
+    f = dot(q, vec2( 0.12,  0.99))*8.10 + t*2.60; s += vec2( 0.12,  0.99)*cos(f)*0.014;
+    return s;
   }
 
   void main(){
@@ -52,11 +62,12 @@ const FRAG = /* glsl */`
     float prof = uNivel - rel.r;
     if(prof < 0.0) discard;
 
-    // ondinhas: mais calmas no raso, perto da margem
-    float e = 0.07;
-    float h0 = onda(p);
-    float k = mix(0.55, 1.5, smoothstep(0.0, 0.6, prof));
-    vec3 n = normalize(vec3((h0 - onda(p + vec2(e, 0.0)))*k, 1.0, (h0 - onda(p + vec2(0.0, e)))*k));
+    // ondinhas: mais calmas no raso, perto da margem, e sumindo ao longe (lá elas
+    // são menores que um pixel e só fariam a água cintilar)
+    float longe = length(cameraPosition - vWP);
+    float k = mix(0.45, 1.0, smoothstep(0.0, 0.6, prof))*mix(1.0, 0.45, smoothstep(14.0, 60.0, longe));
+    vec2 inc = inclinacao(p, uTempo)*k;
+    vec3 n = normalize(vec3(-inc.x, 1.0, -inc.y));
 
     vec3 v = normalize(cameraPosition - vWP);
     float nv = max(dot(n, v), 0.0);
@@ -91,7 +102,10 @@ const FRAG = /* glsl */`
     alfa = max(alfa, espuma*0.75);
 
     // o sol na água: ponto forte (o bloom acende em volta) e um rastro largo
-    float sd = max(dot(r, uSolDir), 0.0);
+    // (um grão fino só no brilho: é ele que faz o rastro do sol faiscar)
+    vec2 grao = texture2D(tRuido, p*0.33 + uTempo*vec2(0.021, -0.016) - uFluxo*uTempo*0.2).rg - 0.5;
+    vec3 rb = reflect(-v, normalize(n + vec3(grao.x, 0.0, grao.y)*0.09*k));
+    float sd = max(dot(rb, uSolDir), 0.0);
     cor += uSolCor*(pow(sd, 700.0)*5.0 + pow(sd, 70.0)*0.16 + pow(sd, 9.0)*0.025);
 
     // os lampiões acesos refletidos: as ondinhas esticam cada um num rastro quente
@@ -100,8 +114,10 @@ const FRAG = /* glsl */`
         if(i >= uNLampadas) break;
         vec3 l = uLampadas[i] - vWP;
         float dl = length(l);
-        float s = pow(max(dot(r, l/dl), 0.0), 150.0);
-        cor += vec3(1.0, 0.7, 0.4)*s*uBrilhoLampadas*5.0/(1.0 + dl*dl*0.012);
+        // (com o grão do brilho e mais contido: na água lisa o reflexo virava uma
+        // mancha branca estourada embaixo do poste)
+        float s = pow(max(dot(rb, l/dl), 0.0), 190.0);
+        cor += vec3(1.0, 0.66, 0.36)*s*uBrilhoLampadas*1.7/(1.0 + dl*dl*0.012);
       }
     }
 

@@ -20,7 +20,7 @@ import { obterMundi } from './mundi.js';
 import { atravessarPara } from './atravessar.js';
 import { criarSom } from './som.js';
 
-export function createMenuUi({ camera, lapides, world, dogController, pausedState, auth, mapaUi }) {
+export function createMenuUi({ camera, lapides, world, dogController, pausedState, auth, mapaUi, retratos = null }) {
 
   const menuScreen = document.getElementById('menuScreen');
   const menuHome = document.getElementById('menuHome');
@@ -717,6 +717,8 @@ export function createMenuUi({ camera, lapides, world, dogController, pausedStat
   function showMenuPanel(panel){
     [menuHome, menuHow, menuAbout, menuDogs, menuChegada].forEach(p=> p.classList.remove('active'));
     panel.classList.add('active');
+    // o retrato de cada raça é tirado na primeira vez que a escolha abre (js/retratos.js)
+    if(panel === menuDogs && retratos) retratos.pintar();
   }
   function startGame(){
     dogController.alinharCamera();

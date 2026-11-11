@@ -11,6 +11,7 @@ import { sorteador, texturaRuido, normalDeAltura } from './ruido.js';
 export function matPedra({
   cor = 0xd4cbb8, rugosidade = 0.86, metal = 0, escala = 1.5, relevo = 0.016,
   musgo = 0, alturaMusgo = 0.35, manchas = 0.3, veios = 0, pontos = 0.14, vertexColors = false, envMapIntensity = 1,
+  blocos = 0, eixoBlocos = [1, 0],
 } = {}){
   const m = new THREE.MeshStandardMaterial({ color: cor, roughness: rugosidade, metalness: metal, vertexColors, envMapIntensity });
   const u = {
@@ -22,6 +23,8 @@ export function matPedra({
     uManchas: { value: manchas },
     uVeios: { value: veios },
     uPontos: { value: pontos },
+    uBlocos: { value: blocos },
+    uEixoBlocos: { value: new THREE.Vector2(eixoBlocos[0], eixoBlocos[1]).normalize() },
   };
   m.onBeforeCompile = (s) => {
     Object.assign(s.uniforms, u);
@@ -42,7 +45,8 @@ export function matPedra({
         varying vec3 vWP;
         varying vec3 vWN;
         uniform sampler2D tRuido;
-        uniform float uEsc, uRelevo, uMusgo, uAltMusgo, uManchas, uVeios, uPontos;
+        uniform float uEsc, uRelevo, uMusgo, uAltMusgo, uManchas, uVeios, uPontos, uBlocos;
+        uniform vec2 uEixoBlocos;
         vec4 tri(vec3 p, vec3 b){
           return texture2D(tRuido, p.zy)*b.x + texture2D(tRuido, p.xz)*b.y + texture2D(tRuido, p.xy)*b.z;
         }
@@ -69,6 +73,25 @@ export function matPedra({
         if(uVeios > 0.0){
           float v = abs(sin((vWP.x*2.1 + vWP.y*3.4 + vWP.z*1.3)*1.8 + n1.r*9.0));
           diffuseColor.rgb *= 1.0 - uVeios*smoothstep(0.1, 0.0, v);
+        }
+        if(uBlocos > 0.0){
+          // alvenaria: fiadas de blocos desencontrados, cada um com o seu tom, e a
+          // junta afundada (o relevo lê a mesma altura). No piso, lajes mais largas.
+          vec3 an = abs(normalize(vWN));
+          float ao = dot(vWP.xz, uEixoBlocos), atraves = dot(vWP.xz, vec2(-uEixoBlocos.y, uEixoBlocos.x));
+          float deFrente = step(0.7, abs(dot(normalize(vWN.xz + 1e-5), uEixoBlocos)));
+          vec2 bc = an.y > 0.6 ? vec2(ao, atraves) : vec2(mix(ao, atraves, deFrente), vWP.y);
+          vec2 tam = an.y > 0.6 ? vec2(0.62, 0.44) : vec2(0.5, 0.25);
+          float fiada = floor(bc.y/tam.y);
+          bc.x += tam.x*0.5*mod(fiada, 2.0) + tam.x*0.23*texture2D(tRuido, vec2(fiada + 0.5, 3.5)/256.0).a;
+          vec2 cel = vec2(bc.x/tam.x, bc.y/tam.y);
+          vec2 f = fract(cel);
+          float beira = min(min(f.x, 1.0 - f.x)*tam.x, min(f.y, 1.0 - f.y)*tam.y);
+          float junta = 1.0 - smoothstep(0.006, 0.03, beira + (n2.g - 0.5)*0.012);
+          float tom = texture2D(tRuido, (floor(cel) + 0.5)/256.0).a;
+          diffuseColor.rgb *= mix(1.0, 0.84 + 0.3*tom, uBlocos);
+          diffuseColor.rgb *= 1.0 - 0.5*junta*uBlocos;
+          altPedra -= junta*2.2*uBlocos;
         }
         if(uMusgo > 0.0){
           // musgo nasce embaixo e em frestas, nunca uma faixa reta

@@ -363,7 +363,7 @@ const VERDES_FRONDOSA = [0x6fae4e, 0x82bd54, 0x97c95c, 0x5f9e4b, 0xa8d063];
 const VERDES_MOITA = [0x63a551, 0x76b65a, 0x57984f];
 const ROSAS = [0xffb0c8, 0xff9dbb, 0xffc4d6, 0xffd7e4, 0xff8cb0];
 const VERDES_SALGUEIRO = [0x9cc06a, 0x8ab35e, 0xaccb76, 0x7ea455];
-const VERDES_PINHEIRO = [0x2f6b3f, 0x3a7a46, 0x2a5f3a, 0x46874f, 0x356f41];
+const VERDES_PINHEIRO = [0x3c7f49, 0x4a8f52, 0x356f44, 0x5a9f5a, 0x427f4c, 0x6dae62];
 const VERDES_SAMAMBAIA = [0x467f3a, 0x55913f, 0x3b7034, 0x5f9a46];
 // o cartão do salgueiro: estreito e alto, preso pelo topo no ponto do tufo
 const CANTOS_PENDURADOS = [[-0.55, -2.2], [0.55, -2.2], [0.55, 0.2], [-0.55, 0.2]];
@@ -468,7 +468,7 @@ function especificacao(tipo, r, folhagem){
   if(tipo === 'pinheiro-longe'){
     // a mata funda de pinheiros: três camadas e poucos tufos grandes
     const vols = [[0, 2.2, 0, 2.1, 0.55], [0, 4.0, 0, 1.45, 0.55], [0, 5.6, 0, 0.8, 0.7]];
-    return { volumes: vols, tufos: Math.round(130*Math.max(0.5, folhagem)), tamanho: 0.95, paleta: [0x2c5e3b, 0x376a42, 0x2a5638, 0x41744a], base: 1.0, altura: 5.2, sombraBaixo: 0.55, mapa: 'agulhas',
+    return { volumes: vols, tufos: Math.round(130*Math.max(0.5, folhagem)), tamanho: 0.95, paleta: [0x386f45, 0x447c4c, 0x336542, 0x518955], base: 1.0, altura: 5.2, sombraBaixo: 0.55, mapa: 'agulhas',
       tronco: { pts: [[0, 0, 0], [0, 1.6, 0]], r0: 0.26, r1: 0.16, galhos: [] }, cascaCor: 0x45352a };
   }
   if(tipo === 'samambaia'){

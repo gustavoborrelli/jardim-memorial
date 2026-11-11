@@ -72,14 +72,17 @@ const FRAG = /* glsl */`
       float cl = dot(d, uLuaDir);
       float dl = smoothstep(0.99925, 0.99955, cl);
       // manchinhas no disco, pra não parecer um adesivo
-      float mare = texture2D(tRuido, d.xy*3.2).r;
-      cor += vec3(1.25, 1.27, 1.35) * dl * (0.82 + 0.28*mare) * uLua;
+      // (mares escuros e a borda um pouco mais apagada: antes o disco estourava
+      // num branco só, e as manchas não apareciam)
+      float mare = smoothstep(0.38, 0.66, texture2D(tRuido, d.xy*2.3 + 0.31).r);
+      float limbo = smoothstep(0.99925, 0.99985, cl);
+      cor += vec3(1.02, 1.04, 1.12) * dl * (1.0 - 0.3*mare) * (0.8 + 0.2*limbo) * uLua;
       cor += vec3(0.42, 0.5, 0.78) * (pow(max(cl, 0.0), 180.0)*0.32 + pow(max(cl, 0.0), 14.0)*0.05) * uLua;
     }
 
     // disco do sol em HDR: o bloom transforma isso em brilho
-    float limbo = smoothstep(cos(uSolTam*1.25), cos(uSolTam*0.82), dot(d, uSolDir));
-    cor += uSolCor * limbo * uSolDisco;
+    float limboSol = smoothstep(cos(uSolTam*1.25), cos(uSolTam*0.82), dot(d, uSolDir));
+    cor += uSolCor * limboSol * uSolDisco;
 
     // nuvens: plano no alto, projetado em perspectiva
     if(uNuvens > 0.5 && h > 0.0){

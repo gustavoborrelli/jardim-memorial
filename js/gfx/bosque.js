@@ -65,7 +65,7 @@ export function criarBosque(scene, { perfil, ceu, luz, chao, planta, lampadas = 
     for(let i = 0; i <= 24; i++){ const s = -L + 2*L*i/24; (i ? mureta.lineTo : mureta.moveTo).call(mureta, s, topo(s) - 0.02); }
     for(let i = 24; i >= 0; i--){ const s = -L + 2*L*i/24; mureta.lineTo(s, topo(s) + 0.34); }
     const geoMureta = new THREE.ExtrudeGeometry(mureta, { depth: 0.16, bevelEnabled: true, bevelThickness: 0.02, bevelSize: 0.02, bevelSegments: 2 });
-    const pedra = matPedra({ cor: 0xb3aa98, escala: 1.4, relevo: 0.03, musgo: 0.55, alturaMusgo: 0.5, manchas: 0.42, rugosidade: 0.92 });
+    const pedra = matPedra({ cor: 0xb9b0a0, escala: 1.4, relevo: 0.03, musgo: 0.5, alturaMusgo: 0.5, manchas: 0.42, pontos: 0.08, rugosidade: 0.92, blocos: 1, eixoBlocos: [P.eixo[0], P.eixo[1]] });
     const ponte = new THREE.Group();
     const m = new THREE.Mesh(corpo, pedra);
     m.castShadow = m.receiveShadow = true;
