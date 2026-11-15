@@ -106,8 +106,11 @@ export function createPresence({ scene, dogController, pausedState, canal = 'jar
   const STALE_MS = 15000; // rede de segurança se o 'leave' do Presence não chegar
   const MOVING_MS = 400;  // só anima perna/rabo se recebeu novidade recente
 
+  // devolve se algum visitante saiu do lugar neste quadro: a sombra dele precisa
+  // ser redesenhada junto (js/jogo.js)
   function updatePeers(dt, elapsed){
     const now = Date.now();
+    let algumAndando = false;
     for(const [id, p] of peers){
       if(now - p.lastSeen > STALE_MS){ removePeer(id); continue; }
 
@@ -122,12 +125,15 @@ export function createPresence({ scene, dogController, pausedState, canal = 'jar
 
       const moving = now - p.lastSeen < MOVING_MS;
       animarCao(p.parts, dt, elapsed, moving);
+      // depois da última mensagem ele ainda desliza até o alvo por alguns quadros
+      if(moving || Math.abs(p.target.x - p.group.position.x) + Math.abs(p.target.z - p.group.position.z) > 0.002) algumAndando = true;
     }
+    return algumAndando;
   }
 
   function update(dt, elapsed){
     sendMyPosition(dt);
-    updatePeers(dt, elapsed);
+    return updatePeers(dt, elapsed);
   }
 
   return { update };

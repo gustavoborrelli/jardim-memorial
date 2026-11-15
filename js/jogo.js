@@ -38,10 +38,13 @@ aplicarEscala();
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFShadowMap;
-// quase tudo que projeta sombra é parado: redesenhar o mapa dia sim, dia não custa
-// metade e ninguém percebe
+// quase tudo que projeta sombra é parado: com o jardim quieto, redesenhar o mapa
+// quadro sim, quadro não custa metade e ninguém percebe. Com um cachorro andando,
+// não: a sombra ficava um quadro para trás dele e tremia o passeio inteiro. Por
+// isso, enquanto alguém anda, o mapa é redesenhado em todo quadro (ver animate)
 renderer.shadowMap.autoUpdate = false;
 let quadroSombra = 0;
+const caoAntes = new THREE.Vector4(); // posição e giro do cachorro no quadro anterior
 appEl.insertBefore(renderer.domElement, appEl.firstChild);
 
 const pos = criarPos(renderer, scene, camera, perfil);
@@ -186,11 +189,16 @@ function animate(){
 
   const cao = dogController.getDog();
   world.update(dt, elapsed, camera, cao ? cao.position : null);
-  presence.update(dt, elapsed);
+  let andando = presence.update(dt, elapsed); // algum visitante andando
   menuUi.updateHints(hoveredEmptyPlot, hoveredStone);
   travessia.atualizar(pausedState.value || mapaUi.isOpen());
 
-  if((quadroSombra++ & 1) === 0) renderer.shadowMap.needsUpdate = true;
+  if(cao){
+    andando = andando || cao.position.x !== caoAntes.x || cao.position.y !== caoAntes.y
+      || cao.position.z !== caoAntes.z || cao.rotation.y !== caoAntes.w;
+    caoAntes.set(cao.position.x, cao.position.y, cao.position.z, cao.rotation.y);
+  }
+  if(andando || (quadroSombra++ & 1) === 0) renderer.shadowMap.needsUpdate = true;
   pos.render(elapsed);
 }
 
