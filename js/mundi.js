@@ -3,7 +3,8 @@
 /*
   O MAPA-MÚNDI (etapa 41)
   A primeira tela do site: os três jardins num vale, ligados pela Ponte do
-  Arco-Íris, do esboço aprovado em 2026-11-09. Cada jardim com a sua miniatura e a
+  Arco-Íris, do esboço aprovado em 2026-11-09. A folha ocupa a tela inteira e toma
+  o formato dela: deitada no computador, em pé no celular (ver `medidas`). Cada jardim com a sua miniatura e a
   conta de homenagens e vagas livres; ao norte, "terras por descobrir" na névoa.
 
   Tocar num jardim abre a ficha de pergaminho com "Ver as homenagens" (o mapa de
@@ -51,75 +52,168 @@ function criarMundi(){
   let contagens = null; // { memorial: n, lago: n, bosque: n } homenagens; null enquanto não chega
   let jogoPronto = false;
   let atual = null;
+  let aberta = null; // chave do jardim com a ficha aberta
+
+  /* ---------- a folha toma o formato da tela ----------
+     Com uma folha de formato fixo (100 × 132), num monitor o mapa ficava uma tira
+     estreita no meio da tela e o nome dos jardins saía com uns 10 px. Agora a folha
+     mede o espaço que tem: deitada no computador (os três jardins lado a lado), em
+     pé no celular (um jardim por andar, descendo a folha). O lado menor vale sempre
+     100; as posições acompanham o formato e os tamanhos, não. */
+  const entre = (v, a, b) => Math.max(a, Math.min(b, v));
+  function medidas(){
+    const r = svg.getBoundingClientRect();
+    const ar = r.width > 0 && r.height > 0 ? r.width/r.height : 1.6;
+    if(ar >= 1){
+      const H = 100, W = entre(100*ar, 125, 215);
+      const k = 1.7*entre(W/150, .85, 1); // janela quase quadrada: jardins um pouco menores
+      return {
+        deitada: true, W, H, k, s: 1, letraNome: 3.6, letraResumo: 2.8,
+        pos: { lago: [.2*W, 48], memorial: [.5*W, 67], bosque: [.8*W, 46] },
+        // o selo "você está aqui" fica no alto do jardim, entre os pés dos arco-íris
+        selo: { k, lago: [0, -9.3], memorial: [0, -9.3], bosque: [0, -9.3] },
+        titulo: { y: 2.6, k: 1.45 },
+        nevoa: { x: W/2, y: 20, rx: 23, ry: 6.5, letra: 3.4, sub: 2.3, linhas: ['o próximo jardim nasce quando estes encherem'] },
+        terra: [5, 10.5, W - 5, 96.5],
+        morros: [[.09, 21, 7], [.19, 15, 9], [.3, 12.5, 8], [.7, 12.5, 9], [.81, 15, 10], [.91, 21, 7]].map(([x, y, t]) => [x*W, y, t]),
+        rios: [[[.4, 11], [.37, 25], [.39, 38], [.35, 52], [.37, 66], [.33, 80], [.3, 97]].map(([x, y]) => [x*W, y])],
+        rosa: [9, 87, 5.5],
+      };
+    }
+    const W = 100, H = entre(100/ar, 125, 205);
+    // um jardim por andar: a miniatura (15,3 para cima) e o nome com a conta (27,5
+    // para baixo). O tamanho de tudo sai da altura que a folha tem
+    const s = entre((H - 12.6)/136.2, .72, 1.2), k = 1.8*s;
+    const hb = 2.6 + 7.8*s + 1.5; // onde o título acaba
+    const sobra = Math.max(1.5, (H - 9.6 - 136.2*s)/2);
+    const y1 = hb + 2 + 15.3*s, y2 = y1 + 42.8*s + sobra, y3 = y2 + 42.8*s + sobra;
+    // "terras por descobrir" ocupa o canto vazio ao lado do Bosque, não um andar
+    const nx = Math.min(30, 4 + 20*s), ny = hb + 15*s;
+    return {
+      deitada: false, W, H, k, s, letraNome: 4.6*s, letraResumo: 3.8*s,
+      pos: { bosque: [66, y1], lago: [34, y2], memorial: [64, y3] },
+      selo: { k: k*1.25, bosque: [9.5, -7], lago: [-8, -8.5], memorial: [-10.5, 1] },
+      titulo: { y: 2.6, k: 1.5*s },
+      nevoa: { x: nx, y: ny, rx: 20*s, ry: 8*s, letra: 3.8*s, sub: 2.9*s, linhas: ['o próximo jardim nasce', 'quando estes encherem'] },
+      terra: [4, hb - 1, 96, H - 4],
+      morros: [[9, hb + 5*s, 5.5], [20, hb + 2.5*s, 7], [91, hb + 3*s, 6]].map(([x, y, t]) => [x, y, t*s]),
+      // o rio sai da névoa, deságua no lago e segue do lago até o pé da folha
+      rios: [
+        [[22, hb + 6*s], [17, ny + 10*s], [22, y2 - 17*s], [30, y2 - 9*s]],
+        [[30, y2 + 3*s], [25, y2 + 14*s], [22, y2 + 30*s], [27, (y2 + y3)/2 + 12*s], [36, y3 + 2*s], [33, y3 + 16*s], [29, H - 5]],
+      ],
+      rosa: [10, H - 11, 4.5*s],
+    };
+  }
 
   /* ---------- o vale, as pontes, a névoa e os três jardins ---------- */
   function desenhar(){
     while(svg.firstChild) svg.firstChild.remove();
+    const M = medidas();
+    const { W, H, k } = M;
+    svg.setAttribute('viewBox', `0 0 ${W.toFixed(1)} ${H.toFixed(1)}`);
     defs(svg, P);
     const sorte = sorteador(31);
-    folha(svg, P, 2, 2, 96, 128);
+    folha(svg, P, 2, 2, W - 4, H - 4);
     const aguadas = el('g', { filter: `url(#${P}aquarela)` }, svg);
     const tinta = el('g', { filter: `url(#${P}tinta)`, fill: 'none', stroke: TINTA, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, svg);
     const enfeites = el('g', {}, svg);
     const alvos = el('g', {}, svg);
 
     // a terra: um vale verde de contorno natural, com morros ao norte
-    const terra = contorno(50, 70, 41, [[2, .07, .4], [3, .06, 1.7], [5, .035, .2], [7, .02, 2.5]], 60).map(([x, y]) => [x, 70 + (y - 70)*1.38]);
+    // (o contorno ondulado é esticado até caber exato na caixa: antes, a terra passava da folha)
+    const bruto = contorno(0, 0, 1, [[2, .07, .4], [3, .06, 1.7], [5, .035, .2], [7, .02, 2.5]], 60);
+    const lim = (i, f) => f(...bruto.map(p => p[i]));
+    const [bx0, bx1, by0, by1] = [lim(0, Math.min), lim(0, Math.max), lim(1, Math.min), lim(1, Math.max)];
+    const [tx0, ty0, tx1, ty1] = M.terra;
+    const T = { rx: (tx1 - tx0)/(bx1 - bx0), ry: (ty1 - ty0)/(by1 - by0) };
+    T.cx = tx0 - bx0*T.rx; T.cy = ty0 - by0*T.ry;
+    const terra = bruto.map(([x, y]) => [T.cx + x*T.rx, T.cy + y*T.ry]);
     el('path', { d: curva(terra, true), fill: '#b4cd8a', opacity: .55 }, aguadas);
     el('path', { d: curva(terra, true), 'stroke-width': .25, opacity: .8 }, tinta);
-    terra.forEach(([x, y], i) => { if(i % 2) return; const dx = x - 50, dy = (y - 70)/1.38, L = Math.hypot(dx, dy); el('line', { x1: x + dx/L*.6, y1: y + dy/L*.6*1.38, x2: x + dx/L*1.7, y2: y + dy/L*1.7*1.38, 'stroke-width': .12, opacity: .45 }, tinta); });
+    terra.forEach(([x, y], i) => {
+      if(i % 2) return;
+      const dx = (x - T.cx)/(T.rx*T.rx), dy = (y - T.cy)/(T.ry*T.ry), L = Math.hypot(dx, dy);
+      el('line', { x1: x + dx/L*.6, y1: y + dy/L*.6, x2: x + dx/L*1.7, y2: y + dy/L*1.7, 'stroke-width': .12, opacity: .45 }, tinta);
+    });
     // um rio que desce dos morros e passa entre os jardins
-    const rio = [[60, 15], [55, 30], [61, 45], [52, 60], [45, 72], [48, 84], [40, 98], [33, 112], [26, 124]];
-    el('path', { d: curva(rio), stroke: '#8fc3d2', 'stroke-width': 1.6, fill: 'none', opacity: .9 }, aguadas);
-    el('path', { d: curva(rio), 'stroke-width': .14, opacity: .5 }, tinta);
+    M.rios.forEach(rio => {
+      el('path', { d: curva(rio), stroke: '#8fc3d2', 'stroke-width': 1.6*Math.max(1, k/1.5), fill: 'none', opacity: .9 }, aguadas);
+      el('path', { d: curva(rio), 'stroke-width': .14, opacity: .5 }, tinta);
+    });
     // morros ao norte
-    [[20, 22, 7], [32, 16, 9], [46, 13, 8], [70, 14, 10], [84, 21, 7]].forEach(([x, y, s]) => {
-      const d = `M${x - s} ${y + s*.5} Q${x - s*.3} ${y - s*.55} ${x} ${y - s*.6} Q${x + s*.35} ${y - s*.5} ${x + s} ${y + s*.5}`;
+    M.morros.forEach(([x, y, t]) => {
+      const d = `M${x - t} ${y + t*.5} Q${x - t*.3} ${y - t*.55} ${x} ${y - t*.6} Q${x + t*.35} ${y - t*.5} ${x + t} ${y + t*.5}`;
       el('path', { d, fill: '#cdbb8e' }, aguadas);
       el('path', { d, 'stroke-width': .22 }, tinta);
-      el('path', { d: `M${x} ${y - s*.6} q${s*.12} ${s*.5} ${s*.05} ${s*.9}`, 'stroke-width': .1, opacity: .5 }, tinta);
+      el('path', { d: `M${x} ${y - t*.6} q${t*.12} ${t*.5} ${t*.05} ${t*.9}`, 'stroke-width': .1, opacity: .5 }, tinta);
     });
-    // árvores soltas pela terra, longe dos jardins
-    const longe = [[50, 104, 14], [26, 66, 12], [74, 62, 13], [50, 30, 14]];
-    for(let i = 0; i < 70; i++){
-      const x = 12 + sorte()*76, y = 30 + sorte()*92;
-      const dx = x - 50, dy = (y - 70)/1.38;
-      if(Math.hypot(dx, dy) > 37) continue;
-      if(longe.some(([cx, cy, r]) => Math.hypot(x - cx, y - cy) < r)) continue;
-      if(sorte() < .35) pinheiro(aguadas, tinta, x, y, 2.2 + sorte(), '#6f9752');
-      else arvore(aguadas, tinta, sorte, x, y, 1 + sorte()*.5, ['#7ea35a', '#8fb367', '#9cbc6e'][i % 3]);
+    // árvores soltas pela terra, longe dos jardins, dos nomes e da névoa
+    const N = M.nevoa;
+    const ocupado = (x, y) => Object.values(M.pos).some(([jx, jy]) => Math.abs(x - jx) < 17.5*k && y > jy - 12*k && y < jy + 17*k)
+      || Math.hypot((x - N.x)/(N.rx + 4), (y - N.y)/(N.ry + 4)) < 1;
+    const tArv = M.deitada ? 1.5 : 1.5*M.s;
+    for(let i = 0, n = Math.round(W*H/150); i < n; i++){
+      const x = 6 + sorte()*(W - 12), y = 6 + sorte()*(H - 12);
+      if(Math.hypot((x - T.cx)/T.rx, (y - T.cy)/T.ry) > .86 || ocupado(x, y)) continue;
+      if(sorte() < .35) pinheiro(aguadas, tinta, x, y, (2.2 + sorte())*tArv, '#6f9752');
+      else arvore(aguadas, tinta, sorte, x, y, (1 + sorte()*.5)*tArv, ['#7ea35a', '#8fb367', '#9cbc6e'][i % 3]);
     }
 
-    // as pontes do arco-íris: do Jardim Memorial para os outros dois, e entre eles
-    arcoIris(enfeites, P, [42.5, 95], [34.5, 67], 6.5, .62);
-    arcoIris(enfeites, P, [57.5, 95], [65.5, 64.5], 6.5, .62);
-    arcoIris(enfeites, P, [34, 55.5], [66, 52], 6.5, .5);
+    // as pontes do arco-íris: cada jardim ligado aos outros dois. Os pés saem do
+    // canto de cada miniatura (em medidas dela, vezes k)
+    const pe = (chave, dx, dy) => [M.pos[chave][0] + dx*k, M.pos[chave][1] + dy*k];
+    const ponte = (a, b, curvatura) => {
+      const vao = Math.hypot(b[0] - a[0], b[1] - a[1]);
+      arcoIris(enfeites, P, a, b, entre(vao*curvatura, 3.5, 10), Math.min(.62*k*.85, vao/24));
+    };
+    if(M.deitada){
+      ponte(pe('memorial', -7.5, -8), pe('lago', 7.5, 5), .3);
+      ponte(pe('memorial', 7.5, -8), pe('bosque', -7.5, 6.5), .3);
+      ponte(pe('lago', 7, -6.5), pe('bosque', -7, -6), .07);
+    } else {
+      ponte(pe('bosque', -9, 3), pe('lago', 4, -8.5), .16);
+      ponte(pe('lago', 9, 3), pe('memorial', -6, -8.3), .16);
+      ponte(pe('bosque', 9.5, 3), pe('memorial', 8.2, -7.5), .09);
+    }
 
     // terras por descobrir: névoa e nuvens onde os próximos jardins vão nascer
     const nevoa = el('g', {}, enfeites);
-    el('ellipse', { cx: 50, cy: 30, rx: 17, ry: 9, fill: '#fffaf0', opacity: .9, filter: `url(#${P}nevoa)` }, nevoa);
-    nuvem(nevoa, 42, 30, 2.4); nuvem(nevoa, 56, 28, 2.8); nuvem(nevoa, 50, 34, 2.2);
-    el('text', { x: 50, y: 29.6, 'text-anchor': 'middle', 'font-family': LETRA_ITALICO, 'font-style': 'italic', 'font-size': 2.4, fill: TINTA }, nevoa).textContent = 'terras por descobrir';
-    el('text', { x: 50, y: 32.6, 'text-anchor': 'middle', 'font-family': LETRA_MAO, 'font-size': 1.7, fill: TINTA, opacity: .8 }, nevoa).textContent = 'o próximo jardim nasce quando estes encherem';
+    el('ellipse', { cx: N.x, cy: N.y, rx: N.rx, ry: N.ry, fill: '#fffaf0', opacity: .9, filter: `url(#${P}nevoa)` }, nevoa);
+    nuvem(nevoa, N.x - N.rx*.62, N.y + N.ry*.1, N.ry*.36); nuvem(nevoa, N.x + N.rx*.6, N.y - N.ry*.2, N.ry*.42); nuvem(nevoa, N.x + N.rx*.1, N.y + N.ry*.72, N.ry*.3);
+    el('text', { x: N.x, y: N.y + N.letra*.05 - (N.linhas.length - 1)*N.sub*.6, 'text-anchor': 'middle', 'font-family': LETRA_ITALICO, 'font-style': 'italic', 'font-size': N.letra, fill: TINTA }, nevoa).textContent = 'terras por descobrir';
+    N.linhas.forEach((linha, i) => {
+      el('text', { x: N.x, y: N.y + N.letra*.05 - (N.linhas.length - 1)*N.sub*.6 + N.sub*1.25*(i + 1), 'text-anchor': 'middle', 'font-family': LETRA_MAO, 'font-size': N.sub, fill: TINTA, opacity: .85 }, nevoa).textContent = linha;
+    });
 
-    // os três jardins, cada um com o seu desenho
+    // os três jardins, cada um com o seu desenho (feito em volta de 0,0 e ampliado k vezes)
     function jardim(chave, desenho){
       const J = JARDINS[chave];
+      const [x, y] = M.pos[chave];
       const n = contagens ? contagens[chave] || 0 : null;
       const resumo = n === null ? '' : n ? `${n} ${n === 1 ? 'homenagem' : 'homenagens'} · ${J.vagas - n} ${J.vagas - n === 1 ? 'vaga livre' : 'vagas livres'}` : `${J.vagas} vagas livres`;
       const g = el('g', { class: 'mm-alvo', role: 'button', tabindex: 0, 'data-jardim': chave, 'aria-label': `${J.nome}${resumo ? ', ' + resumo : ''}` }, alvos);
-      el('circle', { cx: J.x, cy: J.y, r: 12, fill: 'transparent' }, g);
+      // a área de toque cobre a miniatura, o nome e a conta
+      el('rect', { x: x - 13*k, y: y - 10*k, width: 26*k, height: 10*k + 10.5*k + M.letraNome + M.letraResumo*1.6, fill: 'transparent' }, g);
       const corpo = el('g', { class: 'mm-corpo' }, g);
-      desenho(corpo, J.x, J.y);
-      faixa(corpo, J.x, J.y + 10.5, J.nome, 1.7, 30);
-      if(resumo) el('text', { x: J.x, y: J.y + 14.2, 'text-anchor': 'middle', 'font-family': LETRA_MAO, 'font-weight': 700, 'font-size': 1.75, fill: TINTA, stroke: '#f3e6c6', 'stroke-width': .5, 'paint-order': 'stroke' }, corpo).textContent = resumo;
+      desenho(el('g', { transform: `translate(${x.toFixed(2)} ${y.toFixed(2)}) scale(${k.toFixed(3)})` }, corpo), 0, 0);
+      // o nome nunca sai da folha: perto da borda, a faixa escorrega para dentro
+      const yFaixa = y + 10.5*k;
+      const medida = faixa(corpo, x, yFaixa, J.nome, M.letraNome, W - 8);
+      const larg = medida.getBBox().width;
+      const xFaixa = entre(x, 4 + larg/2, W - 4 - larg/2);
+      if(xFaixa !== x) medida.setAttribute('transform', `translate(${(xFaixa - x).toFixed(2)} 0)`);
+      if(resumo) el('text', { x: xFaixa, y: yFaixa + M.letraNome*.8 + M.letraResumo*1.05, 'text-anchor': 'middle', 'font-family': LETRA_MAO, 'font-weight': 700, 'font-size': M.letraResumo, fill: TINTA, stroke: '#f3e6c6', 'stroke-width': M.letraResumo*.3, 'paint-order': 'stroke' }, corpo).textContent = resumo;
       if(chave === JARDIM){
         // "você está aqui", com a patinha
-        const v = el('g', { transform: `translate(${J.x + 9.5} ${J.y - 8.5})` }, corpo);
+        // (perto da borda ele escorrega para dentro, para a legenda caber)
+        const ks = M.selo.k, [sx, sy] = M.selo[chave];
+        const v = el('g', { transform: `translate(${entre(x + sx*k, 4 + 4.9*ks, W - 4 - 4.9*ks).toFixed(2)} ${(y + sy*k).toFixed(2)}) scale(${ks.toFixed(3)})` }, corpo);
         el('circle', { r: 2.1, fill: '#e39a32', stroke: TINTA, 'stroke-width': .16 }, v);
         el('text', { y: .75, 'text-anchor': 'middle', 'font-size': 2.1 }, v).textContent = '🐾';
         el('text', { x: 0, y: -2.7, 'text-anchor': 'middle', 'font-family': LETRA_MAO, 'font-weight': 700, 'font-size': 1.6, fill: TINTA, stroke: '#f3e6c6', 'stroke-width': .45, 'paint-order': 'stroke' }, v).textContent = 'você está aqui';
       }
+      if(chave === aberta){ atual = g; g.classList.add('mm-ativo'); } // redesenho com a ficha aberta
       g.addEventListener('click', (e) => { e.stopPropagation(); abrirFicha(chave, g); });
       g.addEventListener('keydown', (e) => { if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); abrirFicha(chave, g); } });
     }
@@ -153,14 +247,14 @@ function criarMundi(){
       [[1, 0], [-3, 1.5], [2.5, 2]].forEach(([dx, dy]) => el('circle', { cx: cx + dx, cy: cy + dy, r: .25, fill: '#f6e27a' }, p));
     });
 
-    cartucho(enfeites, 50, 3.6, 34, 'Os Jardins', 'ligados pela Ponte do Arco-Íris');
-    rosaDosVentos(enfeites, 13, 119, 4.2);
+    cartucho(el('g', { transform: `translate(${W/2} ${M.titulo.y}) scale(${M.titulo.k.toFixed(3)})` }, enfeites), 0, 0, 34, 'Os Jardins', 'ligados pela Ponte do Arco-Íris');
+    rosaDosVentos(enfeites, ...M.rosa);
   }
 
   /* ---------- a ficha de pergaminho de um jardim ---------- */
   function abrirFicha(chave, g){
     if(atual) atual.classList.remove('mm-ativo');
-    atual = g; g.classList.add('mm-ativo');
+    atual = g; g.classList.add('mm-ativo'); aberta = chave;
     const J = JARDINS[chave];
     const n = contagens ? contagens[chave] || 0 : null;
     const resumo = n === null ? '' : n ? `${n} ${n === 1 ? 'homenagem' : 'homenagens'} · ${J.vagas - n} ${J.vagas - n === 1 ? 'vaga livre' : 'vagas livres'}` : `${J.vagas} vagas livres, à espera da primeira homenagem`;
@@ -189,7 +283,7 @@ function criarMundi(){
   function fecharFicha(){
     ficha.classList.remove('aberta');
     if(atual) atual.classList.remove('mm-ativo');
-    atual = null;
+    atual = null; aberta = null;
   }
   svg.addEventListener('click', fecharFicha);
 
@@ -225,6 +319,13 @@ function criarMundi(){
     const b = ficha.querySelector('[data-acao="passear"]');
     if(b && atual && atual.dataset.jardim === JARDIM){ b.disabled = !sim; b.textContent = sim ? 'Passear aqui' : 'preparando o jardim…'; }
   }
+
+  // a folha tem o formato da tela: se a janela muda ou o celular gira, redesenha
+  let espera = 0;
+  window.addEventListener('resize', () => {
+    clearTimeout(espera);
+    espera = setTimeout(() => { if(isOpen()) desenhar(); }, 120);
+  });
 
   document.getElementById('btnMundiFechar').addEventListener('click', fechar);
   fundo.addEventListener('click', e => { if(e.target === fundo && !isInicio()) fechar(); });

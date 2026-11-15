@@ -994,6 +994,22 @@ html.travessia-noite .travessia-texto{ color:#efe8ff; }
 /* ===== O MAPA-MÚNDI (etapa 41) ===== */
 .mm-fundo{ z-index:38; } /* acima do mapa da primeira tela (35), abaixo do menu (40) */
 .mm-fundo.mt-modo-inicio{ z-index:38; }
+/* por cima do mapa de um jardim ("← Os jardins"), o fundo é fechado: transparente,
+   a busca e os botões do mapa de baixo apareciam atrás da dica */
+.mm-fundo{ background:radial-gradient(ellipse at 50% 40%, #3a2c22 0%, #1d1510 100%); }
+/* a folha ocupa a tela inteira (js/mundi.js desenha no formato que encontrar); o
+   título já está no cartucho do desenho, então na primeira tela a etiqueta sai */
+.mm-fundo .mt-quadro{ width:100%; max-height:none; }
+.mm-fundo.mt-modo-inicio .mm-topo{ display:none; }
+.mm-fundo .mt-ficha{ max-width:620px; margin-inline:auto; }
+/* tela deitada: a dica e o Menu dividem uma linha só, e a folha fica com o resto */
+@media (orientation:landscape){
+  .mm-fundo .mt-quadro{ display:grid; grid-template-columns:150px 1fr 150px; grid-template-rows:auto minmax(0, 1fr) auto; }
+  .mm-fundo .mm-topo{ grid-column:1 / -1; grid-row:1; }
+  .mm-fundo .mt-svg{ grid-column:1 / -1; grid-row:2; height:100%; }
+  .mm-fundo .mt-dica{ grid-column:2; grid-row:3; align-self:center; }
+  .mm-fundo .mt-inicio-barra{ grid-column:3; grid-row:3; justify-content:flex-end; }
+}
 .mm-topo{ min-height:40px; }
 .mm-etiqueta{ flex:1; margin:0; text-align:center; font-family:'Caveat',cursive; font-size:20px; color:#ead9b6; }
 .mm-fundo .mt-inicio-barra{ justify-content:center; }
