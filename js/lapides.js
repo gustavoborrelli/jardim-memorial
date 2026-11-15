@@ -15,7 +15,7 @@ import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { supabase } from './supabaseClient.js';
 import { matPedra, matMadeira, torneado } from './gfx/materiais.js';
-import { malhaSDF, esculpir, caixa, elipsoide } from './gfx/sdf.js';
+import { malhaSDF, esculpir, caixa, elipsoide, smin } from './gfx/sdf.js';
 import { normalDeAltura, sorteador } from './gfx/ruido.js';
 import { escolherPerfil } from './gfx/qualidade.js';
 import { SECTIONS, VAGAS, dadosDaLinha } from './planta.js';
@@ -91,6 +91,10 @@ export function createLapides(scene, { vagas = VAGAS, placas = null, altura = nu
     { id:'estatua-dachshund', label:'Dachshund', icon:'🐕', raca:'dachshund' },
     { id:'estatua-caramelo',  label:'Caramelo',  icon:'🐕', raca:'caramelo' },
     { id:'estatua-gato',      label:'Gato',      icon:'🐈', raca:'siames', especie:'gato' },
+    // os pequenos têm uma lápide só deles: a estátua numa almofada (buildCushionMarker)
+    { id:'almofada-shihtzu',   label:'Shih-tzu',  icon:'🐶', raca:'shihtzu',   almofada:true },
+    { id:'almofada-yorkshire', label:'Yorkshire', icon:'🐶', raca:'yorkshire', almofada:true },
+    { id:'almofada-spitz',     label:'Lulu',      icon:'🐶', raca:'spitz',     almofada:true },
   ];
 
   /* os quatro campos e as vagas moram em planta.js (o mapa usa os mesmos) */
@@ -366,21 +370,63 @@ export function createLapides(scene, { vagas = VAGAS, placas = null, altura = nu
     return geoCache[k];
   }
 
-  // Ossinho: osso na vertical, sobre uma base — referência "Ossinho Clássico".
-  // Esculpido inteiro de uma vez, com as duas pontas iguais e um entalhe fundo em
-  // cada uma: é esse "V" que faz a forma ler como osso de desenho, sem dúvida.
-  const OSSO = { baixo: 0.2, alto: 1.32, meia: 0.245 };
+  // Ossinho: um osso deitado sobre a base, com a homenagem gravada ao longo da haste.
+  // O que faz um osso ler como osso: haste fina (metade da altura das pontas) e com
+  // cintura, dois nós redondos em cada ponta e o "V" fundo entre eles. A versão
+  // anterior ficava em pé, com a haste quase da largura das pontas e nós achatados
+  // que mal saíam dela: lia como uma tábua com calombos. Em pé, com a haste fina de
+  // um osso de verdade, a letra não cabia e a forma lembrava outra coisa; deitado é
+  // como o osso de brinquedo é desenhado, e a haste dá uma placa larga.
+  // A frente da haste é plana (é onde se grava); os nós são mais gordos que ela.
+  const OSSO = { centro: 0.56, meio: 0.5, haste: 0.185, no: 0.2, abre: 0.165, espessura: 0.105 };
   function geoOsso(){
     if(geoCache.osso) return geoCache.osso;
-    const { baixo, alto, meia } = OSSO;
-    // lóbulos largos e achatados saindo pouco da haste: biscoito de cachorro, e não
-    // duas bolas presas num cabo
-    const nos = [[0.24, alto-0.1], [-0.24, alto-0.1], [0.24, baixo+0.1], [-0.24, baixo+0.1]];
-    const lista = [[caixa(0, (baixo+alto)/2, 0, meia, (alto-baixo)/2-0.1, 0.115, 0.05), 0]];
-    nos.forEach(([x, y]) => lista.push([elipsoide(x, y, 0, 0.168, 0.158, 0.13), 0.075]));
-    const f = esculpir(lista);
-    geoCache.osso = malhaSDF(f, [[-0.5, baixo-0.14, -0.18], [0.5, alto+0.14, 0.18]], celula*0.85);
+    const { centro, meio, haste, no, abre, espessura } = OSSO;
+    const nos = [[meio, centro + abre], [meio, centro - abre], [-meio, centro + abre], [-meio, centro - abre]];
+    // silhueta, de frente: a haste (mais fina no meio) e os quatro nós
+    const silhueta = (x, y) => {
+      const t = x/meio;
+      let d = Math.max(Math.abs(y - centro) - haste*(0.84 + 0.16*t*t), Math.abs(x) - meio);
+      nos.forEach(([nx, ny]) => { d = smin(d, Math.hypot(x - nx, y - ny) - no, 0.03); });
+      return d;
+    };
+    const gordos = nos.map(([nx, ny]) => elipsoide(nx, ny, 0, no*0.99, no*0.99, 0.15));
+    const f = (x, y, z) => {
+      // a silhueta vira uma laje de borda arredondada...
+      const a = silhueta(x, y), b = Math.abs(z) - espessura;
+      let d = -smin(-a, -b, 0.05);
+      // ...e os nós engordam, como a cabeça de um osso
+      gordos.forEach(g => { d = smin(d, g(x, y, z), 0.035); });
+      return d;
+    };
+    const lado = meio + no + 0.06, alt = abre + no + 0.06;
+    geoCache.osso = malhaSDF(f, [[-lado, centro - alt, -0.2], [lado, centro + alt, 0.2]], celula*0.85);
     return geoCache.osso;
+  }
+
+  // Almofada dos cachorros pequenos: fofa no meio e fina na beirada, com os cantos
+  // puxados (é onde ficam as borlas) e uma covinha onde o cachorro se acomoda
+  const ALMOFADA = { l: 0.88, p: 0.72, alt: 0.19, canto: 0.11, cova: 0.02 };
+  function geoAlmofada(){
+    if(geoCache.almofada) return geoCache.almofada;
+    const { l, p, alt, canto, cova } = ALMOFADA;
+    const hx = l/2, hz = p/2, T = alt/2;
+    const f = (x, y, z) => {
+      // planta: retângulo de cantos redondos
+      const qx = Math.abs(x) - hx + canto, qz = Math.abs(z) - hz + canto;
+      const planta = Math.hypot(Math.max(qx, 0), Math.max(qz, 0)) + Math.min(Math.max(qx, qz), 0) - canto;
+      // espessura: cheia no meio, um quinto na costura
+      const u = Math.min(1, Math.abs(x)/hx), v = Math.min(1, Math.abs(z)/hz);
+      const cheia = Math.sqrt(Math.max(0, 1 - u*u))*Math.sqrt(Math.max(0, 1 - v*v));
+      const meia = T*(0.2 + 0.8*Math.pow(cheia, 0.6));
+      const r = Math.hypot(x/0.27, z/0.22);
+      const topo = meia - cova*Math.exp(-r*r);
+      const dy = y - T;
+      const corpo = dy > 0 ? dy - topo : -dy - meia;
+      return -smin(-planta, -corpo*0.8, 0.03);
+    };
+    geoCache.almofada = malhaSDF(f, [[-hx-0.04, -0.03, -hz-0.04], [hx+0.04, alt+0.04, hz+0.04]], celula*0.9);
+    return geoCache.almofada;
   }
 
   // Pata: pedra de caminho deitada na grama, almofada e dedos numa peça só, com o
@@ -469,24 +515,31 @@ export function createLapides(scene, { vagas = VAGAS, placas = null, altura = nu
     return comAlvoDeClique(g, 1.2, 1.5, 0.5, 0.75);
   }
 
-  // A cor escolhida aparece só na faixa fina perto do topo, uma "coleira" gravada.
+  // A cor escolhida aparece só em duas faixas finas na haste, junto dos nós: duas
+  // "coleiras" que emolduram a homenagem.
   function buildBoneMarker(data, cor){
     const g = new THREE.Group();
-    const base = sombra(new THREE.Mesh(geoBase(1.0, 0.2, 0.5), marbleMat));
+    const base = sombra(new THREE.Mesh(geoBase(1.46, 0.2, 0.52), marbleMat));
     base.position.y = 0.1;
     g.add(base);
     g.add(sombra(new THREE.Mesh(geoOsso(), marbleMat)));
 
-    const { baixo, alto, meia } = OSSO;
+    const { centro, meio, haste, no, abre, espessura } = OSSO;
     const accentMat = new THREE.MeshStandardMaterial({ color: cor, roughness: 0.48 });
-    const band = sombra(new THREE.Mesh(geoBase(meia*2+0.02, 0.074, 0.25), accentMat));
-    band.position.y = alto-0.3;
-    g.add(band);
+    const xFaixa = meio - no*0.92;
+    [-1, 1].forEach(s => {
+      const band = sombra(new THREE.Mesh(geoBase(0.058, haste*1.84 + 0.03, espessura*2 + 0.03), accentMat));
+      band.position.set(s*xFaixa, centro, 0);
+      g.add(band);
+    });
 
-    const plaque = makePlaque(data, new THREE.PlaneGeometry(0.48, 0.52));
-    plaque.position.set(0, (baixo+alto)/2 - 0.06, 0.1165);
+    // a homenagem ao longo da haste, entre as duas faixas
+    const pl = (xFaixa - 0.05)*2, pa = haste*1.66;
+    const plaque = makePlaque(data, new THREE.PlaneGeometry(pl, pa), pl/pa);
+    plaque.position.set(0, centro, espessura + 0.0015);
     g.add(plaque);
-    return comAlvoDeClique(g, 0.9, 1.6, 0.5, 0.8);
+    const alto = centro + abre + no;
+    return comAlvoDeClique(g, (meio + no)*2, alto, 0.5, alto/2);
   }
 
   function buildPawMarker(data, cor){
@@ -563,6 +616,78 @@ export function createLapides(scene, { vagas = VAGAS, placas = null, altura = nu
     return comAlvoDeClique(g, topo[0], y + E.altura*caber, topo[2], (y + E.altura*caber)/2);
   }
 
+  /* Almofada: a lápide dos cachorros pequenos (shih-tzu, yorkshire, lulu). Cachorro
+     de colo descansa em almofada: em vez do pedestal alto das estátuas, um soco
+     baixo de granito com a homenagem na frente e, em cima, uma almofada de mármore
+     com o cachorro acomodado nela. A cor escolhida vai no debrum e nas borlas dos
+     quatro cantos da almofada, e na coleira. */
+  const SOCO = { base: [1.1, 0.08, 0.94], dado: [0.96, 0.36, 0.8] };
+  const geoBorla = { no: new THREE.SphereGeometry(0.03, 12, 10), franja: new THREE.CylinderGeometry(0.014, 0.036, 0.1, 12, 1, true) };
+  function buildCushionMarker(data, cor, raca, pose, r1, r2){
+    const g = new THREE.Group();
+    const tom = STONE_TINTS[Math.floor(r2*3)];
+    const granito = matPedra({ cor: 0xb5ac9f, rugosidade: 0.84, escala: tom.escala, relevo: 0.0045, musgo: tom.musgo*0.6, alturaMusgo: 0.3, manchas: tom.manchas });
+    const { base, dado } = SOCO;
+    let y = 0;
+    [base, dado].forEach(([l, a, p]) => {
+      const m = sombra(new THREE.Mesh(geoBase(l, a, p), granito));
+      m.position.y = y + a/2;
+      y += a;
+      g.add(m);
+    });
+
+    const { l, p, alt, canto, cova } = ALMOFADA;
+    const almofada = sombra(new THREE.Mesh(geoAlmofada(), marbleMat));
+    almofada.position.y = y - 0.012;
+    g.add(almofada);
+    const yCostura = y - 0.012 + alt/2;
+
+    // debrum: um cordão na cor escolhida, pela costura da almofada
+    const accentMat = new THREE.MeshStandardMaterial({ color: cor, roughness: 0.55 });
+    const hx = l/2, hz = p/2, pontos = [];
+    const N = 12;
+    [[1, 1], [-1, 1], [-1, -1], [1, -1]].forEach(([sx, sz], q) => {
+      for(let i = 0; i <= N; i++){
+        const ang = (q + i/N)*Math.PI/2;
+        pontos.push(new THREE.Vector3(sx*(hx - canto) + Math.cos(ang)*canto, yCostura, sz*(hz - canto) + Math.sin(ang)*canto));
+      }
+    });
+    const cordao = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pontos, true, 'centripetal'), 120, 0.014, 8, true), accentMat);
+    cordao.castShadow = true;
+    g.add(cordao);
+    // borlas: um nó e uma franja pendurada em cada canto
+    [[1, 1], [-1, 1], [-1, -1], [1, -1]].forEach(([sx, sz]) => {
+      const cx = sx*(hx - canto*0.29), cz = sz*(hz - canto*0.29);
+      const no = new THREE.Mesh(geoBorla.no, accentMat);
+      no.position.set(cx + sx*0.012, yCostura, cz + sz*0.012);
+      const franja = new THREE.Mesh(geoBorla.franja, accentMat);
+      franja.position.set(cx + sx*0.03, yCostura - 0.062, cz + sz*0.03);
+      franja.rotation.set(sz*0.3, 0, -sx*0.3);
+      [no, franja].forEach(m => { m.castShadow = true; g.add(m); });
+    });
+
+    const E = geoEstatua(raca, celula*1.25, pose);
+    const caber = Math.min((l - 0.08)/E.largura, (p - 0.06)/E.profundidade, 0.72/E.altura);
+    const est = new THREE.Group();
+    est.add(sombra(new THREE.Mesh(E.corpo, estatuaMat)));
+    est.add(sombra(new THREE.Mesh(E.coleira, accentMat)));
+    const medalha = new THREE.Mesh(E.medalha, charmMat);
+    medalha.castShadow = true;
+    est.add(medalha);
+    est.scale.set(caber*(r1 < 0.5 ? -1 : 1), caber, caber);
+    // afunda um pouco na covinha: a almofada cede com o peso
+    const yEst = y - 0.012 + alt - cova - 0.012;
+    est.position.y = yEst;
+    g.add(est);
+
+    const pl = dado[0] - 0.14, pa = dado[1] - 0.07;
+    const plaque = makePlaque(data, new THREE.PlaneGeometry(pl, pa), pl/pa);
+    plaque.position.set(0, base[1] + dado[1]/2, dado[2]/2 + 0.002);
+    g.add(plaque);
+    const altura = yEst + E.altura*caber;
+    return comAlvoDeClique(g, base[0], altura, base[2], altura/2);
+  }
+
   function buildStone(plot, data){
     const formato = data.formato || 'classica';
     const cor = data.cor || PALETTE[0].hex;
@@ -576,6 +701,7 @@ export function createLapides(scene, { vagas = VAGAS, placas = null, altura = nu
     const estatua = FORMATOS.find(f => f.raca && f.id === formato);
     if(formato === 'ossinho') g = buildBoneMarker(data, cor);
     else if(formato === 'pata') g = buildPawMarker(data, cor);
+    else if(estatua && estatua.almofada) g = buildCushionMarker(data, cor, estatua.raca, poseDaRaca(estatua.raca), r1, r2);
     else if(estatua) g = buildStatueMarker(data, cor, estatua.raca, poseDaRaca(estatua.raca), r1, r2);
     else g = buildClassicStone(data, cor, r1, r2);
 

@@ -16,6 +16,7 @@ import * as THREE from 'three';
 import { malhaSDF, esculpir, esfera, elipsoide, cone, corrente } from './sdf.js';
 import { escolherPerfil } from './qualidade.js';
 import { GATOS, receitaGato } from './gatos.js';
+import { PEQUENOS, receitaPequeno } from './pequenos.js';
 
 const lin = (hex) => { const c = new THREE.Color(hex); return [c.r, c.g, c.b]; };
 const mixv = (a, b, t, o) => { o[0] = a[0]+(b[0]-a[0])*t; o[1] = a[1]+(b[1]-a[1])*t; o[2] = a[2]+(b[2]-a[2])*t; return o; };
@@ -33,16 +34,18 @@ const achatarDir = (f, [cx, cy, cz], [nx, ny, nz], k) => (x, y, z) => {
 };
 
 /* ============ material do pelo ============ */
-function materialPelo({ comprimento, densidade, cascas, rim = 0.32 }){
+function materialPelo({ comprimento, densidade, cascas, rim = 0.32, cai = [0, -0.46, -0.62] }){
   const m = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.82, metalness: 0, envMapIntensity: 1.15, alphaToCoverage: true });
   m.onBeforeCompile = (s) => {
     s.uniforms.uComp = { value: comprimento };
     s.uniforms.uDens = { value: densidade };
     s.uniforms.uRim = { value: rim };
+    s.uniforms.uCai = { value: new THREE.Vector3(...cai) };
     s.vertexShader = s.vertexShader
       .replace('#include <common>', /* glsl */`#include <common>
         attribute float aPelo;
         uniform float uComp;
+        uniform vec3 uCai;
         varying float vS;
         varying vec3 vOP;
         varying float vPelo;
@@ -53,9 +56,10 @@ function materialPelo({ comprimento, densidade, cascas, rim = 0.32 }){
         vOP = position;
         vPelo = aPelo;
         float l_ = aPelo*uComp;
-        // penteado: empurra pra fora, depois cai um pouco e corre pra trás
+        // penteado: empurra pra fora, depois cai um pouco e corre pra trás (quanto
+        // cai é da raça: o pelo do shih-tzu escorre reto, o do lulu fica armado)
         transformed += objectNormal*l_*s_;
-        transformed += vec3(0.0, -0.46, -0.62)*l_*s_*s_;
+        transformed += uCai*l_*s_*s_;
       `);
     s.fragmentShader = s.fragmentShader
       .replace('#include <common>', /* glsl */`#include <common>
@@ -99,9 +103,11 @@ function materialPelo({ comprimento, densidade, cascas, rim = 0.32 }){
   return m;
 }
 
-/* ============ as quatro raças (os gatos moram em gatos.js) ============ */
+/* ============ as quatro raças grandes (os gatos moram em gatos.js; shih-tzu,
+   yorkshire e spitz, em pequenos.js) ============ */
 export function receita(raca){
   if(GATOS.includes(raca)) return receitaGato(raca);
+  if(PEQUENOS.includes(raca)) return receitaPequeno(raca);
   if(raca === 'golden'){
     const OURO = lin(0xe2b066), MEL = lin(0xc48a3e), CREME = lin(0xf6e6c4), NARIZ_COR = lin(0x8d6236);
     const olhos = { x: 0.082, y: 0.868, z: 0.655, r: 0.041 };
@@ -454,7 +460,7 @@ function esculturas(raca, perfil){
     const piv = R.orelha.pivo(s);
     const g = malhaSDF(R.orelha.forma(s), R.orelha.caixa(s), fin*1.1, {
       cor: opCor(R.corOrelha || ((x, y, z, o) => R.cor(x, y, z, o))),
-      atributos: opPelo(() => 0.85),
+      atributos: opPelo(() => R.peloOrelha || 0.85),
     });
     g.translate(-piv[0], -piv[1], -piv[2]);
     return { geo: g, piv };
@@ -514,7 +520,7 @@ function materiaisCorpo(raca, R, perfil){
   // sem cascas (perfil baixo), a própria malha usa a cor cheia; com cascas ela é a
   // "pele", mais escura, por baixo dos fios
   if(perfil.pelos > 0) base.color.setScalar(0.62);
-  const pelo = perfil.pelos > 0 ? materialPelo({ comprimento: R.comprimento, densidade: R.densidade, cascas: perfil.pelos }) : null;
+  const pelo = perfil.pelos > 0 ? materialPelo({ comprimento: R.comprimento, densidade: R.densidade, cascas: perfil.pelos, cai: R.cai }) : null;
   const res = { base, pelo };
   matsCorpo.set(k, res);
   return res;
@@ -630,10 +636,29 @@ export function construirCao(raca){
   }
 
   const tongue = new THREE.Mesh(geoLingua, matLingua);
-  tongue.position.set(R.lingua.pos[0]-P[0], R.lingua.pos[1]-P[1]+0.034, R.lingua.pos[2]-P[2]);
+  tongue.position.set(R.lingua.pos[0]-P[0], R.lingua.pos[1]-P[1]+(R.lingua.sobe ?? 0.034), R.lingua.pos[2]-P[2]);
   tongue.scale.set(R.lingua.esc[0], 0.001, R.lingua.esc[2]);
   tongue.userData.base = R.lingua.esc;
   head.add(tongue);
+
+  // laço no topete (shih-tzu e yorkshire): duas abas e o nó, na cor da receita
+  if(R.laco){
+    const L = R.laco, mat = matDaCor(L.cor, { roughness: 0.55 });
+    const laco = new THREE.Group();
+    laco.position.set(L.pos[0]-P[0], L.pos[1]-P[1], L.pos[2]-P[2]);
+    [-1, 1].forEach(s => {
+      const aba = new THREE.Mesh(geoBrilho, mat);
+      aba.scale.set(L.tam, L.tam*0.62, L.tam*0.4);
+      aba.position.x = s*L.tam*0.95;
+      aba.rotation.z = s*0.35;
+      aba.castShadow = true;
+      laco.add(aba);
+    });
+    const no = new THREE.Mesh(geoBrilho, mat);
+    no.scale.setScalar(L.tam*0.42);
+    laco.add(no);
+    head.add(laco);
+  }
 
   const ears = E.orelhas.map(({ geo, piv }) => {
     const pp = parte(geo, mats, cascas);
@@ -663,6 +688,9 @@ export function construirCao(raca){
     breed: raca,
     especie: R.especie || 'cao',
     velocidade: R.velocidade || 1,
+    // cachorro pequeno (pequenos.js): passo mais rápido, quique e abano menores
+    pequeno: !!R.pequeno,
+    cadencia: R.cadencia || 1, porte: R.porte || 1, abano: R.abano || 1,
     // estado de animação
     anim: { blink: 1.5 + Math.random()*3, piscando: 0, lingua: 0, olhar: 0, olharAlvo: 0, olharTimer: 1, passo: 0, peso: 0 },
   };
@@ -674,7 +702,7 @@ export function animarCao(p, dt, elapsed, andando){
   const a = p.anim;
   a.peso += ((andando ? 1 : 0) - a.peso)*Math.min(1, dt*7);
   const k = a.peso;
-  if(andando) a.passo += dt*9.5;
+  if(andando) a.passo += dt*9.5*p.cadencia;
 
   // trote: pernas em diagonal se movem juntas
   p.legs.forEach((leg, i) => {
@@ -685,12 +713,12 @@ export function animarCao(p, dt, elapsed, andando){
 
   // corpo: sobe e desce no dobro da passada, respira quando parado
   const respira = Math.sin(elapsed*2.1)*0.5 + 0.5;
-  p.body.position.y = p.bodyBaseY + Math.abs(Math.sin(a.passo))*0.016*k + respira*0.005*(1-k);
+  p.body.position.y = p.bodyBaseY + (Math.abs(Math.sin(a.passo))*0.016*k + respira*0.005*(1-k))*p.porte;
   p.body.rotation.x = Math.sin(a.passo + 0.6)*0.012*k;
   p.body.rotation.z = Math.sin(a.passo)*0.016*k;
 
   // rabo: abana rápido quando anda, de leve quando para
-  p.tail.rotation.y = Math.sin(elapsed*(k > 0.5 ? 13 : 5))*(0.2 + 0.32*k);
+  p.tail.rotation.y = Math.sin(elapsed*(k > 0.5 ? 13 : 5))*(0.2 + 0.32*k)*p.abano;
   p.tail.rotation.x = Math.sin(elapsed*2.0)*0.03;
 
   // cabeça: acompanha o passo; parada, olha em volta de vez em quando

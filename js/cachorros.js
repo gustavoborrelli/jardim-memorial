@@ -3,9 +3,9 @@
 /*
   CACHORROS
   Controla o movimento do companheiro escolhido (cachorro ou gato): teclado (WASD / setas), a câmera
-  que gira ao redor dele (touchpad / roda do mouse / toque). Os modelos das quatro
-  raças (Pastor Alemão, Dachshund, Golden Retriever, Vira-lata Caramelo) e a
-  animação moram em js/gfx/caes.js.
+  que gira ao redor dele (touchpad / roda do mouse / toque). Os modelos das raças
+  (Pastor Alemão, Dachshund, Golden Retriever, Vira-lata Caramelo; os pequenos em
+  js/gfx/pequenos.js; os gatos em js/gfx/gatos.js) e a animação moram em js/gfx/caes.js.
 
   createDogController(scene, renderer, opts) devolve as funções que
   main.js usa a cada frame para mover o cachorro e atualizar a câmera.
@@ -384,8 +384,9 @@ export function createDogController(scene, renderer, { isPaused, plaza, bounds, 
       return;
     }
 
-    // gato tem metade do tamanho: câmera mais perto e mais baixa, senão ele some na tela
-    const gato = dogParts && dogParts.especie === 'gato';
+    // gato e cachorro pequeno têm metade do tamanho: câmera mais perto e mais baixa,
+    // senão eles somem na tela
+    const gato = dogParts && (dogParts.especie === 'gato' || dogParts.pequeno);
     const target = new THREE.Vector3(tx, (gato ? 0.55 : 0.9) + (dog ? dog.position.y : 0), tz);
     if(foco && dog){
       target.x += (foco.x - tx)*focoPeso;

@@ -1041,6 +1041,52 @@ flores/velas nas lápides dos outros (MVP family & friends).
     Lago e no Bosque (computador) e no Memorial (celular). A subida continua igual.
     Falta o teste dele no celular.
 
+48. 🔜 **Shih-tzu, Yorkshire e Spitz Alemão (lulu); lápide de almofada; osso refeito**
+    (branch `racas-pequenas`) — pedido do Gustavo em 2026-11-15: as três raças "nas
+    lápides e no modo passear", "uma nova ideia de lápide para estes cachorros, pra
+    variar", e o ossinho, que "não está muito parecido com um osso".
+    - **As três raças** moram em `js/gfx/pequenos.js`, num molde só (`montarPequeno`),
+      como os gatos. Têm metade do tamanho de um golden e o que as separa é o pelo:
+      por isso o volume do pelo é esculpido junto (a juba do lulu, a saia de pelo do
+      shih-tzu e do yorkshire, o topete) e a silhueta se mantém no perfil baixo, sem
+      as cascas. Spitz: bola laranja, focinho de raposa, rabo em pluma sobre o dorso.
+      Shih-tzu: branco e dourado, cara achatada, orelha caída, topete com laço azul.
+      Yorkshire: manto azul-aço, cabeça e patas douradas, orelha em V, laço vermelho.
+    - `caes.js` ganhou o que faltava para cachorro pequeno: para onde o fio do pelo
+      cai é da raça (`cai`: o do shih-tzu escorre, o do lulu fica armado), laço no
+      topete, língua proporcional, passo mais rápido e quique menor (`cadencia`,
+      `porte`, `abano`). A câmera usa o enquadramento do gato (`pequeno`).
+    - O pelo dos pequenos pede densidade alta (220 a 240): com a dos grandes (150) o
+      fio fica grosso para o tamanho do corpo e o cachorro sai espetado.
+    - **Lápide de almofada** (`buildCushionMarker`, formatos `almofada-shihtzu`,
+      `almofada-yorkshire`, `almofada-spitz`): cachorro de colo descansa em almofada.
+      Um soco baixo de granito com a homenagem na frente e, em cima, uma almofada de
+      mármore (fofa no meio, fina na costura, com covinha) com a estátua. A cor
+      escolhida vai no debrum, nas borlas dos quatro cantos e na coleira. Lulu e
+      yorkshire sentados, shih-tzu deitado. Nas estátuas dos pequenos o rabo é o da
+      própria raça (`raboProprio`) e o pelo engorda a pedra só em parte (`inflar`):
+      inteiro, virava uma bola sem cara.
+    - Tentativa descartada (mesmo dia): ele achou que a estátua do yorkshire "parece
+      uma tromba", as orelhas "estranhas" e a coleira do lulu "esquisita". Fiz uma
+      rodada (focinho do yorkshire encurtado, orelha menor, rabo enrolado no chão,
+      coleira dos dois na base do pescoço) e, vendo as fotos, ele preferiu como
+      estava: "as opções antigas estavam melhores, volte". Ficou a primeira versão.
+    - **Ossinho**: era um osso em pé com a haste quase da largura das pontas e nós
+      achatados (lia como tábua com calombos). Agora é um osso deitado, de haste fina
+      com cintura, dois nós gordos em cada ponta e o "V" fundo entre eles; a homenagem
+      vai ao longo da haste, numa placa larga, entre duas faixas na cor escolhida. A
+      primeira tentativa manteve o osso em pé: com a haste fina a letra não cabia e a
+      silhueta, com dois nós redondos na base, lembrava outra coisa. As homenagens que
+      já usam o ossinho mudam de forma.
+    - `supabase/020_lapide_almofada.sql`: a constraint de formato com os três novos.
+      **Rodar no Supabase antes do deploy**, senão o banco recusa as lápides novas.
+    Conferido no jogo (Playwright): as três raças nos perfis alto e baixo, de quatro
+    ângulos; retrato das dez raças no menu; passeio e 1ª pessoa com o lulu no celular;
+    as quatro lápides (osso e três almofadas) nos perfis alto e médio; `npm run build`.
+    Não testado em aparelho de verdade. Pontos fracos: sem pelo (perfil baixo) o lulu
+    fica menos bola e o shih-tzu lembra um beagle pequeno; o azul do yorkshire sai
+    quase preto na sombra.
+
 ## Ideias soltas (não decidido ainda)
 
 - A leva de dinamismo social planejada em conjunto está completa: (1)

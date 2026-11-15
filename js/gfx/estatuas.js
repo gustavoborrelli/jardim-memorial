@@ -77,6 +77,39 @@ const MEDIDAS = {
     cabeca: 1.2,
     sentado: { inclina: 0.78, giro: 0.45, ergue: 0.02, recua: 0.06, sobe: 0.012 },
   },
+  // os pequenos (pequenos.js) vão na lápide de almofada. Metade do tamanho de um
+  // cachorro grande: grade mais fina, como no gato. O rabo é o deles mesmo (a pluma
+  // sobre o dorso é metade da raça), não o rabo enrolado no chão das outras estátuas.
+  spitz: {
+    frente: { r1: 0.046, r2: 0.027, pe: [0.031, 0.021, 0.037], ante: 0.11 },
+    tras: { coxa: 0.062, canela: 0.026, pe: [0.031, 0.021, 0.038] },
+    raboProprio: true, inflar: 0.75,
+    pescoco: [[0, 0.24, 0.1], [0, 0.32, 0.16]],
+    celula: 0.5,
+    orelha: { desce: 0, abre: 0, pelo: 1.6 },
+    cabeca: 1.15,
+    sentado: { inclina: 0.6, giro: 0.45, ergue: 0.04 },
+  },
+  yorkshire: {
+    frente: { r1: 0.04, r2: 0.024, pe: [0.028, 0.019, 0.034], ante: 0.1 },
+    tras: { coxa: 0.052, canela: 0.023, pe: [0.028, 0.019, 0.035] },
+    raboProprio: true, inflar: 0.5,
+    pescoco: [[0, 0.21, 0.08], [0, 0.275, 0.135]],
+    celula: 0.5,
+    orelha: { desce: 0, abre: 0, pelo: 1.1 },
+    cabeca: 1.18,
+    sentado: { inclina: 0.66, giro: 0.45, ergue: 0.04 },
+  },
+  shihtzu: {
+    frente: { r1: 0.05, r2: 0.032, pe: [0.036, 0.024, 0.042], ante: 0.11 },
+    tras: { coxa: 0.066, canela: 0.03, pe: [0.036, 0.024, 0.043] },
+    raboProprio: true, inflar: 0.5,
+    pescoco: [[0, 0.24, 0.11], [0, 0.31, 0.17]],
+    celula: 0.5,
+    orelha: { desce: 0, abre: 0, pelo: 1.2 },
+    cabeca: 1.1,
+    deitado: { giro: 0.85, ergue: 0.08 },
+  },
   dachshund: {
     frente: { r1: 0.07, r2: 0.04, pe: [0.05, 0.034, 0.066], ante: 0.2 },
     tras: { coxa: 0.082, canela: 0.042, pe: [0.05, 0.034, 0.068] },
@@ -203,7 +236,9 @@ function campoEstatua(raca, pose){
   const partes = [];
   let caixa = null;
   // quanto o pelo engorda a pedra; a caixa de cada parte cresce o mesmo tanto
-  const L = R.comprimento*0.55;
+  // (`inflar`: nos pequenos o pelo é comprido para o tamanho do corpo; inteiro, a
+  // pedra virava uma bola sem cara)
+  const L = R.comprimento*0.55*(M.inflar ?? 1);
   const folga = L*2.4 + (M.mechas ? M.mechas.amp : 0);
   const crescer = ([a, b]) => [a.map(v => v - folga), b.map(v => v + folga)];
   // a coleira procura o pescoço só no tronco e na cabeça: com as orelhas, a do
@@ -324,7 +359,11 @@ function campoEstatua(raca, pose){
 
   // rabo: desce até o chão e se enrola por fora da coxa, do lado de quem chega;
   // sentado, vem para a frente, na direção das patas
-  {
+  if(M.raboProprio){
+    const peloRabo = R.peloRabo ? R.peloRabo() : 1;
+    const cx = crescer(R.rabo.caixa);
+    somar(corpo.campo(limitada((x, y, z) => R.rabo.forma(x, y, z) - L*peloRabo, cx)), caixaCorpo(cx), 0.04);
+  } else {
     const Rb = M.rabo, k = Rb.comp/0.5;
     const [, y0, rz] = corpo.ponto(R.rabo.pivo);
     const fora = Math.abs(quadril[0]) + T.coxa*(sentado ? 1.3 : 1.15) + Rb.r*0.6;
