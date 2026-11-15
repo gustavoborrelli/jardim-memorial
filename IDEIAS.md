@@ -1028,6 +1028,19 @@ flores/velas nas lápides dos outros (MVP family & friends).
     testado: celular deitado e aparelho de verdade. O mapa de dentro de cada jardim
     continua na coluna de 620 px.
 
+47. 🔜 **Câmera acima da Ponte do Arco-Íris na descida** (branch `camera-na-ponte`) —
+    pedido do Gustavo em 2026-11-15 ("quando desço do arco-íris a câmera entra embaixo
+    do arco-íris"). Na chegada a câmera fica atrás do cachorro, isto é, mais acima na
+    ponte, e no trecho mais inclinado a ponte sobe mais depressa do que a câmera: ela
+    afundava até 1,54 m por baixo da faixa de cores e a tela ficava coberta pelo
+    arco-íris visto de baixo. Agora, enquanto o cachorro anda numa rota com altura
+    própria (a travessia), `updateCamera` em `js/cachorros.js` segura a câmera 1,1 m
+    acima do caminho da ponte (`FOLGA_SOBRE_A_PONTE`). Fora da travessia nada muda.
+    Medido simulando a chegada (sessionStorage `jardimTravessia`): antes, 103 de 285
+    quadros da descida com a câmera embaixo da ponte; depois, nenhum, no Memorial, no
+    Lago e no Bosque (computador) e no Memorial (celular). A subida continua igual.
+    Falta o teste dele no celular.
+
 ## Ideias soltas (não decidido ainda)
 
 - A leva de dinamismo social planejada em conjunto está completa: (1)

@@ -153,6 +153,7 @@ export function createDogController(scene, renderer, { isPaused, plaza, bounds, 
   // na chegada a câmera mira o meio entre o cachorro e a pedra (`foco`) e se afasta
   // um pouco: mirando só o cachorro, a pedra saía cortada na tela de celular em pé
   const CAM_DIST = 5.2;
+  const FOLGA_SOBRE_A_PONTE = 1.1; // quanto a câmera fica acima do caminho da ponte
   let foco = null, focoPeso = 0, camDistAlvo = CAM_DIST;
   const distanciaChegada = () => (window.innerHeight > window.innerWidth ? 7.2 : 6.0);
   // `camera`: azimute em que a câmera termina (padrão: atrás do cachorro). Quem chama
@@ -398,6 +399,13 @@ export function createDogController(scene, renderer, { isPaused, plaza, bounds, 
     let cy = dog ? target.y + dist*Math.sin(camElevation) + (gato ? 0.75 : 1.1) : 7.4;
     // com relevo, a câmera nunca entra no morro atrás do cachorro
     if(terreno) cy = Math.max(cy, terreno.altura(cx, cz) + 0.7);
+    // nem embaixo da Ponte do Arco-Íris: na descida a câmera fica atrás do cachorro,
+    // isto é, mais acima na ponte, e ali a ponte sobe mais depressa do que a câmera
+    // (no trecho mais inclinado ela ficava 1,5 m abaixo da faixa de cores)
+    if(rota && rota.altura){
+      const ponte = rota.altura(cx, cz);
+      if(ponte !== null) cy = Math.max(cy, ponte + FOLGA_SOBRE_A_PONTE);
+    }
     camera.position.set(cx,cy,cz);
     camera.lookAt(target.x, target.y+0.3, target.z);
   }
