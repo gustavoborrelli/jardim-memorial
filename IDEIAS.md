@@ -989,6 +989,45 @@ flores/velas nas lápides dos outros (MVP family & friends).
     Conferido: `npm run build` e os três jardins nos perfis alto, médio e baixo, sem
     erro no console. Falta o teste dele no celular.
 
+45. 🔜 **Sombra fluida no passeio** (branch `sombra-fluida`) — pedido do Gustavo em
+    2026-11-15 ("a sombra está travando quando você anda"). O mapa de sombra era
+    redesenhado quadro sim, quadro não (`js/jogo.js`), então a sombra do cachorro
+    ficava um quadro para trás dele e tremia o passeio inteiro. Agora, enquanto o
+    cachorro de quem joga ou o de um visitante se move (`presence.update` devolve
+    isso), o mapa é redesenhado em todo quadro; com o jardim parado, segue alternado.
+    Medido no jogo rodando: antes, 73 de 147 quadros andando saíam com a sombra
+    atrasada; depois, nenhum de 106, e 60 quadros por segundo nos três perfis no Mac
+    (o redesenho custa de 0,6 a 2,7 ms). A parte dos visitantes não foi exercitada
+    com um visitante de verdade. Falta o teste dele no celular.
+
+46. 🔜 **Mapa dos jardins de tela cheia** (branch `mapa-mundi-tela-cheia`) — pedido do
+    Gustavo em 2026-11-15: no computador o mapa era pequeno e mal dava para ler o
+    nome dos jardins; ele pediu uma cartolina deitada que ocupasse a tela, e outra
+    saída para o celular.
+    - A folha tinha formato fixo (100 × 132) numa coluna de 620 px. Agora
+      `medidas()` em `js/mundi.js` mede o espaço do SVG e escolhe: **deitada** no
+      computador (Lago, Memorial e Bosque lado a lado) ou **em pé** no celular (um
+      jardim por andar: Bosque, Lago, Memorial). O lado menor vale sempre 100; as
+      posições acompanham o formato e os tamanhos, não.
+    - Nome dos jardins: de ~10 px para 25 px em 1366×768 (36 px em 1920×1080); no
+      iPhone 14, de ~6 px para 17 px; no iPhone SE, 14 px.
+    - No celular, "terras por descobrir" foi para o canto vazio ao lado do Bosque
+      (não ocupa um andar) e o rio deságua no lago: correndo entre os jardins, ele
+      ficava embolado com os arco-íris.
+    - As miniaturas são desenhadas em volta de (0,0) e ampliadas; a terra é esticada
+      até caber exata na folha (antes passava da borda); o selo "você está aqui" e a
+      faixa do nome escorregam para dentro quando chegam perto da borda.
+    - Na primeira tela a etiqueta de cima saiu (o título já está no cartucho); em
+      tela deitada a dica e o "Menu" dividem uma linha só.
+    - Redesenha quando a janela muda ou o celular gira, mantendo a ficha aberta.
+    - Defeito consertado junto: aberto pelo "← Os jardins" do mapa de um jardim, o
+      múndi tinha fundo transparente e a busca e os botões do mapa de baixo apareciam
+      atrás da dica.
+    Conferido por fotos (Playwright) em 1366×768, 1920×1080, iPad deitado, iPhone 14
+    e iPhone SE, com a ficha, a troca de formato e a entrada no mapa do jardim. Não
+    testado: celular deitado e aparelho de verdade. O mapa de dentro de cada jardim
+    continua na coluna de 620 px.
+
 ## Ideias soltas (não decidido ainda)
 
 - A leva de dinamismo social planejada em conjunto está completa: (1)
